@@ -23,7 +23,12 @@ h1,h2,h3{color:#f04e91!important}
 </style>
 ''', unsafe_allow_html=True)
 st.title('FLAMINGOS STUDIO')
-st.caption('Pixel Arcade Edition · Editor visuale · Starting 7 · PNG + MP4')
+template = st.sidebar.radio('Scegli un modello', ['Starting 7', 'Matchday Screen'], key='studio_template')
+if template == 'Matchday Screen':
+    from matchday_ui import show_matchday
+    show_matchday(ROOT)
+    st.stop()
+st.caption('Pixel Arcade Edition - Editor visuale - Starting 7 - PNG + MP4')
 
 if 'positions' not in st.session_state:
     st.session_state.positions = {k:list(v) for k,v in DEFAULT_POSITIONS.items()}
