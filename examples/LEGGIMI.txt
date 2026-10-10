@@ -1,0 +1,3 @@
+Anteprime create dal renderer 1.5.
+Squadre avversarie, punteggio, data, marcatori e MVP sono dati dimostrativi, non una partita reale.
+Il file demo_project.json si importa come backup e aggiunge un solo progetto di esempio. Non contiene font o stemmi personali.

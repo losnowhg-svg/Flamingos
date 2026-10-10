@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "assets": {},
+  "projects": {
+    "demo-flamingos-v15-result": {
+      "name": "DEMO 1.5 - Match Result",
+      "template": "Match Result",
+      "config": {
+        "title": "MATCH RESULT",
+        "date": "18/10/2026 / DEMO",
+        "competition": "CSI BRESCIA",
+        "round_label": "GIORNATA 06",
+        "home_name": "FLAMINGOS",
+        "away_name": "SPORTING CLUB",
+        "home_score": 3,
+        "away_score": 1,
+        "match_status": "FINALE",
+        "team_side": "Casa",
+        "show_outcome": true,
+        "home_penalties": 0,
+        "away_penalties": 0,
+        "scorers_home": "Rossi 12', 47'\nBianchi 68'",
+        "scorers_away": "Verdi 35'",
+        "mvp": "MARCO ROSSI",
+        "show_mvp": true,
+        "footer": "DATI DI ESEMPIO / NON PUBBLICARE",
+        "title_size": 42,
+        "label_size": 22,
+        "info_size": 16,
+        "score_size": 98,
+        "home_logo_size": 90,
+        "away_logo_size": 90,
+        "home_clear_white": true,
+        "away_clear_white": true,
+        "accent": "#F660A0",
+        "secondary": "#7CDAEF",
+        "background": "#100E1A",
+        "panel_color": "#201A2E",
+        "text_color": "#FFF6FB",
+        "pattern": "Pulito",
+        "texture": 25,
+        "preset_id": "flamingos",
+        "font_choice": "Sans Bold",
+        "home_logo_id": "default",
+        "away_logo_id": "none",
+        "export_format": "Story 9:16",
+        "duration": 8,
+        "fps": 24,
+        "video_scale": 2,
+        "png_quality": "Fine",
+        "positions": {
+          "competition": [
+            270,
+            79
+          ],
+          "title": [
+            270,
+            134
+          ],
+          "date": [
+            270,
+            184
+          ],
+          "home_logo": [
+            142,
+            310
+          ],
+          "away_logo": [
+            398,
+            310
+          ],
+          "home_name": [
+            142,
+            408
+          ],
+          "away_name": [
+            398,
+            408
+          ],
+          "score": [
+            270,
+            501
+          ],
+          "outcome": [
+            270,
+            597
+          ],
+          "scorers_home": [
+            144,
+            705
+          ],
+          "scorers_away": [
+            396,
+            705
+          ],
+          "mvp": [
+            270,
+            839
+          ],
+          "footer": [
+            270,
+            907
+          ]
+        },
+        "layouts": {},
+        "locked_layers": []
+      }
+    }
+  },
+  "preferred_font": null
+}
