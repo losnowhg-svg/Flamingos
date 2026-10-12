@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="it">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:transparent;color:#eee7ef;font:13px system-ui,sans-serif}button,.upload{font:inherit;color:inherit;border:1px solid #534055;border-radius:8px;background:#251b2c;padding:8px 10px;cursor:pointer;text-align:center}button:hover,.upload:hover{border-color:#ee76aa}button:focus-visible,.upload:focus-within{outline:2px solid #8bddef;outline-offset:2px}button:disabled{opacity:.45;cursor:default}.row{display:flex;gap:7px;margin:8px 0;flex-wrap:wrap}.row>*{flex:1}input[type=file]{display:none}#status{padding:9px 10px;border:1px solid #514356;border-radius:8px;font-size:12px;line-height:1.5}#status.error{border-color:#e4a455;color:#ffe1b2}#summary{font-weight:600;margin:10px 0 4px}small{display:block;color:#bfafc4;line-height:1.5;margin-top:7px}.list{max-height:165px;overflow:auto}.file{display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid #302434}.file span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.file button{padding:3px 7px;font-size:11px}details{margin-top:8px}summary{cursor:pointer;color:#d9bbd3}#message{line-height:1.4;font-size:12px;margin:6px 0;color:#bce4ee}
+</style></head>
+<body>
+<div id="status" role="status">Apertura archivio del browser...</div>
+<div id="summary">Font e stemmi</div>
+<div class="row"><label class="upload">+ Font TTF / OTF<input id="fonts" type="file" accept=".ttf,.otf" multiple></label><label class="upload">+ Stemmi<input id="logos" type="file" accept=".png,.jpg,.jpeg,.webp" multiple></label></div>
+<div id="assets" class="list"></div>
+<div class="row"><button id="backup">Scarica backup</button><label class="upload">Importa backup<input id="restore" type="file" accept=".json,application/json"></label></div>
+<details id="project-details"><summary>Gestisci progetti salvati</summary><div id="projects" class="list"></div></details>
+<button id="protect" style="width:100%;margin-top:8px">Richiedi conservazione al browser</button>
+<div id="message" aria-live="polite"></div>
+<small>Font: 5 MB. Stemmi: 12 MB. Totale: 32 MB / 24 file.<br>Salvataggio su questo browser, non su un account. I file selezionati sono trasmessi all'app per il rendering. Conserva un backup e verifica la licenza dei font.</small>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const empty=()=>({schema:1,assets:{},projects:{},preferred_font:null,last_command:null});
+let vault=empty(),db=null,storageOK=false,bootSent=false,queue=Promise.resolve(),seen=new Set();
+let storageMessage='Solo sessione: archivio browser non disponibile.';
+const uid=()=>crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2);
+const clone=x=>JSON.parse(JSON.stringify(x));
+function send(type,data={}){window.parent.postMessage({isStreamlitMessage:true,type,...data},'*')}
+function height(){send('streamlit:setFrameHeight',{height:Math.ceil(document.body.scrollHeight+4)})}
+function feedback(text){$('message').textContent=text;height()}
+function emit(commandId=null,error=null){send('streamlit:setComponentValue',{value:{event_id:uid(),library:vault,storage_ok:storageOK,command_id:commandId,error},dataType:'json'})}
+function rawSize(library){return Object.values(library.assets).reduce((sum,item)=>sum+(typeof item.data==='string'?Math.floor(item.data.length*3/4):0),0)}
+function checkLibrary(lib){
+ if(!lib||lib.schema!==1||!lib.assets||Array.isArray(lib.assets)||typeof lib.assets!=='object'||!lib.projects||Array.isArray(lib.projects)||typeof lib.projects!=='object')throw Error('Backup non riconosciuto.');
+ if(Object.keys(lib.assets).length>24||Object.keys(lib.projects).length>50||rawSize(lib)>32000000)throw Error('Limite archivio: 24 file, 50 progetti, 32 MB.');
+ for(const [id,a] of Object.entries(lib.assets)){
+  if(!a||!['font','logo'].includes(a.kind)||typeof a.data!=='string'||typeof a.name!=='string'||!new RegExp('^'+a.kind+':[a-f0-9]{64}$').test(id))throw Error('File non valido nel backup.');
+  if(a.data.length>4*Math.ceil((a.kind==='font'?5000000:12000000)/3))throw Error('Un file supera il limite.');
+ }
+ for(const [id,p] of Object.entries(lib.projects)){
+  if(['__proto__','constructor','prototype'].includes(id)||!p||!['Starting 7','Matchday Screen'].includes(p.template)||typeof p.name!=='string'||typeof p.config!=='object'||p.config===null||JSON.stringify(p).length>40000||id.length>128)throw Error('Progetto non valido.');
+ }
+ return lib;
+}
+function transaction(mode,action){return new Promise((resolve,reject)=>{
+ const tx=db.transaction('state',mode);let result;
+ tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error||Error('Errore archivio.'));tx.onabort=()=>reject(tx.error||Error('Scrittura interrotta.'));
+ const request=action(tx.objectStore('state'));if(request)request.onsuccess=()=>{result=request.result};
+})}
+async function openStore(){
+ try{
+  const name='flamingos-studio-1:'+location.pathname.replace(/\/index\.html$/,'').replace(/\/$/,'');
+  db=await Promise.race([new Promise((resolve,reject)=>{
+   const req=indexedDB.open(name,1);
+   req.onupgradeneeded=()=>req.result.createObjectStore('state');
+   req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);req.onblocked=()=>reject(Error('Archivio occupato da un\'altra scheda.'));
+  }),new Promise((_,reject)=>setTimeout(()=>reject(Error('Archivio non disponibile.')),5000))]);
+  db.onversionchange=()=>{db.close();storageOK=false;paint()};
+  const stored=await transaction('readonly',store=>store.get('library'));
+  if(stored)vault=checkLibrary(stored);
+  storageOK=true;storageMessage='Archivio locale pronto. Caricamenti salvati su questo browser.';
+ }catch(err){storageOK=false;storageMessage='Solo sessione: '+(err.message||'archivio non disponibile')+' Scarica un backup.'}
+ paint();
+}
+const ready=openStore();
+async function commit(next){
+ checkLibrary(next);
+ if(db){
+  try{await transaction('readwrite',store=>store.put(next,'library'));storageOK=true;storageMessage='Salvato su questo browser.'}
+  catch(err){storageOK=false;storageMessage='Non salvato: spazio esaurito o archivio bloccato. Scarica un backup.'}
+ }
+ vault=next;paint();
+}
+function paint(){
+ $('status').textContent=storageMessage;$('status').className=storageOK?'':'error';
+ $('summary').textContent=Object.values(vault.assets).filter(x=>x.kind==='font').length+' font / '+Object.values(vault.assets).filter(x=>x.kind==='logo').length+' stemmi / '+(rawSize(vault)/1000000).toFixed(1)+' MB';
+ const assets=$('assets');assets.replaceChildren();
+ for(const [id,a] of Object.entries(vault.assets)){
+  const row=document.createElement('div');row.className='file';const label=document.createElement('span');label.textContent=(a.kind==='font'?'Aa  ':'IMG  ')+a.name;label.title=a.name;
+  const button=document.createElement('button');button.textContent='Rimuovi';button.setAttribute('aria-label','Rimuovi '+a.name);
+  button.onclick=()=>enqueue(async()=>{if(!confirm('Rimuovere '+a.name+'? I progetti che lo usano passeranno al font o stemma predefinito.'))return;const next=clone(vault);delete next.assets[id];if(next.preferred_font===id)next.preferred_font=null;await commit(next);emit()});
+  row.append(label,button);assets.append(row);
+ }
+ const projects=$('projects');projects.replaceChildren();
+ for(const [id,p] of Object.entries(vault.projects)){
+  const row=document.createElement('div');row.className='file';const label=document.createElement('span');label.textContent=p.name+' / '+p.template;
+  const button=document.createElement('button');button.textContent='Elimina';button.onclick=()=>enqueue(async()=>{if(!confirm('Eliminare il progetto '+p.name+'?'))return;const next=clone(vault);delete next.projects[id];await commit(next);emit()});
+  row.append(label,button);projects.append(row);
+ }
+ if(!Object.keys(vault.projects).length)projects.textContent='Nessun progetto salvato.';
+ height();
+}
+function enqueue(task){queue=queue.then(()=>ready).then(task).catch(err=>feedback('Errore: '+(err.message||err)));return queue}
+function b64(buffer){let binary='';const array=new Uint8Array(buffer);for(let i=0;i<array.length;i+=32768)binary+=String.fromCharCode(...array.subarray(i,i+32768));return btoa(binary)}
+async function digest(buffer){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer)),x=>x.toString(16).padStart(2,'0')).join('')}
+async function addFiles(files,kind){
+ let next=clone(vault);
+ for(const file of files){
+  const allowed=kind==='font'?/\.(ttf|otf)$/i:/\.(png|jpe?g|webp)$/i;
+  if(!allowed.test(file.name)||file.size>(kind==='font'?5000000:12000000)||!file.size)throw Error('Formato o dimensione non valida: '+file.name);
+  const data=await file.arrayBuffer();
+  // Browser-level validation precedes IndexedDB. Python validates again before export.
+  if(kind==='font'){
+   const face=new FontFace('flamingos-validation-'+uid(),data);await face.load();
+  }else{
+   const bmp=await createImageBitmap(file);const tooLarge=bmp.width*bmp.height>20000000;bmp.close();if(tooLarge)throw Error('Immagine oltre 20 megapixel.');
+  }
+  const id=kind+':'+await digest(data);next.assets[id]={kind,name:file.name.slice(0,100),data:b64(data)};
+  if(kind==='font')next.preferred_font=id;
+  checkLibrary(next);
+ }
+ await commit(next);feedback(storageOK?'Caricamento salvato. Seleziona il file nei controlli del modello.':'File disponibile solo in questa sessione. Scarica il backup.');emit();
+}
+for(const [id,kind] of [['fonts','font'],['logos','logo']])$(id).onchange=e=>{const files=[...e.target.files];e.target.value='';enqueue(()=>addFiles(files,kind))};
+$('backup').onclick=()=>enqueue(async()=>{
+ const data=clone(vault);delete data.last_command;const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+ const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='flamingos-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+ feedback('Backup creato: contiene i font caricati, gli stemmi e i progetti salvati.');
+});
+$('restore').onchange=e=>{const file=e.target.files[0];e.target.value='';if(!file)return;enqueue(async()=>{
+ if(file.size>44000000)throw Error('Backup troppo grande.');
+ const imported=checkLibrary(JSON.parse(await file.text()));
+ if(!confirm('Unire questo backup all\'archivio? I progetti con lo stesso identificativo saranno aggiornati.'))return;
+ const next=clone(vault);Object.assign(next.assets,imported.assets);Object.assign(next.projects,imported.projects);next.preferred_font=imported.preferred_font||next.preferred_font;
+ await commit(next);feedback('Backup importato. I file sono ricontrollati dal renderer.');emit();
+})};
+$('protect').onclick=()=>enqueue(async()=>{
+ if(!navigator.storage||!navigator.storage.persist)throw Error('Questo browser non espone la richiesta di conservazione. Usa il backup.');
+ const granted=await navigator.storage.persist();feedback(granted?'Conservazione accordata dal browser. La cancellazione manuale dei dati elimina comunque l\'archivio.':'Conservazione non accordata. I dati restano locali ma il browser potrebbe rimuoverli. Conserva un backup.');
+});
+$('project-details').ontoggle=height;
+window.addEventListener('resize',height);
+window.addEventListener('message',event=>{
+ if(event.source!==window.parent||!event.data||event.data.type!=='streamlit:render')return;
+ const cmd=(event.data.args||{}).command;
+ enqueue(async()=>{
+  if(cmd&&cmd.id&&!seen.has(cmd.id)&&vault.last_command!==cmd.id){
+   try{
+    const next=clone(vault);
+    if(cmd.type==='save_project'){
+     const p=cmd.project;if(!p||!['Starting 7','Matchday Screen'].includes(p.template))throw Error('Progetto non valido.');
+     next.projects[cmd.project_id]={name:String(p.name).slice(0,80),template:p.template,config:p.config};
+    }else throw Error('Comando non riconosciuto.');
+    next.last_command=cmd.id;await commit(next);seen.add(cmd.id);feedback(storageOK?'Progetto salvato nel browser.':'Progetto in memoria: scarica il backup.');emit(cmd.id);bootSent=true;
+   }catch(err){seen.add(cmd.id);emit(cmd.id,err.message);feedback(err.message)}
+  }else if(!bootSent){emit(cmd&&cmd.id||null);bootSent=true}
+  height();
+ });
+});
+send('streamlit:componentReady',{apiVersion:1});height();
+</script></body></html>
