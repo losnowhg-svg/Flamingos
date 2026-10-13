@@ -1,4 +1,4 @@
-"""Flamingos Studio 1.4 - HD graphics and a persistent per-browser asset library."""
+"""Flamingos Studio 1.5 - HD graphics and a persistent per-browser asset library."""
 from pathlib import Path
 import streamlit as st
 
@@ -14,14 +14,14 @@ h2,h3{color:#f2dce8!important}
 .block-container{padding-top:2.2rem}
 </style>''',unsafe_allow_html=True)
 st.title('FLAMINGOS STUDIO')
-st.caption('1.4 / Grafica HD / Font riutilizzabili / Progetti e backup')
+st.caption('1.5 / Matchday, Starting 7, Full Time e Convocati / 6 preset CRT / 2 nuovi font pixel')
 
 from library import show_library
 from studio_ui import show_studio
 
 with st.sidebar:
     st.header('Il tuo studio')
-    template = st.radio('Modello',['Starting 7','Matchday Screen'],key='studio_template')
+    template = st.radio('Modello',['Matchday Screen','Starting 7','Full Time','Convocati'],key='studio_template')
 
 library = show_library()
 if library is None:

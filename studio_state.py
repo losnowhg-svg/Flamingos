@@ -10,10 +10,14 @@ import re
 
 import renderer as starting
 import matchday_renderer as matchday
+import fulltime_renderer as fulltime
+import convocati_renderer as convocati
+from pixel_fonts import PIXEL_FONTS
+from crt_presets import PRESETS, FORMATS
 
 SCHEMA_VERSION = 1
 MAX_LIBRARY_BYTES = 44_000_000  # JSON / base64 limit; raw assets capped at 32 MB in browser.
-BUILTIN_FONTS = ['Sans Bold', 'Monospace Bold', 'Pixel Arcade']
+BUILTIN_FONTS = ['Sans Bold', 'Monospace Bold', 'Pixel Arcade', *PIXEL_FONTS]
 
 START_DEFAULT = dict(
     team_name='FLAMINGOS', headline='STARTING 7', footer='CSI BRESCIA', formation_text='MODULO 1-1-3-1',
@@ -33,12 +37,49 @@ MATCH_DEFAULT = dict(
     export_format='Post 1:1', duration=8, fps=24, video_scale=2, png_quality='Fine',
     positions={k:list(v) for k,v in matchday.DEFAULT_POSITIONS.items()},
 )
+CRT_DEFAULT = dict(preset_id='crt',rotation_mode='Manuale',season_round=1,scanlines=16)
+MATCH_DEFAULT.update(CRT_DEFAULT)
+MATCH_DEFAULT.update(font_choice='CRT Terminal',our_side='Casa')
+FULLTIME_DEFAULT = dict(
+    **CRT_DEFAULT,
+    title='FULL TIME',date='GG/MM/AAAA',competition='CSI BRESCIA',
+    home_name='FLAMINGOS',away_name='AVVERSARI',our_side='Casa',
+    home_score=0,away_score=0,home_penalties=0,away_penalties=0,
+    show_penalties=False,show_result=True,show_scorers=True,home_scorers='',away_scorers='',
+    title_size=30,label_size=15,info_size=12,score_size=54,result_size=16,scorer_size=11,
+    home_logo_size=66,away_logo_size=66,home_clear_white=True,away_clear_white=True,
+    pink='#F268A8',cyan='#79DCF7',yellow='#FFC963',white='#F6F4FC',
+    font_choice='CRT Terminal',home_logo_id='default',away_logo_id='none',
+    export_format='Post 1:1',duration=8,fps=24,video_scale=2,png_quality='Fine',
+    positions={k:list(v) for k,v in fulltime.DEFAULT_POSITIONS.items()},
+)
+CONVOCATI_DEFAULT = dict(
+    **CRT_DEFAULT,
+    title='CONVOCATI',team_name='FLAMINGOS',opponent='AVVERSARI',date='GG/MM/AAAA',
+    meeting_time='HH:MM',kickoff='HH:MM',venue='CAMPO / INDIRIZZO',
+    roster_count=12,title_size=25,team_size=12,info_size=11,name_size=11,logo_size=45,remove_white=True,
+    pink='#F268A8',cyan='#79DCF7',yellow='#FFC963',white='#F6F4FC',
+    font_choice='CRT Terminal',logo_id='default',export_format='Post 4:5',
+    duration=8,fps=24,video_scale=2,png_quality='Fine',
+    roster=[{'number':i+1,'name':f'GIOCATORE {i+1:02d}',
+             'role':'P' if i==0 else '-','captain':False} for i in range(convocati.MAX_PLAYERS)],
+    positions={k:list(v) for k,v in convocati.DEFAULT_POSITIONS.items()},
+)
 RANGES = {
     'Starting 7': dict(title_size=(15,62),subtitle_size=(12,56),footer_size=(10,42),name_size=(10,35),logo_size=(50,210),texture=(0,100),duration=(7,18)),
     'Matchday Screen': dict(title_size=(18,42),label_size=(12,30),info_size=(12,25),vs_size=(24,58),home_logo_size=(60,150),away_logo_size=(60,150),duration=(5,18)),
 }
-DEFAULTS = {'Starting 7':START_DEFAULT,'Matchday Screen':MATCH_DEFAULT}
-TEXT_LIMITS = dict(team_name=50,headline=60,footer=80,formation_text=80,title=36,date=24,home_name=42,away_name=42,kickoff=14,venue=72,kickoff_label=40,venue_label=22)
+RANGES['Full Time'] = dict(title_size=(18,42),label_size=(10,24),info_size=(9,20),
+    score_size=(30,76),result_size=(10,24),scorer_size=(8,16),home_logo_size=(45,85),away_logo_size=(45,85),
+    home_score=(0,99),away_score=(0,99),home_penalties=(0,99),away_penalties=(0,99),duration=(5,18))
+RANGES['Convocati'] = dict(title_size=(18,36),team_size=(9,20),info_size=(8,18),name_size=(9,16),
+    logo_size=(30,58),roster_count=(7,18),duration=(5,18))
+for model in ('Matchday Screen','Full Time','Convocati'):
+    RANGES[model].update(season_round=(1,80),scanlines=(0,60))
+DEFAULTS = {'Starting 7':START_DEFAULT,'Matchday Screen':MATCH_DEFAULT,
+            'Full Time':FULLTIME_DEFAULT,'Convocati':CONVOCATI_DEFAULT}
+MODULES = {'Starting 7':starting,'Matchday Screen':matchday,'Full Time':fulltime,'Convocati':convocati}
+TEXT_LIMITS = dict(team_name=50,headline=60,footer=80,formation_text=80,title=36,date=24,home_name=42,away_name=42,kickoff=14,venue=72,kickoff_label=40,venue_label=22,competition=42,home_scorers=1200,away_scorers=1200,opponent=42,meeting_time=14)
 
 
 def defaults(template):
@@ -63,7 +104,7 @@ def sanitize_config(template, raw):
     for key,default in config.items():
         value = raw.get(key,default)
         if key == 'positions':
-            module = starting if template == 'Starting 7' else matchday
+            module = MODULES[template]
             config[key] = {k:list(v) for k,v in module.normalized_positions({'positions':value}).items()}
         elif key == 'players':
             if isinstance(value,list):
@@ -71,6 +112,21 @@ def sanitize_config(template, raw):
                     if isinstance(item,dict):
                         config[key][i] = {'number':_integer(item.get('number'),i+1,0,99),
                                           'name':str(item.get('name','GIOCATORE'))[:27]}
+        elif key == 'roster':
+            if isinstance(value,list):
+                for i,item in enumerate(value[:convocati.MAX_PLAYERS]):
+                    if isinstance(item,dict):
+                        role=item.get('role','-')
+                        config[key][i] = dict(number=_integer(item.get('number'),i+1,0,99),
+                            name=str(item.get('name','GIOCATORE'))[:27],
+                            role=role if isinstance(role,str) and role in convocati.ROLES else '-',
+                            captain=item.get('captain') is True)
+        elif key == 'preset_id':
+            config[key] = value if isinstance(value,str) and value in PRESETS else default
+        elif key == 'rotation_mode':
+            config[key] = value if value in ('Manuale','Per giornata') else default
+        elif key == 'our_side':
+            config[key] = value if value in ('Casa','Ospiti') else default
         elif key in RANGES[template]:
             config[key] = _integer(value,default,*RANGES[template][key])
         elif key in ('fps','video_scale'):
@@ -79,7 +135,7 @@ def sanitize_config(template, raw):
         elif key == 'png_quality':
             config[key] = value if value in ('Fine','Standard') else default
         elif key == 'export_format':
-            valid = ['Story 9:16','Post 1:1'] if template == 'Matchday Screen' else ['Story 9:16']
+            valid = FORMATS if template != 'Starting 7' else ['Story 9:16']
             config[key] = value if value in valid else default
         elif isinstance(default,bool):
             config[key] = value if isinstance(value,bool) else default

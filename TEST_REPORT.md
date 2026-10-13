@@ -1,62 +1,71 @@
-# Rapporto di verifica - versione 1.4
+# Flamingos Studio 1.5 - verifiche della consegna
 
-Data della verifica: 9 ottobre 2026.
+Verifiche eseguite il 13 ottobre 2026 sul codice incluso nel pacchetto.
+I dati nei render di esempio sono dimostrativi.
 
-## Eseguito: 12 test automatici Python, tutti superati
+## Eseguito con esito positivo
 
-Comando: `python -m unittest discover -s tests -v`.
+La suite di rendering e validazione comprende **27 test superati**: i 12 della
+versione precedente e 15 nuovi. Il test aggiuntivo AppTest e opzionale e viene
+saltato in assenza di Streamlit.
 
-Verificati formato e dimensioni dei PNG, metadato sRGB, rendering nativo ad
-alta risoluzione, antialias sui glifi, adattamento dei testi lunghi, alpha
-compositing, coordinate non valide / non finite, segnalazioni di ritaglio,
-caricamento di un font di sistema solo per il test, validazione dei loghi,
-schema di importazione e rifiuto di archivi non validi.
+Sono stati verificati i 18 abbinamenti fra i tre editor CRT e i sei preset,
+l'assenza di elementi tagliati nei layout iniziali, le dimensioni PNG, il profilo
+sRGB, il rendering ad alta risoluzione e l'adattamento delle scritte. Sono stati
+controllati il punteggio fino a due cifre per lato, l'esito casa / ospiti, i
+rigori, la visibilita e la spaziatura di sei righe di marcatori, i convocati da
+7 a 18, i giocatori nascosti ma non cancellati e le animazioni.
 
-Gli MP4 sono stati realmente scritti e riaperti con ImageIO/FFmpeg:
-Starting 7 a 540 x 960 e 1080 x 1920; Matchday a 540 x 540, 1080 x 1080 e
-1080 x 1920. I test automatici usano clip brevi, 3 frame a 12 FPS, per
-verificare dimensioni, codec utilizzabile, lettura e conteggio dei frame.
+I due alfabeti pixel sono verificati a scala 1, 2 e 4, anche con accenti italiani,
+righe multicolore, limiti di larghezza / altezza e pixel a maschera binaria. La
+rotazione di 80 giornate, la conservazione dei dati al cambio preset, i limiti dei
+nuovi campi, gli input non validi e l'importazione dei progetti 1.4 sono coperti.
 
-## Eseguito: 6 controlli del componente in Chromium, tutti superati
+Sono stati generati e riletti MP4 con FFmpeg: numero di fotogrammi, dimensioni e
+FPS verificati. I nuovi casi includono 1080 x 1080, 1080 x 1350, 1080 x 1920 e
+540 x 676 con padding del formato ridotto 4:5. Sono test brevi di esportazione,
+non prove di carico prolungato su un server cloud.
 
-Comando: `python tests/editor_smoke.py`.
+Tutti i file Python sono stati compilati con `py_compile`. Il catalogo e i render
+di esempio sono stati generati dal codice effettivo e ispezionati visivamente;
+la spaziatura dei marcatori e stata corretta dopo questa ispezione.
 
-- Frecce e Maiusc + frecce, con coordinate logiche corrette.
-- Annulla/ripeti e selezione durante la simulazione dei rerun del server.
-- Trascinamento con il puntatore indipendente dalla scala dell'anteprima.
-- Guide di ritaglio, visibilita delle guide e zoom.
-- Archivio non disponibile: messaggio Solo sessione, senza bloccare il caricamento.
-- Rifiuto di un font non valido da parte del browser.
+## Componenti browser, Chromium senza rete
 
-Il test usa iframe `srcdoc` in una pagina senza navigazione. Lo storage
-IndexedDB reale non e accessibile in tale origine: viene verificato il
-comportamento di errore, non la persistenza su disco.
+`tests/editor_smoke.py`: **6 controlli superati** su movimento da tastiera,
+trascinamento, annulla / ripeti, guide, zoom, storage non disponibile e rifiuto
+di un font non valido.
 
-## Altri controlli eseguiti
+`tests/v15_browser_smoke.py`: **5 controlli superati** sui layer Full Time e
+Convocati, annulla e guide 4:5, salvataggio in sessione dei nuovi tipi di progetto,
+conservazione di font e preset, export e reimport del backup JSON.
 
-Sintassi Python verificata con `py_compile`. I due script JavaScript sono
-stati verificati con `node --check`. PNG di entrambi i modelli sono stati
-ispezionati visivamente. Entrambi i percorsi dell'interfaccia Python sono stati
-eseguiti con un doppio minimale dell'API Streamlit per cercare errori di logica;
-questo non sostituisce una prova con Streamlit reale.
+Questi test usano il protocollo reale dei componenti in un iframe locale senza
+rete. Il backup testato contiene progetti, non font copiati dal sistema.
+**Non dimostrano persistenza di IndexedDB dopo la chiusura del browser.**
 
-## Non completato in questo ambiente
+## Non verificato nell'ambiente di consegna
 
-La dipendenza Streamlit non era installata; il tentativo di installazione e
-fallito per assenza di accesso alla rete. Il browser ha rifiutato la navigazione
-al server locale con `ERR_BLOCKED_BY_ADMINISTRATOR`.
+L'installazione di Streamlit non e riuscita per il blocco di rete / risoluzione
+DNS dell'ambiente. Il test `test_streamlit_app.py` e quindi saltato; non e stato
+avviato un server Streamlit completo. La navigazione Chromium a `127.0.0.1` e
+stata bloccata con `ERR_BLOCKED_BY_ADMINISTRATOR`, impedendo il completamento
+originario di `tests/browser_smoke.py` sulla persistenza reale.
 
-Di conseguenza, non sono stati verificati end-to-end: avvio di Streamlit,
-comunicazione componente/server nel deployment, persistenza IndexedDB dopo
-chiusura e riapertura del browser, import/export del backup nel deployment,
-Safari, Firefox, dispositivi mobili e Streamlit Community Cloud.
+Non sono stati verificati il deploy su Streamlit Cloud, Safari / iOS, profili
+browser multipli o limiti di memoria di un server specifico. Non e stata
+eseguita alcuna pubblicazione su Instagram.
 
-Il test riproducibile `tests/browser_smoke.py` e incluso ma **non risulta
-superato qui**. E progettato per coprire caricamento, deduplicazione, salvataggio
-progetti, reload, riapertura del browser, backup, rimozione e ripristino in un
-ambiente che permetta un server HTTP locale.
+## Riprodurre le verifiche
 
-Prima dell'uso operativo, apri l'app distribuita, carica un tuo font, attendi
-Salvato su questo browser, salva un progetto e scarica un backup. Chiudi e
-riapri il browser: verifica che font e progetto siano ancora selezionabili.
-Non affidare l'unica copia dei file allo storage del browser.
+```bash
+python -m pip install --upgrade -r requirements.txt
+python -m unittest discover -s tests -v
+python tests/editor_smoke.py
+python tests/v15_browser_smoke.py
+python tests/browser_smoke.py
+```
+
+I test browser richiedono Playwright e Chromium. Con Streamlit installato,
+AppTest controlla anche il rendering dei widget delle quattro pagine.
+L'ultimo test richiede un'origine HTTP locale accessibile.

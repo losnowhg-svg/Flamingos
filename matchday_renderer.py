@@ -118,7 +118,7 @@ def _unknown_shield(s=1):
 
 def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
     s = checked_scale(render_scale)
-    style = config.get('text_style','Sans Bold')
+    style = config.get('text_style',config.get('font_choice','Sans Bold'))
     pink = rgb(config.get('pink','#F268A8'),DEFAULT_PINK)
     cyan = rgb(config.get('cyan','#79DCF7'),(121,220,247))
     white = rgb(config.get('white','#F6F4FC'),DEFAULT_WHITE)
@@ -148,7 +148,8 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
 
 def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     s = checked_scale(render_scale)
-    return background(config.get('cyan','#79DCF7'),s).copy(),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
+    from crt_presets import background as preset_background
+    return preset_background(config,'matchday',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
 
 
 def compose(prepared,t=999,animated=True):
@@ -170,16 +171,8 @@ def compose(prepared,t=999,animated=True):
 
 
 def output_image(image,format='Story 9:16',scale=2):
-    scale = checked_scale(scale)
-    source_scale = image.width/W
-    if format.startswith('Post'):
-        image = image.crop(tuple(round(v*source_scale) for v in FEED_CROP))
-        target = (W*scale,W*scale)
-    else:
-        target = (W*scale,H*scale)
-    if image.size != target:
-        image = image.resize(target,Image.Resampling.LANCZOS)
-    return image
+    from crt_presets import output_image as format_image
+    return format_image(image,format,scale)
 
 
 def png_bytes(config,home_logo,away_logo=None,font_bytes=None,format='Story 9:16',scale=2,supersample=2):
@@ -190,13 +183,14 @@ def png_bytes(config,home_logo,away_logo=None,font_bytes=None,format='Story 9:16
 
 
 def render_video(config,home_logo,away_logo,path,font_bytes=None,fps=24,duration=8,format='Story 9:16',scale=2,progress_callback=None):
+    from crt_presets import even_video_frame
     fps,duration = video_settings(fps,duration,scale)
     prepared = scene(config,home_logo,away_logo,font_bytes,scale)
     writer = video_writer(path,fps)
     count = round(duration*fps)
     try:
         for i in range(count):
-            writer.append_data(np.asarray(output_image(compose(prepared,i/fps,True),format,scale)))
+            writer.append_data(np.asarray(even_video_frame(output_image(compose(prepared,i/fps,True),format,scale))))
             if progress_callback and (i%fps==0 or i==count-1):
                 progress_callback((i+1)/count)
     finally:

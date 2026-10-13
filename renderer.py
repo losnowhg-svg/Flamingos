@@ -1,4 +1,4 @@
-"""Flamingos Studio 1.4: native high-resolution typography, layout, PNG and MP4."""
+"""Flamingos Studio 1.5: native high-resolution typography, layout, PNG and MP4."""
 from __future__ import annotations
 
 import base64
@@ -95,6 +95,9 @@ def text_runs(parts, font_style, size, max_width, font_bytes=None,
     if not parts or not ''.join(txt for txt, _ in parts).strip():
         return None
     logical_size = max(1, min(115, float(size)))
+    from pixel_fonts import PIXEL_FONTS, pixel_text_runs
+    if font_style in PIXEL_FONTS:
+        return pixel_text_runs(parts, font_style, logical_size, max_width, s, max_height)
     if font_style == 'Pixel Arcade':
         # Intentional aesthetic only, never used for smooth or uploaded fonts.
         chunks = []
@@ -225,7 +228,7 @@ def make_player_layer(entry, index, config, font_bytes, render_scale=1):
     s = render_scale
     accent = rgb(config.get('accent'), DEFAULT_PINK)
     white = rgb(config.get('text_color'), DEFAULT_WHITE)
-    style = config.get('text_style', 'Sans Bold')
+    style = config.get('text_style', config.get('font_choice', 'Sans Bold'))
     target = Image.new('RGBA', (150 * s, 111 * s))
     dr = ScaledDraw(target, s)
     dr.ellipse((45, 8, 105, 68), fill=(11, 11, 22, 255), outline=(*accent, 255), width=3)
@@ -244,7 +247,7 @@ def get_layers(config, logo_bytes, font_bytes=None, render_scale=1):
     s = checked_scale(render_scale)
     accent = rgb(config.get('accent'), DEFAULT_PINK)
     white = rgb(config.get('text_color'), DEFAULT_WHITE)
-    style = config.get('text_style', 'Sans Bold')
+    style = config.get('text_style', config.get('font_choice', 'Sans Bold'))
     layers = [Layer('logo', 'Stemma', clean_logo(logo_bytes, config.get('logo_size', 95), config.get('remove_white', True), s))]
     for id_, label, value, size, clr, maximum in [
         ('team', 'Nome squadra', config.get('team_name', 'FLAMINGOS'), config.get('title_size', 34), accent, 368),
