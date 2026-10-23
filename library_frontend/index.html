@@ -17,6 +17,7 @@
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
+const TEMPLATES=['Starting 7','Matchday Screen','Full Time','Convocati','Classifica','Calendario','Rosa','Settimana'];
 const empty=()=>({schema:1,assets:{},projects:{},preferred_font:null,last_command:null});
 let vault=empty(),db=null,storageOK=false,bootSent=false,queue=Promise.resolve(),seen=new Set();
 let storageMessage='Solo sessione: archivio browser non disponibile.';
@@ -35,7 +36,7 @@ function checkLibrary(lib){
   if(a.data.length>4*Math.ceil((a.kind==='font'?5000000:12000000)/3))throw Error('Un file supera il limite.');
  }
  for(const [id,p] of Object.entries(lib.projects)){
-  if(['__proto__','constructor','prototype'].includes(id)||!p||!['Starting 7','Matchday Screen','Full Time','Convocati'].includes(p.template)||typeof p.name!=='string'||typeof p.config!=='object'||p.config===null||JSON.stringify(p).length>40000||id.length>128)throw Error('Progetto non valido.');
+  if(['__proto__','constructor','prototype'].includes(id)||!p||!TEMPLATES.includes(p.template)||typeof p.name!=='string'||typeof p.config!=='object'||p.config===null||JSON.stringify(p).length>120000||id.length>128)throw Error('Progetto non valido.');
  }
  return lib;
 }
@@ -135,7 +136,7 @@ window.addEventListener('message',event=>{
    try{
     const next=clone(vault);
     if(cmd.type==='save_project'){
-     const p=cmd.project;if(!p||!['Starting 7','Matchday Screen','Full Time','Convocati'].includes(p.template))throw Error('Progetto non valido.');
+     const p=cmd.project;if(!p||!TEMPLATES.includes(p.template))throw Error('Progetto non valido.');
      next.projects[cmd.project_id]={name:String(p.name).slice(0,80),template:p.template,config:p.config};
     }else throw Error('Comando non riconosciuto.');
     next.last_command=cmd.id;await commit(next);seen.add(cmd.id);feedback(storageOK?'Progetto salvato nel browser.':'Progetto in memoria: scarica il backup.');emit(cmd.id);bootSent=true;
