@@ -1,4 +1,23 @@
-# Flamingos Studio 1.7
+# Flamingos Studio 1.8
+
+## Novita della 1.8: tutto in ordine
+
+- **Pagina "La tua settimana"** come punto di partenza: ① aggiorna dal sito CSI
+  (link al girone e segnalibro), ② partita della settimana, ③ la rosa,
+  ④ le sei grafiche con anteprima, stato (Pronta / Da completare) e pulsante
+  Apri, e il kit ZIP di tutte le grafiche.
+- **Editor in tre schede**: *Contenuti*, *Stile*, *Esporta* a sinistra,
+  anteprima trascinabile sempre visibile a destra. La barra laterale contiene
+  solo il menu e l'archivio. Didascalie, PNG, video e progetti stanno in Esporta.
+- **La rosa salvata una volta**: nome, numero e ruolo dei giocatori nel browser.
+  I Convocati si scelgono dalla rosa (e si correggono in una tabella unica), i
+  sette della Starting 7 da un menu per ruolo, i gol del Full Time con
+  *+ Gol* (giocatore e minuto).
+- **Memoria della settimana**: partita, classifica, calendario e partite lette
+  dal CSI si salvano da soli nel browser e tornano alla riapertura dell'app.
+- **Fix**: l'archivio del browser rifiutava i progetti Classifica e Calendario
+  (e i backup che li contenevano). Ora accetta tutti i modelli.
+
 
 ## Novita della 1.7
 

@@ -66,39 +66,6 @@ def apply_match_everywhere(match):
     return match
 
 
-def show_match_panel(library):
-    """Type the fixture once; every editor receives it with one click."""
-    assets = library['assets']
-    match = sanitize_match(st.session_state.get('shared_match'))
-    logos = [id_ for id_, a in assets.items() if a['kind'] == 'logo']
-    label = lambda x: {'default': 'Flamingos - incluso', 'none': 'Segnaposto (scudo con ?)'}.get(x, assets.get(x, {}).get('name', x))
-    with st.sidebar.expander('Partita della settimana', expanded=not st.session_state.get('shared_match')):
-        st.caption('Scrivi i dati una volta sola, oppure usa il segnalibro Invia a Flamingos sulla pagina del girone CSI: '
-                   'la prossima partita si compila da sola. Li copio in tutti gli editor.')
-        with st.form('shared_match_form', border=False):
-            values = {}
-            values['our_name'] = st.text_input('La nostra squadra', match['our_name'], max_chars=42)
-            values['opponent'] = st.text_input('Avversari', match['opponent'], max_chars=42)
-            values['our_side'] = st.radio('Giochiamo', ('Casa', 'Ospiti'), index=0 if match['our_side'] == 'Casa' else 1, horizontal=True)
-            a, b = st.columns(2)
-            values['date'] = a.text_input('Data', match['date'], max_chars=24)
-            values['round'] = b.number_input('Giornata', 1, 80, match['round'], step=1)
-            a, b = st.columns(2)
-            values['meeting_time'] = a.text_input('Ritrovo', match['meeting_time'], max_chars=14)
-            values['kickoff'] = b.text_input('Calcio d\'inizio', match['kickoff'], max_chars=14)
-            values['venue'] = st.text_input('Campo / indirizzo', match['venue'], max_chars=72)
-            options = ['none', 'default']+logos
-            values['opponent_logo_id'] = st.selectbox('Stemma avversari', options,
-                index=options.index(match['opponent_logo_id']) if match['opponent_logo_id'] in options else 0, format_func=label)
-            if st.form_submit_button('Applica a tutte le grafiche', type='primary', width='stretch'):
-                values['our_logo_id'] = match['our_logo_id']
-                apply_match_everywhere(values)
-                st.session_state['match_applied'] = True
-                st.rerun()
-        if st.session_state.pop('match_applied', False):
-            st.success('Dati copiati in tutte le grafiche. Layout, colori e preset restano quelli scelti.')
-
-
 def _scene(root, template, library, preset_override, scale):
     config, home, away, font_bytes = resolve_assets(root, template, current_config(template), library['assets'])
     if preset_override in PRESETS:
@@ -175,8 +142,6 @@ def show_sequence(root: Path, library):
         if video:
             st.video(video)
             st.download_button('Scarica MP4', video, file_name='flamingos_sequenza.mp4', mime='video/mp4', width='stretch')
-    st.divider()
-    show_kit(root, library)
 
 
 def show_kit(root: Path, library):

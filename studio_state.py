@@ -218,7 +218,82 @@ def sanitize_config(template, raw):
 
 
 def empty_library():
-    return dict(schema=SCHEMA_VERSION,assets={},projects={},preferred_font=None)
+    return dict(schema=SCHEMA_VERSION,assets={},projects={},preferred_font=None,squad=[],week=None)
+
+
+# --- Squad register and week memory (stored as special browser projects) ----
+SQUAD_ID, WEEK_ID = 'rosa', 'settimana'
+MAX_SQUAD = 30
+SQUAD_ROLES = ('P','D','C','A','-')
+
+
+def sanitize_squad(raw):
+    players = raw.get('players',[]) if isinstance(raw,dict) else raw
+    squad, seen = [], set()
+    for item in (players if isinstance(players,list) else [])[:200]:
+        if len(squad) >= MAX_SQUAD:
+            break
+        if not isinstance(item,dict):
+            continue
+        name = re.sub(r'\s+',' ',str(item.get('name',''))).strip().upper()[:27]
+        if not name or name in seen:
+            continue
+        seen.add(name)
+        role = item.get('role','-')
+        squad.append(dict(number=_integer(item.get('number'),0,0,99),name=name,role=role if role in SQUAD_ROLES else '-'))
+    return squad
+
+
+def sanitize_week(raw):
+    """Shared match, standings, month fixtures and CSI matches, as plain JSON."""
+    if not isinstance(raw,dict):
+        return None
+    week = dict(match=sanitize_match(raw.get('match')),updated=str(raw.get('updated',''))[:32],
+                standings=[],fixtures=[],month_label=str(raw.get('month_label',''))[:30],matches=[])
+    for i,item in enumerate((raw.get('standings') or [])[:classifica.MAX_TEAMS] if isinstance(raw.get('standings'),list) else []):
+        if isinstance(item,dict) and str(item.get('team','')).strip():
+            row = dict(pos=_integer(item.get('pos'),i+1,1,99),team=str(item['team'])[:34])
+            for field in ('pt','g','v','n','p','gf','gs'):
+                row[field] = _integer(item.get(field),0,0,999)
+            week['standings'].append(row)
+    for item in (raw.get('fixtures') or [])[:calendario.MAX_FIXTURES] if isinstance(raw.get('fixtures'),list) else []:
+        if isinstance(item,dict) and str(item.get('opponent','')).strip():
+            row = calendario.empty_fixture()
+            for field,limit in (('date',8),('day',3),('opponent',30),('time',8),('score',7)):
+                row[field] = str(item.get(field,'') or '')[:limit]
+            row['side'] = item.get('side') if item.get('side') in ('C','T') else 'C'
+            week['fixtures'].append(row)
+    for item in (raw.get('matches') or [])[:400] if isinstance(raw.get('matches'),list) else []:
+        if not isinstance(item,dict):
+            continue
+        try:
+            date = _dt.date.fromisoformat(str(item.get('date',''))[:10]).isoformat()
+        except ValueError:
+            continue
+        score = item.get('score')
+        if isinstance(score,(list,tuple)) and len(score)==2:
+            score = [_integer(score[0],0,0,99),_integer(score[1],0,0,99)]
+        else:
+            score = None
+        week['matches'].append(dict(home=str(item.get('home',''))[:40],away=str(item.get('away',''))[:40],date=date,
+                                    time=str(item.get('time',''))[:5],score=score,venue=str(item.get('venue',''))[:80],
+                                    round=_integer(item.get('round'),0,0,80) or None))
+    return week
+
+
+def matches_from_week(week):
+    """Back to the parser's shape: real dates and tuple scores."""
+    out = []
+    for m in (week or {}).get('matches',[]):
+        item = dict(m)
+        item['date'] = _dt.date.fromisoformat(m['date'])
+        item['score'] = tuple(m['score']) if m.get('score') else None
+        out.append(item)
+    return out
+
+
+def matches_to_week(matches):
+    return [dict(m,date=m['date'].isoformat(),score=list(m['score']) if m.get('score') else None) for m in matches]
 
 
 def validate_library(raw):
@@ -259,6 +334,12 @@ def validate_library(raw):
     if not isinstance(projects,dict) or len(projects)>50:
         raise ValueError('L\'archivio supporta al massimo 50 progetti.')
     for id_,project in projects.items():
+        if isinstance(project,dict) and project.get('template') == 'Rosa':
+            library['squad'] = sanitize_squad(project.get('config'))
+            continue
+        if isinstance(project,dict) and project.get('template') == 'Settimana':
+            library['week'] = sanitize_week(project.get('config'))
+            continue
         try:
             if not isinstance(project,dict) or project.get('template') not in DEFAULTS:
                 raise ValueError('Modello progetto non valido.')

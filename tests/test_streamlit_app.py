@@ -14,10 +14,10 @@ class StreamlitAppTests(unittest.TestCase):
         app=AppTest.from_file(str(ROOT/'app.py'),default_timeout=90)
         app.session_state['studio_library']=empty_library()
         app.run()
-        for template in ('Starting 7','Matchday Screen','Full Time','Convocati','Classifica','Calendario','Sequenza video'):
+        for template in ('Settimana','Starting 7','Matchday Screen','Full Time','Convocati','Classifica','Calendario','Sequenza video'):
             app.sidebar.radio[0].set_value(template).run()
             self.assertFalse(app.exception)
             self.assertFalse(app.error)
-            if template!='Sequenza video':
+            if template not in ('Sequenza video','Settimana'):
                 self.assertEqual(app.session_state['studio_models'][template]['font_choice'],
                                  'Sans Bold' if template=='Starting 7' else 'CRT Terminal')

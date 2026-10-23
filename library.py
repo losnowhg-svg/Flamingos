@@ -12,7 +12,7 @@ VAULT = components.declare_component('flamingos_studio_library',path=str(ROOT/'l
 
 
 def show_library():
-    with st.sidebar.expander('Archivio font, stemmi e backup',expanded=True):
+    with st.sidebar.expander('Archivio: font, stemmi e backup',expanded=True):
         result = VAULT(command=st.session_state.get('vault_command'),key='studio_library_v1',default=None)
         if isinstance(result,dict) and result.get('event_id') != st.session_state.get('vault_event'):
             try:
@@ -28,6 +28,9 @@ def show_library():
                 st.session_state.pop('vault_command',None)
                 if result.get('error'):
                     st.session_state['vault_errors'] = [str(result['error'])]
+                flush_backlog()
+                if st.session_state.get('vault_command'):
+                    st.rerun()
         for message in st.session_state.get('vault_errors',[]):
             st.warning(message)
         if 'studio_library' not in st.session_state:
@@ -39,10 +42,28 @@ def show_library():
     return st.session_state['studio_library']
 
 
+def queue_save(name, template, config, project_id):
+    """Ask the browser archive to store a project on this run. False if one is pending."""
+    if st.session_state.get('vault_command'):
+        st.session_state.setdefault('vault_backlog', {})[project_id] = (name, template, config)
+        return False
+    st.session_state['vault_command'] = {'id':uuid.uuid4().hex,'type':'save_project',
+        'project_id':project_id,'project':{'name':name.strip()[:80],'template':template,'config':config}}
+    return True
+
+
+def flush_backlog():
+    """Send the next waiting save once the previous one is confirmed."""
+    backlog = st.session_state.get('vault_backlog') or {}
+    if backlog and not st.session_state.get('vault_command'):
+        project_id, (name, template, config) = next(iter(backlog.items()))
+        del backlog[project_id]
+        queue_save(name, template, config, project_id)
+
+
 def save_project(name, template, config, project_id):
     if st.session_state.get('vault_command'):
         st.warning('Attendi il completamento del salvataggio precedente.')
         return
-    st.session_state['vault_command'] = {'id':uuid.uuid4().hex,'type':'save_project',
-        'project_id':project_id,'project':{'name':name.strip()[:80],'template':template,'config':config}}
+    queue_save(name, template, config, project_id)
     st.rerun()
