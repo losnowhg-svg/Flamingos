@@ -74,7 +74,7 @@ SAMPLE_STANDINGS = [
 CLASSIFICA_DEFAULT = dict(
     **CRT_DEFAULT,
     title='CLASSIFICA',group='GIRONE D / SERIE C',round_label='GIORNATA 8',our_team='FLAMINGOS',
-    source_url='https://live.centrosportivoitaliano.it/26/Calcio-a-7/Lombardia/Brescia/C102/?j=NEU9REZJJjRGPVBOSyY0Rz1FREYmNEg9RCY0ST1RJjRMPURGSSY0Mj1l',auto_update=True,
+    source_url='https://live.centrosportivoitaliano.it/26/Calcio-a-7/Lombardia/Brescia/C102/?j=NEU9REZJJjRGPVBOSyY0Rz1FREYmNEg9RCY0ST1RJjRMPURGSSY0Mj1l',auto_update=False,
     table_detail='Completa',team_count=8,title_size=24,info_size=10,table_size=10,logo_size=40,remove_white=True,
     pink='#F268A8',cyan='#79DCF7',yellow='#FFC963',white='#F6F4FC',
     font_choice='CRT Terminal',logo_id='default',export_format='Post 4:5',
