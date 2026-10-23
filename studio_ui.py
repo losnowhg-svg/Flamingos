@@ -1,4 +1,4 @@
-"""Four editors, seasonal CRT presets and the backward-compatible browser vault."""
+"""Five editors, eleven CRT presets, shared match data and the browser vault."""
 from __future__ import annotations
 
 import copy
@@ -14,6 +14,8 @@ import streamlit.components.v1 as components
 import renderer as r
 import fulltime_renderer as f
 import convocati_renderer as c
+import classifica_renderer as k
+from classifica_data import MAX_TEAMS, empty_row, fetch_standings, parse_standings, sort_rows
 from library import save_project
 from render_utils import layout_warnings
 from studio_state import BUILTIN_FONTS, MODULES, defaults, sanitize_config
@@ -21,13 +23,14 @@ from crt_presets import PRESETS, PRESET_IDS, FORMATS, CROPS, apply_preset, prese
 
 ROOT = Path(__file__).resolve().parent
 EDITOR = components.declare_component('flamingos_studio_editor',path=str(ROOT/'frontend'))
-SLUGS={'Starting 7':'starting7','Matchday Screen':'matchday','Full Time':'fulltime','Convocati':'convocati'}
+SLUGS={'Starting 7':'starting7','Matchday Screen':'matchday','Full Time':'fulltime','Convocati':'convocati','Classifica':'classifica'}
 
 
 def show_studio(root: Path, template: str, library: dict):
     is_match=template=='Matchday Screen'
     is_full=template=='Full Time'
     is_squad=template=='Convocati'
+    is_table=template=='Classifica'
     is_crt=template!='Starting 7'
     has_opponent=is_match or is_full
     module=MODULES[template]
@@ -84,6 +87,7 @@ def show_studio(root: Path, template: str, library: dict):
         'Starting 7':'IN CAMPO / I sette titolari, con nomi, numeri e posizioni modificabili.',
         'Full Time':'DOPO IL FISCHIO FINALE / Risultato, marcatori e rigori nella stessa identita del Matchday.',
         'Convocati':'VERSO LA PARTITA / I convocati, inclusa la panchina, e le informazioni di ritrovo.',
+        'Classifica':'IL GIRONE / Importa la classifica dal link o incollandola, la tua squadra resta evidenziata.',
     }[template])
 
     with st.expander('Progetti salvati - riapri una grafica',expanded=False):
@@ -144,7 +148,7 @@ def show_studio(root: Path, template: str, library: dict):
                 if st.button('Abbina il font del preset',key=key('preset_font'),width='stretch'):
                     updated=copy.deepcopy(config);updated['font_choice']=PRESETS[config['preset_id']]['font']
                     restart(updated)
-                st.caption('Il cambio di preset modifica solo cornice e palette. Testi, risultati, stemmi, font e posizioni rimangono tuoi. La rotazione riparte ogni 6 giornate.')
+                st.caption(f'Il cambio di preset modifica solo cornice e palette. Testi, risultati, stemmi, font e posizioni rimangono tuoi. La rotazione riparte ogni {len(PRESET_IDS)} giornate.')
         st.subheader('Impostazioni del modello')
         with st.expander('Testi e contenuti',expanded=True):
             if has_opponent:
@@ -157,6 +161,11 @@ def show_studio(root: Path, template: str, library: dict):
                 else:
                     text('competition','Competizione / giornata',42)
                     check('show_result','Mostra esito automatico della nostra squadra')
+            elif is_table:
+                text('title','Titolo',36);text('group','Girone / campionato',48)
+                text('round_label','Giornata',36);text('our_team','La nostra squadra (evidenziata)',34)
+                select('table_detail','Colonne della tabella',k.DETAILS,
+                       lambda x:'Completa - G V N P GF GS PT' if x=='Completa' else 'Compatta - G, differenza reti, PT')
             elif is_squad:
                 text('title','Titolo',36);text('team_name','Nome squadra',50)
                 text('opponent','Avversari / partita',42);text('date','Data',24)
@@ -193,6 +202,10 @@ def show_studio(root: Path, template: str, library: dict):
                 slider('info_size','Dimensione competizione e data',9,20)
                 slider('scorer_size','Dimensione marcatori',8,16)
                 slider('result_size','Dimensione esito',10,24)
+            elif is_table:
+                slider('title_size','Dimensione titolo',16,34)
+                slider('info_size','Dimensione girone e giornata',8,16)
+                slider('table_size','Dimensione testo tabella',7,14)
             elif is_squad:
                 slider('title_size','Dimensione titolo',18,36)
                 slider('team_size','Dimensione squadra',9,20)
@@ -206,13 +219,13 @@ def show_studio(root: Path, template: str, library: dict):
             st.caption('Le dimensioni vengono ridotte quando necessario per non tagliare le righe. I font CRT trasformano il testo in maiuscolo.')
         with st.expander('Stemmi',expanded=False):
             logos=[id_ for id_,a in assets.items() if a['kind']=='logo']
-            label=lambda x:{'default':'Flamingos - incluso','none':'Segnaposto avversario'}.get(x,assets.get(x,{}).get('name',x))
+            label=lambda x:{'default':'Flamingos - incluso','none':'Segnaposto (scudo con ?)'}.get(x,assets.get(x,{}).get('name',x))
             fields=('home_logo_id','away_logo_id') if has_opponent else ('logo_id',)
             for field in fields:
                 if config.get(field) not in ['default','none']+logos:
                     st.warning('Uno stemma del progetto manca in archivio: viene sostituito. Reimporta il backup per recuperarlo.')
             if has_opponent:
-                select('home_logo_id','Stemma squadra di casa',['default']+logos,label)
+                select('home_logo_id','Stemma squadra di casa',['default','none']+logos,label)
                 select('away_logo_id','Stemma squadra ospite',['none','default']+logos,label)
                 slider('home_logo_size','Dimensione stemma casa',45 if is_full else 60,85 if is_full else 150)
                 slider('away_logo_size','Dimensione stemma ospiti',45 if is_full else 60,85 if is_full else 150)
@@ -220,13 +233,15 @@ def show_studio(root: Path, template: str, library: dict):
                 check('away_clear_white','Rimuovi bianco esterno - ospiti')
             else:
                 select('logo_id','Stemma',['default']+logos,label)
-                slider('logo_size','Dimensione stemma',30 if is_squad else 50,58 if is_squad else 210)
+                slider('logo_size','Dimensione stemma',*((30,58) if is_squad else (26,56) if is_table else (50,210)))
                 check('remove_white','Rimuovi sfondo bianco esterno')
             st.caption('Stemmi riutilizzabili dall\'archivio. Il bianco interno degli scudi viene mantenuto.')
         with st.expander('Palette e atmosfera',expanded=False):
             if is_crt:
                 color('pink','Rosa / colore casa');color('cyan','Neon / colore ospiti')
                 color('yellow','Accento risultato');color('white','Testo chiaro')
+                slider('brightness','Luminosita per Instagram',0,100)
+                st.caption('Schiarisce sfondo e cornice senza toccare i testi. 55 e il valore consigliato per il feed; 0 riproduce la versione 1.5, piu scura.')
                 slider('scanlines','Intensita scanline CRT',0,60)
             else:
                 color('accent','Colore principale');color('background','Sfondo');color('text_color','Testo')
@@ -234,14 +249,14 @@ def show_studio(root: Path, template: str, library: dict):
 
     default_logo=(root/'assets'/'flamingos_logo.jpg').read_bytes()
     home_id=config['home_logo_id'] if has_opponent else config['logo_id']
-    home=assets[home_id]['bytes'] if home_id in assets else default_logo
+    home=assets[home_id]['bytes'] if home_id in assets else None if home_id=='none' else default_logo
     away_id=config.get('away_logo_id')
     away=default_logo if away_id=='default' else assets[away_id]['bytes'] if away_id in assets else None
 
     if is_crt:
         catalog=root/'assets'/'preset_catalog.jpg'
         if catalog.exists():
-            with st.expander('Catalogo dei 6 preset CRT',expanded=False):
+            with st.expander(f'Catalogo dei {len(PRESET_IDS)} preset CRT',expanded=False):
                 st.image(str(catalog),caption='Esempi di stile. Scegli il preset nella barra laterale: i dati della tua grafica non cambiano.',width='stretch')
         if config.get('date')=='GG/MM/AAAA' or config.get('kickoff')=='HH:MM' or config.get('away_name',config.get('opponent'))=='AVVERSARI':
             st.info('Dati di esempio: aggiorna la partita prima di pubblicare.')
@@ -272,6 +287,66 @@ def show_studio(root: Path, template: str, library: dict):
                 elif config['home_penalties']==config['away_penalties']:
                     st.warning('I rigori sono ancora in parita: verifica il risultato finale.')
         if config['show_result']:st.caption('Esito per la nostra squadra ('+config['our_side'].lower()+'): '+f.result_text(config))
+
+    if is_table:
+        def load_rows(rows,message):
+            updated=copy.deepcopy(config)
+            rows=rows[:MAX_TEAMS]
+            updated['standings']=rows+[empty_row(i+1) for i in range(len(rows),MAX_TEAMS)]
+            updated['team_count']=max(2,len(rows))
+            st.session_state['standings_message']=message
+            restart(updated)
+
+        with st.expander('Dati della classifica',expanded=True):
+            if st.session_state.get('standings_message'):
+                st.success(st.session_state.pop('standings_message'))
+            link,paste,manual=st.tabs(['Dal link','Incolla la tabella','Modifica a mano'])
+            with link:
+                text('source_url','Link della classifica (Tuttocampo o simili)',300)
+                if st.button('Aggiorna dal link',key=key('fetch'),type='primary'):
+                    with st.spinner('Leggo la classifica...'):
+                        try:
+                            rows=fetch_standings(config['source_url'])
+                            load_rows(rows,f'Classifica aggiornata dal link: {len(rows)} squadre.')
+                        except ValueError as exc:
+                            st.error(str(exc))
+                st.caption('Alcuni siti bloccano le letture automatiche. Se succede, usa la scheda Incolla la tabella: funziona sempre.')
+            with paste:
+                pasted=st.text_area('Testo della classifica',height=180,key=key('paste'),
+                    placeholder='Apri la classifica, seleziona la tabella dalla prima squadra all\'ultima, copia e incolla qui.')
+                if st.button('Leggi la tabella incollata',key=key('parse')):
+                    try:
+                        rows=parse_standings(pasted)
+                        load_rows(rows,f'Tabella letta: {len(rows)} squadre. Controlla i numeri nella scheda Modifica a mano.')
+                    except ValueError as exc:
+                        st.error(str(exc))
+                st.caption('Va bene il testo copiato da Tuttocampo, dal sito CSI o da un foglio di calcolo. Riconosco da solo l\'ordine delle colonne.')
+            with manual:
+                number('team_count','Numero di squadre',2,MAX_TEAMS)
+                count=config['team_count']
+                columns={'pos':st.column_config.NumberColumn('Pos',min_value=1,max_value=99,step=1,width='small'),
+                         'team':st.column_config.TextColumn('Squadra',max_chars=34),
+                         **{f:st.column_config.NumberColumn(f.upper(),min_value=0,max_value=999,step=1,width='small')
+                            for f in ('pt','g','v','n','p','gf','gs')}}
+                edited=st.data_editor([dict(r) for r in config['standings'][:count]],column_config=columns,
+                                      hide_index=True,num_rows='fixed',key=key('table_editor'),width='stretch')
+                rows=edited.to_dict('records') if hasattr(edited,'to_dict') else list(edited)
+                for i,row in enumerate(rows[:count]):
+                    clean=empty_row(i+1)
+                    for field in clean:
+                        value=row.get(field,clean[field])
+                        try:clean[field]=str(value or '')[:34] if field=='team' else max(0,min(999,int(value or 0)))
+                        except (TypeError,ValueError):pass
+                    config['standings'][i]=clean
+                if st.button('Ordina per punti e differenza reti',key=key('sort')):
+                    load_rows(sort_rows(config['standings'][:count]),'Classifica riordinata.')
+            active=k.active_rows(config)
+            wrong=[r['team'] for r in active if r['v']+r['n']+r['p']!=r['g']]
+            if wrong:st.warning('Vinte + pareggiate + perse non torna con le giocate per: '+', '.join(wrong[:4])+'.')
+            if not any(k.is_ours(r['team'],config['our_team']) for r in active):
+                st.info('La tua squadra non e in tabella: controlla il nome in Testi e contenuti per evidenziarla.')
+            if any(r['team'].startswith('SQUADRA ') for r in active):
+                st.info('La classifica contiene ancora squadre di esempio.')
 
     if is_squad:
         with st.expander('Rosa convocata - titolari e panchina',expanded=True):
@@ -392,4 +467,4 @@ def show_studio(root: Path, template: str, library: dict):
         st.error(f'Impossibile creare la grafica: {exc}')
         st.caption('Controlla i file o prova un font predefinito. Le impostazioni rimangono disponibili.')
     st.divider()
-    st.caption('Studio 1.5 / Font, stemmi e progetti nel browser. Scarica un backup prima di cambiare dispositivo o cancellare i dati del sito.')
+    st.caption('Studio 1.6 / Font, stemmi e progetti nel browser. Scarica un backup prima di cambiare dispositivo o cancellare i dati del sito.')

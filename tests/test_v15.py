@@ -27,7 +27,7 @@ class NewEditorTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):cls.logo=(ROOT/'assets/flamingos_logo.jpg').read_bytes()
 
-    def test_all_eighteen_crt_scenes_and_default_bounds(self):
+    def test_all_crt_scenes_and_default_bounds(self):
         fingerprints={}
         for template in ('Matchday Screen','Full Time','Convocati'):
             module=MODULES[template]
@@ -40,7 +40,7 @@ class NewEditorTests(unittest.TestCase):
                     image=module.compose(scene,animated=False)
                     self.assertEqual(image.size,(540,960))
                     fingerprints[template,preset]=hashlib.sha256(image.tobytes()).digest()
-        self.assertEqual(len(set(fingerprints.values())),18)
+        self.assertEqual(len(set(fingerprints.values())),3*len(PRESET_IDS))
 
     def test_png_formats_and_profile(self):
         for template in ('Full Time','Convocati'):
@@ -141,7 +141,7 @@ class SeasonSchemaTests(unittest.TestCase):
         original=defaults('Full Time');original.update(home_score=8,away_score=6,home_scorers='ROSSI 3',font_choice='Sans Bold')
         original['positions']['score']=[261,455]
         for round_no in range(1,81):
-            self.assertEqual(preset_for_round(round_no),PRESET_IDS[(round_no-1)%6])
+            self.assertEqual(preset_for_round(round_no),PRESET_IDS[(round_no-1)%len(PRESET_IDS)])
         result=apply_preset(original,'handheld')
         for key in ('home_score','away_score','home_scorers','home_logo_id','font_choice','positions'):
             self.assertEqual(result[key],original[key])
@@ -163,7 +163,7 @@ class SeasonSchemaTests(unittest.TestCase):
         library['projects']['v14']={'name':'Old','template':'Matchday Screen','config':old}
         clean,messages=validate_library(json.loads(json.dumps(library)))
         self.assertFalse(messages)
-        self.assertEqual(len(clean['projects']),5)
+        self.assertEqual(len(clean['projects']),len(MODULES)+1)
         self.assertEqual(clean['projects']['v14']['config']['preset_id'],'crt')
         self.assertEqual(clean['projects']['v14']['config']['font_choice'],'Sans Bold')
 
