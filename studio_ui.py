@@ -310,7 +310,7 @@ def show_studio(root: Path, template: str, library: dict):
                             load_rows(rows,f'Classifica aggiornata dal link: {len(rows)} squadre.')
                         except ValueError as exc:
                             st.error(str(exc))
-                st.caption('Alcuni siti bloccano le letture automatiche. Se succede, usa la scheda Incolla la tabella: funziona sempre.')
+                st.caption('Tuttocampo blocca le letture dal server dell\'app (errore 403). In quel caso apri il link nel browser e usa la scheda Incolla la tabella: funziona sempre.')
             with paste:
                 pasted=st.text_area('Testo della classifica',height=180,key=key('paste'),
                     placeholder='Apri la classifica, seleziona la tabella dalla prima squadra all\'ultima, copia e incolla qui.')
