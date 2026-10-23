@@ -148,13 +148,20 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
 
 def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     s = checked_scale(render_scale)
+    import animations, themes
     from crt_presets import background as preset_background
-    return preset_background(config,'matchday',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
+    config = themes.effective(config)
+    prepared = preset_background(config,'matchday',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
+    return animations.prepare(prepared,config,'matchday')
 
 
 def compose(prepared,t=999,animated=True):
+    import animations
+    if animated and animations.rich(prepared):
+        return animations.compose(prepared,t)
     base,layers,positions = prepared
     canvas = base.copy()
+    animations.particles(canvas,prepared,t,animated)
     timeline = {'title':.2,'date':.6,'home_logo':1.25,'away_logo':1.55,'vs':2.05,
                 'home_name':2.6,'away_name':2.9,'kickoff':3.4,'venue':3.75}
     for layer in layers:
@@ -176,23 +183,10 @@ def output_image(image,format='Story 9:16',scale=2):
 
 
 def png_bytes(config,home_logo,away_logo=None,font_bytes=None,format='Story 9:16',scale=2,supersample=2):
-    scale = checked_scale(scale)
-    ss = checked_scale(supersample,2)
-    prepared = scene(config,home_logo,away_logo,font_bytes,min(4,scale*ss))
-    return encode_png(output_image(compose(prepared,animated=False),format,scale))
+    from crt_common import export_png
+    return export_png(scene,config,home_logo,away_logo,font_bytes,format,scale,supersample,compose)
 
 
 def render_video(config,home_logo,away_logo,path,font_bytes=None,fps=24,duration=8,format='Story 9:16',scale=2,progress_callback=None):
-    from crt_presets import even_video_frame
-    fps,duration = video_settings(fps,duration,scale)
-    prepared = scene(config,home_logo,away_logo,font_bytes,scale)
-    writer = video_writer(path,fps)
-    count = round(duration*fps)
-    try:
-        for i in range(count):
-            writer.append_data(np.asarray(even_video_frame(output_image(compose(prepared,i/fps,True),format,scale))))
-            if progress_callback and (i%fps==0 or i==count-1):
-                progress_callback((i+1)/count)
-    finally:
-        writer.close()
-    return str(path)
+    from crt_common import export_video
+    return export_video(scene,config,home_logo,away_logo,path,font_bytes,fps,duration,format,scale,progress_callback,compose)

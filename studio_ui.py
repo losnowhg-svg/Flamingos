@@ -18,6 +18,8 @@ import classifica_renderer as k
 import calendario_renderer as cal
 import captions as cap
 import sounds
+import animations
+import themes
 from classifica_data import MAX_TEAMS, empty_row, fetch_standings, parse_standings, sort_rows, with_rows
 from library import save_project
 from render_utils import layout_warnings
@@ -477,6 +479,15 @@ def show_studio(root: Path, template: str, library: dict):
                 with st.expander(f'Guarda tutti i {len(PRESET_IDS)} preset'):
                     st.image(str(catalog), width='stretch')
             st.divider()
+            section('Tema per eventi e stagioni', 'Derby, big match, ultima giornata, Halloween, Natale, Capodanno: '
+                    'cambiano accenti e dettagli, la grafica resta Flamingos.')
+            chosen_theme = select('theme', 'Tema', themes.CHOICES, themes.label)
+            active_theme = themes.resolve(config)
+            st.caption(themes.why(config)+(' '+themes.THEMES[active_theme]['description'] if active_theme else ''))
+            if chosen_theme == 'auto' and not active_theme:
+                st.caption('Per derby, big match e ultima giornata scegli il tipo di partita nella pagina Settimana, '
+                           'oppure scegli il tema qui a mano.')
+            st.divider()
             section('Luce e colori')
             slider('brightness', 'Luminosita per Instagram', 0, 100)
             st.caption('55 e il valore consigliato per il feed; 0 = aspetto originale, piu scuro.')
@@ -540,6 +551,11 @@ def show_studio(root: Path, template: str, library: dict):
         with b:
             select('png_quality', 'Qualita', ('Fine', 'Standard'),
                    lambda x: 'Fine (antialias)' if x == 'Fine' else 'Standard (pixel netti)')
+        if is_crt:
+            check('mockup', '📺 Dentro un vecchio televisore (PNG e video)')
+            if config['mockup']:
+                st.caption('La grafica va sullo schermo di un TV a tubo in una stanza buia: la luce dello schermo '
+                           'colora la stanza. Il ritaglio del formato vale per tutta la scena.')
 
     default_logo = (root/'assets'/'flamingos_logo.jpg').read_bytes()
     home_id = config['home_logo_id'] if has_opponent else config['logo_id']
@@ -552,7 +568,8 @@ def show_studio(root: Path, template: str, library: dict):
         crop = CROPS[config['export_format']] if is_crt else None
         # ------------------------------------------------------ PREVIEW
         with preview_column:
-            changed = EDITOR(**r.editor_data(prepared), crop=crop, key=key('canvas'), default=None)
+            editor_scene = (animations.still_base(prepared),)+tuple(prepared[1:]) if is_crt else prepared
+            changed = EDITOR(**r.editor_data(editor_scene), crop=crop, key=key('canvas'), default=None)
             if isinstance(changed, dict) and changed.get('event_id') != st.session_state.get('editor_event_'+template):
                 st.session_state['editor_event_'+template] = changed.get('event_id')
                 if isinstance(changed.get('positions'), dict):
@@ -589,8 +606,11 @@ def show_studio(root: Path, template: str, library: dict):
             basename = 'flamingos_'+SLUGS[template]
             st.download_button(f'⬇ Scarica PNG  ·  1080 x {height}', png, file_name=basename+'.png', mime='image/png',
                                type='primary', width='stretch', key=key('download_png'))
-            with st.expander('Guarda il PNG finale'):
+            if is_crt and config['mockup']:
                 st.image(png, width='stretch')
+            else:
+                with st.expander('Guarda il PNG finale'):
+                    st.image(png, width='stretch')
             st.divider()
             texts = cap.captions(template, config)
             if texts:
@@ -601,6 +621,20 @@ def show_studio(root: Path, template: str, library: dict):
                 st.code(texts[choice], language=None, wrap_lines=True)
                 st.divider()
             section('Video MP4')
+            if is_crt:
+                a, b = st.columns(2)
+                with a:
+                    select('animation', 'Animazione', animations.STYLES,
+                           lambda x: 'Retro: scrittura, glitch, contatore' if x == 'Retro' else 'Classica: dissolvenza')
+                with b:
+                    st.write('')
+                    if config['animation'] == 'Retro':
+                        check('power_on', 'Accensione del TV all\'inizio')
+                if config['animation'] == 'Retro':
+                    st.caption('Testi scritti come su un terminale, stemmi con glitch RGB, VS che esplode, '
+                               + ('punteggio che conta fino al risultato, ' if is_full else '')
+                               + ('tabella che si riempie riga per riga, ' if (is_table or is_cal) else '')
+                               + 'sfarfallio CRT.')
             with st.expander('Impostazioni video'):
                 slider('duration', 'Durata (secondi)', 5 if is_crt else 7, 18)
                 a, b = st.columns(2)

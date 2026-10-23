@@ -53,14 +53,30 @@ def resolve_assets(root: Path, template, config, assets):
     return config, home, away, font_bytes
 
 
+def match_event(match):
+    """derby / bigmatch / ultima for the shared match, using standings and CSI calendar."""
+    import themes
+    from studio_state import matches_from_week
+    models = st.session_state.get('studio_models', {})
+    standings = models.get('Classifica', {}).get('standings', [])
+    matches = st.session_state.get('csi_matches') or []
+    try:
+        if matches and isinstance(matches[0].get('date'), str):
+            matches = matches_from_week({'matches': matches})
+    except (ValueError, TypeError, KeyError):
+        matches = []
+    return themes.auto_event(match, standings, matches)
+
+
 def apply_match_everywhere(match):
     """Store the shared match and copy it into every editor."""
     match = sanitize_match(match)
     st.session_state['shared_match'] = match
     models = st.session_state.setdefault('studio_models', {})
     revisions = st.session_state.setdefault('studio_revisions', {})
+    event = match_event(match)
     for template in DEFAULTS:
-        models[template] = apply_match(template, current_config(template), match)
+        models[template] = apply_match(template, current_config(template), match, event)
         revisions[template] = revisions.get(template, 0)+1
         st.session_state.pop('png_'+template, None)
     return match
@@ -85,8 +101,9 @@ def show_sequence(root: Path, library):
                'Ogni grafica usa i dati e il preset che hai impostato nel suo editor.')
     state = st.session_state.setdefault('sequence', {
         'items': ['Matchday Screen', 'Convocati'], 'transitions': ['channel'], 'format': 'Story 9:16',
-        'hold': 4.0, 'transition_seconds': 1.0, 'fps': 24, 'scale': 2, 'preset': 'own', 'sound': True, 'volume': 80})
-    state.setdefault('sound', True); state.setdefault('volume', 80)
+        'hold': 4.0, 'transition_seconds': 1.0, 'fps': 24, 'scale': 2, 'preset': 'own', 'sound': True, 'volume': 80,
+        'mockup': False})
+    state.setdefault('sound', True); state.setdefault('volume', 80); state.setdefault('mockup', False)
     left, right = st.columns([1.1, 1], gap='large')
     with left:
         count = st.slider('Numero di grafiche', 2, 5, len(state['items']), key='seq_count')
@@ -99,6 +116,8 @@ def show_sequence(root: Path, library):
                 transitions.append(st.selectbox(f'Transizione {i+1} > {i+2}', TRANSITION_IDS,
                     index=TRANSITION_IDS.index(current), format_func=TRANSITIONS.get, key=f'seq_trans_{i}'))
         state['items'], state['transitions'] = items, transitions
+        state['mockup'] = st.toggle('📺 Tutto dentro un vecchio televisore', state['mockup'], key='seq_mockup',
+                                    help='La manopola dei canali gira a ogni transizione.')
         with st.expander('Tempi, formato e stile', expanded=False):
             state['format'] = st.selectbox('Formato', FORMATS, index=FORMATS.index(state['format']), key='seq_format')
             state['hold'] = st.slider('Secondi per grafica', 2.0, 8.0, float(state['hold']), .5, key='seq_hold')
@@ -117,6 +136,11 @@ def show_sequence(root: Path, library):
     with right:
         st.markdown('**Anteprima delle transizioni**')
         try:
+            if state['mockup']:
+                import mockup as tv
+                prepared, compose = _scene(root, items[0], library, state['preset'], 1)
+                st.image(tv.frame(compose(prepared, 999, False), state['format'], 1, 0), caption='Così appare sul televisore',
+                         width='stretch')
             stills = [_still(root, t, library, state['preset'], state['format']) for t in items]
             for i, kind in enumerate(transitions):
                 st.image(preview_strip(stills[i], stills[i+1], kind, 5, 150),
@@ -132,7 +156,7 @@ def show_sequence(root: Path, library):
                     render_sequence(scenes, transitions, path, state['fps'], state['hold'], state['transition_seconds'],
                                     state['format'], state['scale'],
                                     lambda f: progress.progress(f, text=f'Rendering: {round(f*100)}%'),
-                                    sound=state['sound'], volume=state['volume']/100)
+                                    sound=state['sound'], volume=state['volume']/100, mockup=state['mockup'])
                     st.session_state['sequence_video'] = path.read_bytes()
             except Exception as exc:
                 st.error(f'Video non generato: {exc}')

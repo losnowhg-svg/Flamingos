@@ -535,7 +535,13 @@ def background(config, layout='matchday', render_scale=2):
     except (TypeError, ValueError):
         brightness = DEFAULT_BRIGHTNESS
     intensity = max(0, min(60, int(config.get('scanlines', 16))))
-    return _background(preset, *colors, layout, intensity, s, brightness).copy()
+    image = _background(preset, *colors, layout, intensity, s, brightness).copy()
+    import themes
+    theme = themes.resolve(config)
+    if theme:
+        themes.decorate_background(image, theme)
+    image.info['theme'] = theme or ''
+    return image
 
 
 def output_image(image, format='Story 9:16', scale=2):

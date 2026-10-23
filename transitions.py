@@ -200,15 +200,20 @@ def transition_frame(kind, a, b, p, channel=2):
 
 def intro_length(prepared, compose):
     """Seconds the scene's own entrance animation needs before everything is on screen."""
+    import animations
+    rich = animations.intro_length(prepared) if animations.rich(prepared) else None
+    if rich:
+        return rich
     if getattr(compose, '__module__', '') == 'matchday_renderer':
         return 4.3
     return .6+.12*max(1, len(prepared[1]))
 
 
 def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seconds=1.0,
-                    format='Story 9:16', scale=2, progress_callback=None, sound=False, volume=.8):
+                    format='Story 9:16', scale=2, progress_callback=None, sound=False, volume=.8, mockup=False):
     """scenes: list of (prepared, compose_function). One transition between each pair.
-    With sound=True a synthesised CRT soundtrack is muxed into the MP4."""
+    With sound=True a synthesised CRT soundtrack is muxed into the MP4.
+    With mockup=True everything plays on a tube TV whose knob turns at each change."""
     from crt_presets import output_image, even_video_frame
     from renderer import video_writer, video_settings
     if not scenes:
@@ -222,20 +227,27 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
 
     # Each entrance is sped up when needed so it completes in 65% of the hold:
     # the transition always starts from a finished graphic.
+    for prepared, _ in scenes[1:]:
+        prepared[0].info['power_on'] = False  # only the first scene switches the set on
     speeds = [max(1.0, intro_length(p, c)/(hold*.65)) for p, c in scenes]
 
     def frame_at(index, t, animated=True):
         prepared, compose = scenes[index]
-        return output_image(compose(prepared, t*speeds[index], animated), format, scale)
+        image = compose(prepared, t*speeds[index], animated)
+        return image if mockup else output_image(image, format, scale)
 
     def emit(image):
         nonlocal done
+        if mockup:
+            import mockup as tv
+            image = tv.frame(image, format, scale, knob[0])
         writer.append_data(np.asarray(even_video_frame(image)))
         done += 1
         if progress_callback and (done % fps == 0 or done == total):
             progress_callback(done/total)
 
     events = []
+    knob = [0.0]
     try:
         for index in range(len(scenes)):
             last = None
@@ -252,7 +264,9 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
                     from sounds import TRANSITION_SOUNDS
                     events.append((done/fps, TRANSITION_SOUNDS.get(kind, TRANSITION_SOUNDS['channel'])(trans_frames/fps)))
                 for i in range(trans_frames):
-                    emit(transition_frame(kind, last, nxt, (i+1)/(trans_frames+1), index+2))
+                    p = (i+1)/(trans_frames+1)
+                    knob[0] = 30.0*(index+_ease(min(1, p*1.6)))
+                    emit(transition_frame(kind, last, nxt, p, index+2))
     finally:
         writer.close()
     if sound:

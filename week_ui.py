@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 import streamlit as st
+import themes
 import streamlit.components.v1 as components
 
 import renderer as r
@@ -191,6 +192,10 @@ def show_match_form(library):
                 index=options.index(match['opponent_logo_id']) if match['opponent_logo_id'] in options else 0)
             values['round'] = b.number_input('Giornata', 1, 80, match['round'], step=1)
             values['our_name'] = c_.text_input('La nostra squadra', match['our_name'], max_chars=42)
+            values['event'] = st.selectbox('Che partita è?', themes.MATCH_EVENTS, format_func=themes.event_label,
+                index=themes.MATCH_EVENTS.index(match.get('event', 'auto')),
+                help='Cambia il tema delle grafiche. Automatico: big match se siamo entrambe in alto in classifica, '
+                     'ultima giornata se il calendario CSI non ha altre partite; altrimenti il tema di stagione.')
             if st.form_submit_button('Applica a tutte le grafiche', type='primary', width='stretch'):
                 values['our_logo_id'] = match['our_logo_id']
                 apply_match_everywhere(values)

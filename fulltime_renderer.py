@@ -72,6 +72,15 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
             im.thumbnail((size*s,round(size*1.42)*s),Image.Resampling.LANCZOS)
         layers.append(Layer(side+'_logo',LAYER_NAMES[side+'_logo'],im))
     text('score',f"{config.get('home_score',0)}-{config.get('away_score',0)}",config.get('score_size',54),yellow,142,63)
+    if layers and layers[-1].id=='score' and config.get('animation','Retro')=='Retro':
+        # Frames for the score counting up in videos.
+        a,b=int(config.get('home_score',0)),int(config.get('away_score',0))
+        steps=max(a,b); n=min(steps,10)
+        variants=[]
+        for i in sorted({round(k*steps/n) for k in range(n+1)} if n else {0}):
+            im=_decorate_text(text_image(f'{min(i,a)}-{min(i,b)}',style,config.get('score_size',54),yellow,142,font_bytes,s,63),s)
+            if im:variants.append(im)
+        layers[-1].variants=variants or [layers[-1].image]
     if config.get('show_penalties',False) and config.get('home_score',0)==config.get('away_score',0):
         text('penalties',f"{config.get('home_penalties',0)}-{config.get('away_penalties',0)} D.C.R.",10,white,142,12)
     for side,col in (('home',pink),('away',cyan)):
@@ -86,8 +95,11 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
 
 
 def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
+    import themes
+    from crt_common import finish
     s=checked_scale(render_scale)
-    return background(config,'fulltime' if config.get('show_scorers',True) else 'fulltime_clean',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
+    config=themes.effective(config)
+    return finish((background(config,'fulltime' if config.get('show_scorers',True) else 'fulltime_clean',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)),config,'fulltime')
 
 
 def png_bytes(config,home_logo,away_logo=None,font_bytes=None,format='Story 9:16',scale=2,supersample=2):

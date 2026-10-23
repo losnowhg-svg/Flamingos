@@ -1,4 +1,25 @@
-# Flamingos Studio 1.8
+# Flamingos Studio 1.9
+
+## Novita della 1.9: televisore, animazioni, temi
+
+- **Dentro un vecchio televisore**: in *Esporta* di ogni grafica CRT c'e "📺 Dentro un vecchio televisore".
+  La grafica va sullo schermo curvo di un TV a tubo in una stanza buia, con antenna, manopole e
+  videoregistratore; la luce dello schermo colora la stanza. Vale per PNG, video e kit, in tutti i formati.
+  Nella *Sequenza video* c'e lo stesso interruttore: la manopola dei canali gira a ogni transizione.
+- **Animazioni Retro** (predefinite nei video): testi scritti come su un terminale con il cursore,
+  stemmi che entrano con un glitch RGB, VS e esito che esplodono, punteggio del Full Time che conta
+  fino al risultato, classifica e calendario che si riempiono riga per riga, accensione del TV
+  all'inizio (si puo togliere) e un leggero sfarfallio. I suoni seguono ogni effetto.
+  *Classica* rimette la vecchia dissolvenza.
+- **Temi per eventi e stagioni** (*Stile* > *Tema*): Derby, Big match, Ultima giornata, Halloween,
+  Natale, Capodanno. Cambiano accenti e dettagli intorno allo schermo (ragnatele, lucine, nastro di
+  pericolo, angoli dorati, bandiera a scacchi) e aggiungono particelle che si muovono nei video
+  (pipistrelli, neve, scintille, coriandoli, fuochi). Il rosa Flamingos non cambia mai.
+  In *Automatico* il tema si sceglie da solo: dalla partita (campo "Che partita e?" nella Settimana:
+  big match se siamo entrambe in alto in classifica, ultima giornata se il calendario CSI non ha altre
+  nostre partite, derby a mano), altrimenti dalla data (Halloween 24/10-2/11, Natale 1-28/12,
+  Capodanno 29/12-6/1).
+
 
 ## Novita della 1.8: tutto in ordine
 

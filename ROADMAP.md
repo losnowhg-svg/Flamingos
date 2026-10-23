@@ -11,10 +11,14 @@ Dalla 1.6: undici preset con luminosita regolabile per Instagram, editor
 Classifica con import da link o copia-incolla, sequenze video con sei
 transizioni CRT, Partita della settimana condivisa e kit partita in ZIP.
 
+Dalla 1.9: mockup su televisore a tubo (PNG, video e sequenze con manopola che
+gira), animazioni Retro (scrittura, glitch, contatore, righe, accensione) e temi
+per eventi e stagioni con scelta automatica.
+
 ## Idee successive, non incluse in questa consegna
 
 Un editor Player of the Match con foto e statistiche; risultati della giornata
-del girone; un calendario mensile; layout indipendenti per ogni rapporto;
+del girone; GOL in diretta, pagelle, figurine; diario della stagione con backup; layout indipendenti per ogni rapporto;
 transizioni anche nel video del singolo editor; salvataggio della Partita della
 settimana nell'archivio browser.
 

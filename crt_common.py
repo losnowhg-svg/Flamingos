@@ -8,8 +8,12 @@ from crt_presets import output_image, even_video_frame
 
 
 def compose(prepared, t=999, animated=True):
+    import animations
+    if animated and animations.rich(prepared):
+        return animations.compose(prepared,t)
     base,layers,positions=prepared
     image=base.copy()
+    animations.particles(image,prepared,t,animated)
     for index,layer in enumerate(layers):
         start=.18+index*.12
         if layer.id=='score':start=1.0
@@ -24,23 +28,38 @@ def compose(prepared, t=999, animated=True):
     return image.convert('RGB')
 
 
+def finish(prepared, config, kind):
+    import animations
+    return animations.prepare(prepared, config, kind)
+
+
+def _frame(compose_fn, prepared, t, animated, format, scale, mockup, knob=0.0):
+    if mockup:
+        import mockup as tv
+        return tv.frame(compose_fn(prepared, t, animated), format, scale, knob)
+    return output_image(compose_fn(prepared, t, animated), format, scale)
+
+
 def export_png(scene_function, config, home_logo, away_logo=None, font_bytes=None,
-               format='Story 9:16', scale=2, supersample=2):
+               format='Story 9:16', scale=2, supersample=2, compose_fn=None):
+    compose_fn=compose_fn or compose
     scale=checked_scale(scale)
     ss=checked_scale(supersample,2)
     prepared=scene_function(config,home_logo,away_logo,font_bytes,min(4,scale*ss))
-    return encode_png(output_image(compose(prepared,animated=False),format,scale))
+    return encode_png(_frame(compose_fn,prepared,999,False,format,scale,config.get('mockup',False)))
 
 
 def export_video(scene_function, config, home_logo, away_logo, path, font_bytes=None,
-                 fps=24, duration=8, format='Story 9:16', scale=2, progress_callback=None):
+                 fps=24, duration=8, format='Story 9:16', scale=2, progress_callback=None, compose_fn=None):
+    compose_fn=compose_fn or compose
     fps,duration=video_settings(fps,duration,scale)
     prepared=scene_function(config,home_logo,away_logo,font_bytes,scale)
     writer=video_writer(path,fps)
     count=round(duration*fps)
+    mockup=config.get('mockup',False)
     try:
         for i in range(count):
-            frame=output_image(compose(prepared,i/fps,True),format,scale)
+            frame=_frame(compose_fn,prepared,i/fps,True,format,scale,mockup)
             writer.append_data(np.asarray(even_video_frame(frame)))
             if progress_callback and (i % fps==0 or i==count-1):
                 progress_callback((i+1)/count)

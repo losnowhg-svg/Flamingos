@@ -127,6 +127,19 @@ def hum(seconds):
     return (np.sin(2*np.pi*50*t)*.012+np.sin(2*np.pi*15625*t)*.004)
 
 
+def tick(index=0):
+    t = _t(.03)
+    return _square(1700+index*90, t)*_env(len(t), .001, .025)*.18
+
+
+def power_on():
+    t = _t(.6)
+    thunk = np.sin(2*np.pi*55*t)*np.exp(-t*12)*.6
+    whine = np.sin(2*np.pi*7800*t)*np.minimum(1, t/.2)*np.exp(-t*2)*.05
+    crackle = _noise(len(t), 9)*np.exp(-t*18)*.3
+    return thunk+whine+crackle
+
+
 def entrance_times(prepared, compose):
     """When each element of a scene starts appearing, in seconds (mirrors each compose)."""
     layers = prepared[1]
@@ -145,6 +158,17 @@ def entrance_times(prepared, compose):
 
 
 def scene_events(prepared, compose, start=0.0, speed=1.0, until=None):
+    import animations
+    if animations.rich(prepared):
+        out = []
+        for t, kind, i in animations.events(prepared):
+            at = start+t/speed
+            if until is not None and at >= until:
+                continue
+            sound = {'power': lambda i: power_on(), 'glitch': lambda i: glitch(.22)*.6,
+                     'tick': tick}.get(kind, blip)(i)
+            out.append((at, sound))
+        return out
     events = []
     for i, t in enumerate(entrance_times(prepared, compose)):
         at = start+t/speed
