@@ -133,7 +133,7 @@ class CsiPageTests(unittest.TestCase):
         played = result['matches'][0]
         self.assertEqual((played['home'], played['away'], played['score']), ('GALBA F.C.', 'FLAMINGOS', (2, 4)))
         self.assertEqual(result['fields'], dict(opponent='LIONS 25', our_side='Casa', date='30/10/2026', kickoff='20:45',
-                                                meeting_time='20:15', venue='ORATORIO FORNACI BRESCIA', round=6))
+                                                meeting_time='19:45', venue='ORATORIO FORNACI BRESCIA', round=6))
 
     def test_block_layout_without_years_and_away_venue_from_card(self):
         result = read_page(self.page(BLOCKS), 'FLAMINGOS', dt.date(2026, 10, 31))

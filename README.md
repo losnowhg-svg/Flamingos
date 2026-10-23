@@ -5,7 +5,7 @@
 - **Prossima partita in automatico.** Il segnalibro *Invia a Flamingos* (versione 2)
   manda all'app tutta la pagina del girone CSI LIVE: con un tocco arrivano
   classifica, prossima partita (avversario, casa o trasferta, data, orario, campo
-  e giornata, ritrovo 30 minuti prima) e calendario del mese. La partita viene
+  e giornata, ritrovo un'ora prima) e calendario del mese. La partita viene
   copiata in tutti gli editor come la *Partita della settimana*. La lettura avviene
   nell'app: i miglioramenti arrivano senza reinstallare il segnalibro. Chi aveva
   la prima versione deve sostituirla una volta.

@@ -212,7 +212,7 @@ def _minus(clock, minutes):
     return f'{total//60:02d}:{total % 60:02d}'
 
 
-def match_fields(match, ours, cards=None, meeting_minutes=30):
+def match_fields(match, ours, cards=None, meeting_minutes=60):
     """Fields for the shared 'Partita della settimana' panel."""
     cards = cards or {}
     home = is_ours(match['home'], ours)
