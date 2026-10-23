@@ -207,6 +207,9 @@ def fetch_standings(url, timeout=12):
             raw = response.read(3_000_000)
             charset = response.headers.get_content_charset() or 'utf-8'
     except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403, 429):
+            raise ValueError('Il sito non permette la lettura automatica (errore '+str(exc.code)+'). '
+                             'Apri la classifica nel browser, copia la tabella e incollala nella scheda Incolla la tabella.') from exc
         raise ValueError(f'Il sito ha risposto con errore {exc.code}. Usa il copia e incolla della tabella.') from exc
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise ValueError('Il sito non e raggiungibile dal server dell\'app. Usa il copia e incolla della tabella.') from exc

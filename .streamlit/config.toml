@@ -1,0 +1,8 @@
+# Dark theme matching the studio, so labels and expander headers stay readable
+# whatever theme the viewer's browser or Streamlit settings prefer.
+[theme]
+base = "dark"
+primaryColor = "#E95396"
+backgroundColor = "#100D16"
+secondaryBackgroundColor = "#19131F"
+textColor = "#F4EDF5"
