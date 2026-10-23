@@ -1,4 +1,29 @@
-# Flamingos Studio 1.6
+# Flamingos Studio 1.7
+
+## Novita della 1.7
+
+- **Prossima partita in automatico.** Il segnalibro *Invia a Flamingos* (versione 2)
+  manda all'app tutta la pagina del girone CSI LIVE: con un tocco arrivano
+  classifica, prossima partita (avversario, casa o trasferta, data, orario, campo
+  e giornata, ritrovo 30 minuti prima) e calendario del mese. La partita viene
+  copiata in tutti gli editor come la *Partita della settimana*. La lettura avviene
+  nell'app: i miglioramenti arrivano senza reinstallare il segnalibro. Chi aveva
+  la prima versione deve sostituirla una volta.
+- **Calendario del mese**, nuovo editor: fino a 8 partite con giorno, data, casa
+  o trasferta, orario o risultato. Vittorie in verde, pareggi in giallo,
+  sconfitte in rosso, prossima partita in rosa con NEXT. Si riempie dal sito o a mano.
+- **Classifica a zone:** prime tre in verde (promozione diretta), quarta e quinta
+  in viola (spareggio), noi sempre in rosa, con legenda. Posti, colori ed
+  etichette si cambiano in *Testi e contenuti* e *Palette e atmosfera*.
+- **Suoni CRT** nei video, generati dal codice (nessun file audio o diritto):
+  fruscio del cambio canale, spegnimento e accensione del tubo, glitch, nastro
+  che si riavvolge, rolling, bip arcade quando compaiono gli elementi e un
+  leggero ronzio. Attivi di default, con volume, nelle sequenze e in ogni editor.
+- **Didascalie per Instagram** in stile pixel retro, da copiare con un clic:
+  almeno tre proposte per ogni grafica. Full Time cambia testi con il risultato
+  (goleada, vittoria, pareggio, sconfitta, rigori) e cita i marcatori; la
+  Classifica con la nostra posizione (vetta, promozione, spareggio, rimonta).
+
 
 ## Novita della 1.6
 

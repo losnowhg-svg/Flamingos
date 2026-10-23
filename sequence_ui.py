@@ -53,6 +53,19 @@ def resolve_assets(root: Path, template, config, assets):
     return config, home, away, font_bytes
 
 
+def apply_match_everywhere(match):
+    """Store the shared match and copy it into every editor."""
+    match = sanitize_match(match)
+    st.session_state['shared_match'] = match
+    models = st.session_state.setdefault('studio_models', {})
+    revisions = st.session_state.setdefault('studio_revisions', {})
+    for template in DEFAULTS:
+        models[template] = apply_match(template, current_config(template), match)
+        revisions[template] = revisions.get(template, 0)+1
+        st.session_state.pop('png_'+template, None)
+    return match
+
+
 def show_match_panel(library):
     """Type the fixture once; every editor receives it with one click."""
     assets = library['assets']
@@ -60,7 +73,8 @@ def show_match_panel(library):
     logos = [id_ for id_, a in assets.items() if a['kind'] == 'logo']
     label = lambda x: {'default': 'Flamingos - incluso', 'none': 'Segnaposto (scudo con ?)'}.get(x, assets.get(x, {}).get('name', x))
     with st.sidebar.expander('Partita della settimana', expanded=not st.session_state.get('shared_match')):
-        st.caption('Scrivi i dati una volta sola: li copio in Matchday, Convocati, Full Time, Starting 7 e Classifica.')
+        st.caption('Scrivi i dati una volta sola, oppure usa il segnalibro Invia a Flamingos sulla pagina del girone CSI: '
+                   'la prossima partita si compila da sola. Li copio in tutti gli editor.')
         with st.form('shared_match_form', border=False):
             values = {}
             values['our_name'] = st.text_input('La nostra squadra', match['our_name'], max_chars=42)
@@ -78,14 +92,7 @@ def show_match_panel(library):
                 index=options.index(match['opponent_logo_id']) if match['opponent_logo_id'] in options else 0, format_func=label)
             if st.form_submit_button('Applica a tutte le grafiche', type='primary', width='stretch'):
                 values['our_logo_id'] = match['our_logo_id']
-                match = sanitize_match(values)
-                st.session_state['shared_match'] = match
-                models = st.session_state.setdefault('studio_models', {})
-                revisions = st.session_state.setdefault('studio_revisions', {})
-                for template in DEFAULTS:
-                    models[template] = apply_match(template, current_config(template), match)
-                    revisions[template] = revisions.get(template, 0)+1
-                    st.session_state.pop('png_'+template, None)
+                apply_match_everywhere(values)
                 st.session_state['match_applied'] = True
                 st.rerun()
         if st.session_state.pop('match_applied', False):
@@ -111,7 +118,8 @@ def show_sequence(root: Path, library):
                'Ogni grafica usa i dati e il preset che hai impostato nel suo editor.')
     state = st.session_state.setdefault('sequence', {
         'items': ['Matchday Screen', 'Convocati'], 'transitions': ['channel'], 'format': 'Story 9:16',
-        'hold': 4.0, 'transition_seconds': 1.0, 'fps': 24, 'scale': 2, 'preset': 'own'})
+        'hold': 4.0, 'transition_seconds': 1.0, 'fps': 24, 'scale': 2, 'preset': 'own', 'sound': True, 'volume': 80})
+    state.setdefault('sound', True); state.setdefault('volume', 80)
     left, right = st.columns([1.1, 1], gap='large')
     with left:
         count = st.slider('Numero di grafiche', 2, 5, len(state['items']), key='seq_count')
@@ -131,6 +139,9 @@ def show_sequence(root: Path, library):
             state['fps'] = st.selectbox('Fotogrammi al secondo', (24, 30), index=(24, 30).index(state['fps']), key='seq_fps')
             state['scale'] = st.selectbox('Risoluzione', (2, 1), index=(2, 1).index(state['scale']),
                 format_func=lambda x: '1080 px - Full HD' if x == 2 else '540 px - rapido', key='seq_scale')
+            state['sound'] = st.checkbox('Suoni CRT (cambio canale, accensione, glitch, nastro, bip)', state['sound'], key='seq_sound')
+            if state['sound']:
+                state['volume'] = st.slider('Volume', 0, 100, int(state['volume']), key='seq_volume')
             choices = ('own',)+PRESET_IDS
             state['preset'] = st.selectbox('Preset', choices, index=choices.index(state['preset']),
                 format_func=lambda x: 'Ognuna il suo preset' if x == 'own' else 'Tutte con '+PRESETS[x]['name'], key='seq_preset')
@@ -153,7 +164,8 @@ def show_sequence(root: Path, library):
                     path = Path(directory)/'sequenza.mp4'
                     render_sequence(scenes, transitions, path, state['fps'], state['hold'], state['transition_seconds'],
                                     state['format'], state['scale'],
-                                    lambda f: progress.progress(f, text=f'Rendering: {round(f*100)}%'))
+                                    lambda f: progress.progress(f, text=f'Rendering: {round(f*100)}%'),
+                                    sound=state['sound'], volume=state['volume']/100)
                     st.session_state['sequence_video'] = path.read_bytes()
             except Exception as exc:
                 st.error(f'Video non generato: {exc}')
