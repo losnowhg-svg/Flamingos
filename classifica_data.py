@@ -218,3 +218,37 @@ def fetch_standings(url, timeout=12):
     if not rows:
         rows = parse_standings(html_to_text(page))
     return rows
+
+
+# --- One-tap import from the viewer's own browser ---------------------------
+# CSI LIVE and Tuttocampo refuse requests from cloud servers (403). The
+# bookmarklet runs on the page the user already has open, reads the standings
+# table their browser is showing and opens the app with it in the address.
+APP_URL = 'https://flamingos-studio.streamlit.app/'
+QUERY_KEY = 'classifica'
+MAX_QUERY_CHARS = 6000
+
+_BOOKMARKLET = r"""(()=>{const clean=s=>s.replace(/\s+/g,' ').trim();
+let t=[...document.querySelectorAll('table')].find(x=>/squadra/i.test(x.innerText)&&/\bpt\b|punti/i.test(x.innerText));
+let s='';if(t){s=[...t.rows].map(r=>[...r.cells].map(c=>clean(c.innerText)).join('\t')).join('\n')}
+else{let h=[...document.querySelectorAll('h1,h2,h3,h4,h5,h6,div,span,p')].find(e=>e.childElementCount==0&&/^classifica$/i.test(e.innerText.trim()));
+let b=h;for(let i=0;i<8&&b&&!/squadra/i.test(b.innerText);i++)b=b.parentElement;s=b?b.innerText:''}
+if(!/squadra/i.test(s)||!/\d/.test(s)){alert('Flamingos Studio: classifica non trovata. Apri la pagina del girone e riprova.');return}
+const u='__APP__?__KEY__='+encodeURIComponent(s.slice(0,__MAX__));
+const w=window.open(u,'_blank');if(!w)location.href=u})()"""
+
+
+def bookmarklet(app_url=APP_URL):
+    code = (_BOOKMARKLET.replace('__APP__', app_url).replace('__KEY__', QUERY_KEY)
+            .replace('__MAX__', str(MAX_QUERY_CHARS)))
+    return 'javascript:' + ''.join(line.strip() for line in code.splitlines())
+
+
+def with_rows(config, rows):
+    """A Classifica config with imported rows, padded to the fixed table size."""
+    import copy
+    updated = copy.deepcopy(config)
+    rows = [dict(r) for r in rows[:MAX_TEAMS]]
+    updated['standings'] = rows + [empty_row(i+1) for i in range(len(rows), MAX_TEAMS)]
+    updated['team_count'] = max(2, len(rows))
+    return updated

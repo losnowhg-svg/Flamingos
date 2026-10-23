@@ -10,7 +10,7 @@ from PIL import Image, ImageStat
 
 import classifica_renderer as k
 import matchday_renderer as m
-from classifica_data import parse_standings, sort_rows, html_to_text, _best_table, MAX_TEAMS
+from classifica_data import parse_standings, sort_rows, html_to_text, _best_table, MAX_TEAMS, bookmarklet, with_rows, APP_URL, QUERY_KEY
 from crt_presets import PRESET_IDS, PRESETS, CROPS, FORMATS, apply_preset, background
 from render_utils import layout_warnings
 from studio_state import (defaults, sanitize_config, apply_match, validate_library, empty_library,
@@ -94,6 +94,18 @@ class StandingsTests(unittest.TestCase):
         self.assertEqual([r['pos'] for r in rows], [1, 6, 8, 10, 13])
         self.assertEqual((rows[1]['pt'], rows[1]['g'], rows[1]['gs']), (7, 5, 16))
         self.assertIn('live.centrosportivoitaliano.it', defaults('Classifica')['source_url'])
+
+    def test_bookmarklet_is_a_single_ascii_line_to_the_app(self):
+        code = bookmarklet()
+        self.assertTrue(code.startswith('javascript:'))
+        self.assertNotIn('\n', code)
+        self.assertTrue(all(ord(ch) < 128 for ch in code))
+        self.assertIn(APP_URL+'?'+QUERY_KEY+'=', code)
+        rows = parse_standings(self.TAB)
+        config = with_rows(defaults('Classifica'), rows)
+        self.assertEqual(config['team_count'], 3)
+        self.assertEqual(len(config['standings']), MAX_TEAMS)
+        self.assertEqual(sanitize_config('Classifica', config)['standings'][1]['team'], 'FLAMINGOS')
 
     def test_bad_text_raises(self):
         for text in ('', 'ciao a tutti', 'SQUADRA PT\nFLAMINGOS'):

@@ -15,7 +15,7 @@ import renderer as r
 import fulltime_renderer as f
 import convocati_renderer as c
 import classifica_renderer as k
-from classifica_data import MAX_TEAMS, empty_row, fetch_standings, parse_standings, sort_rows
+from classifica_data import MAX_TEAMS, empty_row, fetch_standings, parse_standings, sort_rows, bookmarklet, with_rows
 from library import save_project
 from render_utils import layout_warnings
 from studio_state import BUILTIN_FONTS, MODULES, defaults, sanitize_config
@@ -290,12 +290,8 @@ def show_studio(root: Path, template: str, library: dict):
 
     if is_table:
         def load_rows(rows,message):
-            updated=copy.deepcopy(config)
-            rows=rows[:MAX_TEAMS]
-            updated['standings']=rows+[empty_row(i+1) for i in range(len(rows),MAX_TEAMS)]
-            updated['team_count']=max(2,len(rows))
             st.session_state['standings_message']=message
-            restart(updated)
+            restart(with_rows(config,rows))
 
         # Automatic refresh: once per session, when the page opens with a link set.
         auto_key='standings_auto_'+config.get('source_url','')
@@ -314,11 +310,29 @@ def show_studio(root: Path, template: str, library: dict):
                 st.warning('Aggiornamento automatico non riuscito: '+st.session_state['standings_auto_error'])
             if st.session_state.get('standings_message'):
                 st.success(st.session_state.pop('standings_message'))
-            link,paste,manual=st.tabs(['Dal link','Incolla la tabella','Modifica a mano'])
+            if st.session_state.get('standings_import_error'):
+                st.error('Il segnalibro ha inviato una pagina senza classifica leggibile: '+st.session_state.pop('standings_import_error'))
+            bookmark,paste,manual,link=st.tabs(['Dal sito CSI (un tocco)','Incolla la tabella','Modifica a mano','Lettura dal server'])
+            with bookmark:
+                code=bookmarklet()
+                st.markdown('**Segnalibro "Invia a Flamingos"**: sulla pagina del girone su CSI LIVE lo tocchi e '
+                            'l\'app si apre con la classifica gia caricata. Funziona su Mac, iPhone e iPad, anche con Tuttocampo.')
+                components.html('''<style>a{display:inline-block;padding:10px 18px;border-radius:9px;background:#e95396;color:#110d14;
+                    font:600 15px system-ui,sans-serif;text-decoration:none;cursor:grab}p{color:#bca9c5;font:13px system-ui,sans-serif;margin:8px 0 0}</style>
+                    <a href="'''+code.replace('"','&quot;')+'''" onclick="return false">Invia a Flamingos</a>
+                    <p>Mac: trascina questo pulsante nella barra dei Preferiti di Safari o Chrome.</p>''',height=86)
+                with st.expander('Installazione su iPhone o iPad, o se il trascinamento non va'):
+                    st.markdown('1. Aggiungi ai segnalibri una pagina qualsiasi (anche questa) e chiamala **Invia a Flamingos**.\n'
+                                '2. Apri *Modifica segnalibri*, tocca il nuovo segnalibro e sostituisci l\'indirizzo con il codice qui sotto.\n'
+                                '3. Sulla pagina del girone apri i segnalibri e tocca **Invia a Flamingos**.')
+                    st.code(code,language=None,wrap_lines=True)
+                st.caption('Il segnalibro legge solo la tabella che il tuo browser sta mostrando e la passa all\'app: '
+                           'non usa account, password o altri dati. Pagina del vostro girone: CSI LIVE, Serie C Girone D.')
+                st.link_button('Apri la classifica del Girone D su CSI LIVE',config['source_url'] or 'https://live.centrosportivoitaliano.it',width='stretch')
             with link:
                 text('source_url','Link del girone su CSI LIVE (live.centrosportivoitaliano.it)',300)
-                check('auto_update','Aggiorna in automatico quando apro la pagina')
-                if st.button('Aggiorna adesso',key=key('fetch'),type='primary'):
+                check('auto_update','Prova a leggere dal server quando apro la pagina')
+                if st.button('Leggi dal server',key=key('fetch')):
                     with st.spinner('Leggo la classifica...'):
                         try:
                             rows=fetch_standings(config['source_url'])
@@ -326,9 +340,8 @@ def show_studio(root: Path, template: str, library: dict):
                             load_rows(rows,f'Classifica aggiornata dal link: {len(rows)} squadre.')
                         except ValueError as exc:
                             st.error(str(exc))
-                st.caption('Il link predefinito e la Serie C Girone D 2026/27 del CSI Brescia sul portale ufficiale CSI LIVE. '
-                           'Per un altro girone apri live.centrosportivoitaliano.it, scegli il girone e copia qui l\'indirizzo. '
-                           'Tuttocampo invece blocca le letture dal server (errore 403): con quello usa Incolla la tabella.')
+                st.caption('CSI LIVE e Tuttocampo oggi rifiutano le letture dal server dell\'app (errore 403): '
+                           'usa il segnalibro. Questo link resta utile per il pulsante Apri la classifica e per altri siti.')
             with paste:
                 pasted=st.text_area('Testo della classifica',height=180,key=key('paste'),
                     placeholder='Apri la classifica, seleziona la tabella dalla prima squadra all\'ultima, copia e incolla qui.')

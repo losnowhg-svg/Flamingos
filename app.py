@@ -21,6 +21,8 @@ st.caption('1.6 / 11 preset CRT / Classifica / Sequenze video con transizioni / 
 from library import show_library
 from studio_ui import show_studio
 from sequence_ui import show_match_panel, show_sequence
+from classifica_data import QUERY_KEY, parse_standings, with_rows
+from studio_state import defaults, sanitize_config
 
 PAGES = {
     'Matchday Screen':'Matchday - prima della partita',
@@ -30,6 +32,23 @@ PAGES = {
     'Classifica':'Classifica - il girone',
     'Sequenza video':'Sequenza video e kit',
 }
+
+# Standings sent by the "Invia a Flamingos" bookmark from the CSI page.
+incoming = st.query_params.get(QUERY_KEY)
+if incoming:
+    try:
+        rows = parse_standings(incoming)
+        models = st.session_state.setdefault('studio_models',{})
+        revisions = st.session_state.setdefault('studio_revisions',{})
+        current = sanitize_config('Classifica',models.get('Classifica',defaults('Classifica')))
+        models['Classifica'] = sanitize_config('Classifica',with_rows(current,rows))
+        revisions['Classifica'] = revisions.get('Classifica',0)+1
+        st.session_state.pop('png_Classifica',None)
+        st.session_state['standings_message'] = f'Classifica arrivata dal sito: {len(rows)} squadre. Controlla e pubblica.'
+    except ValueError as exc:
+        st.session_state['standings_import_error'] = str(exc)
+    st.session_state['studio_template'] = 'Classifica'
+    st.query_params.clear()
 
 with st.sidebar:
     st.header('Il tuo studio')

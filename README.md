@@ -25,21 +25,21 @@
   applicano a tutti gli editor. Layout, colori e preset restano i tuoi.
 - **Kit partita**: tutte le grafiche scelte in un file ZIP con un clic.
 
-### La classifica dal link
+### La classifica con un tocco: il segnalibro "Invia a Flamingos"
 
-Il link di Tuttocampo e gia inserito. *Aggiorna dal link* prova a leggere la
-pagina dal server dell'app; alcuni siti bloccano le letture automatiche, quindi
-la strada sempre valida e **Incolla la tabella**: apri la classifica, seleziona
-la tabella dalla prima all'ultima squadra, copia e incolla. L'app riconosce da
-sola l'ordine delle colonne (anche con una cella per riga o con la colonna
-delle ultime partite) e segnala le righe in cui V + N + P non torna con G.
-Controlla sempre i numeri nella scheda *Modifica a mano* prima di pubblicare.
+CSI LIVE e Tuttocampo rifiutano le letture fatte dal server dell'app (errore
+403). Per questo la scheda **Dal sito CSI (un tocco)** della Classifica offre un
+segnalibro: sulla pagina del girone (per noi CSI LIVE, Serie C Girone D) lo
+tocchi e l'app si apre con la classifica gia caricata, senza copiare nulla.
 
+- **Mac:** trascina il pulsante *Invia a Flamingos* nella barra dei Preferiti.
+- **iPhone / iPad:** aggiungi un segnalibro qualsiasi, poi in *Modifica* sostituisci
+  l'indirizzo con il codice mostrato nell'app.
 
-Studio Python / Streamlit per le grafiche Instagram di una squadra di calcio a 7.
-Quattro editor: **Matchday Screen, Starting 7, Full Time e Convocati**.
-Questa versione aggiunge due editor, sei preset CRT e due caratteri pixel integrati.
-Non richiede API AI, account aggiuntivi o servizi a pagamento.
+Il segnalibro legge solo la tabella che il browser sta mostrando e la passa
+all'app nell'indirizzo; non usa account o password. Restano disponibili
+*Incolla la tabella*, *Modifica a mano* e la lettura dal server per i siti che
+la permettono. Controlla sempre i numeri prima di pubblicare.
 
 ## Aggiornare dalla 1.4
 
