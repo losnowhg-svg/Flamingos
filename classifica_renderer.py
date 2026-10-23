@@ -35,6 +35,19 @@ def active_rows(config):
     return rows
 
 
+def zone_of(position, config):
+    """'promo' for direct promotion, 'playoff' for the play-off places, else None."""
+    if not config.get('show_zones', True):
+        return None
+    promo = max(0, int(config.get('promo_count', 3)))
+    playoff = max(0, int(config.get('playoff_count', 2)))
+    if position <= promo:
+        return 'promo'
+    if position <= promo+playoff:
+        return 'playoff'
+    return None
+
+
 def _value(row, key):
     if key == 'dr':
         diff = int(row.get('gf', 0))-int(row.get('gs', 0))
@@ -56,7 +69,10 @@ def table_image(config, font_bytes=None, s=1):
     image = Image.new('RGBA', (TABLE_W*s, TABLE_H*s))
     d = ScaledDraw(image, s)
     header_h = 18
-    row_h = min(33, (TABLE_H-header_h-2)/max(1, len(rows)))
+    zones = {'promo': rgb(config.get('promo_color', '#5BE6A4')), 'playoff': rgb(config.get('playoff_color', '#B98CFF'))}
+    show_legend = bool(config.get('show_zones', True)) and any(zone_of(int(r.get('pos', i+1)), config) for i, r in enumerate(rows))
+    legend_h = 15 if show_legend else 0
+    row_h = min(33, (TABLE_H-header_h-legend_h-2)/max(1, len(rows)))
     text_h = max(6, min(size+2, row_h-5))
     stats_w = sum(w for _, _, w in columns)
     team_x, team_w = 30, TABLE_W-30-stats_w-6
@@ -84,14 +100,19 @@ def table_image(config, font_bytes=None, s=1):
         top = header_h+i*row_h
         mid = top+row_h/2
         highlight = is_ours(row.get('team', ''), ours)
+        pos = int(row.get('pos', i+1))
+        zone = zone_of(pos, config)
         if highlight:
             d.rectangle((0, top+1, TABLE_W, top+row_h-1), fill=(*pink, 245))
+        elif zone:
+            d.rectangle((0, top+1, TABLE_W, top+row_h-1), fill=(*zones[zone], 38))
         elif i % 2 == 0:
             d.rectangle((0, top+1, TABLE_W, top+row_h-1), fill=(255, 255, 255, 16))
-        pos = int(row.get('pos', i+1))
-        if pos <= 1 and not highlight:
-            d.rectangle((3, top+3, 25, top+row_h-3), fill=(*yellow, 255))
-        cell(str(pos), ink if (highlight or pos <= 1) else cyan, 0, mid, 28)
+        if zone:
+            # Zone colour on the position badge, also on our own pink row.
+            d.rectangle((0, top+1, 3, top+row_h-1), fill=(*zones[zone], 255))
+            d.rectangle((5, top+3, 26, top+row_h-3), fill=(*zones[zone], 255))
+        cell(str(pos), ink if (highlight or zone) else cyan, 2, mid, 28)
         cell(str(row.get('team', '')).upper(), ink if highlight else white, team_x, mid, team_w, 'left')
         x = TABLE_W-stats_w
         for label, key, width in columns:
@@ -100,6 +121,18 @@ def table_image(config, font_bytes=None, s=1):
             x += width
         if not highlight and i < len(rows)-1:
             d.line((4, top+row_h, TABLE_W-4, top+row_h), fill=(*cyan, 30), width=.5)
+    if show_legend:
+        y = TABLE_H-legend_h/2
+        x = 4
+        for zone, label in (('promo', config.get('promo_label', 'PROMOZIONE')),
+                            ('playoff', config.get('playoff_label', 'SPAREGGIO'))):
+            if zone == 'promo' and not int(config.get('promo_count', 3)) or zone == 'playoff' and not int(config.get('playoff_count', 2)):
+                continue
+            d.rectangle((x, y-4, x+8, y+4), fill=(*zones[zone], 255))
+            im = text_image(str(label).upper(), style, 8, white, 150, font_bytes, s, 8)
+            if im:
+                image.alpha_composite(im, (round((x+13)*s), round(y*s-im.height/2)))
+                x += 13+im.width/s+16
     return image
 
 

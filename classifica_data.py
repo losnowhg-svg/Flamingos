@@ -124,20 +124,26 @@ def parse_standings(text):
     leading, blocks = _blocks(_tokens('\n'.join(lines)))
     if not blocks:
         raise ValueError('Nessuna squadra riconosciuta nel testo incollato.')
-    # Between two names the last number is the next team's position.
+    # Between two names the last number is the next team's position, so inside
+    # the table each block holds K stats + 1. The last row (or a row followed by
+    # other page text) holds just the K stats.
+    sizes = Counter(len(numbers) for _, numbers in blocks if len(numbers) >= 6)
+    if not sizes:
+        raise ValueError('Ho trovato i nomi ma non i numeri della classifica (servono almeno G, V, N, P e punti).')
+    # With a position before the first team, every inner block also carries the
+    # next team's position: one number more than the stat columns.
+    width = sizes.most_common(1)[0][0]-(1 if leading else 0)
     parsed = []
     position = leading[-1] if leading else None
-    for i, (name, numbers) in enumerate(blocks):
-        last = i == len(blocks)-1
-        stats = numbers if last else numbers[:-1]
-        next_position = None if last or not numbers else numbers[-1]
+    for name, numbers in blocks:
+        next_position = None
+        if len(numbers) == width+1:
+            stats, next_position = numbers[:width], numbers[-1]
+        else:
+            stats = numbers[:width]
         parsed.append((position, ' '.join(name), stats))
-        position = next_position
-    lengths = Counter(len(stats) for _, _, stats in parsed if len(stats) >= 5)
-    if not lengths:
-        raise ValueError('Ho trovato i nomi ma non i numeri della classifica (servono almeno G, V, N, P e punti).')
-    width = lengths.most_common(1)[0][0]
-    rows_stats = [stats[:width] for _, _, stats in parsed if len(stats) >= width]
+        position = next_position if next_position and 0 < next_position <= 99 else None
+    rows_stats = [stats for _, _, stats in parsed if len(stats) >= width]
     if header:
         order = tuple(header[:width])
     else:
@@ -227,20 +233,25 @@ def fetch_standings(url, timeout=12):
 APP_URL = 'https://flamingos-studio.streamlit.app/'
 QUERY_KEY = 'classifica'
 MAX_QUERY_CHARS = 6000
+MAX_PAGE_TEXT = 24000
 
-_BOOKMARKLET = r"""(()=>{const clean=s=>s.replace(/\s+/g,' ').trim();
-let t=[...document.querySelectorAll('table')].find(x=>/squadra/i.test(x.innerText)&&/\bpt\b|punti/i.test(x.innerText));
-let s='';if(t){s=[...t.rows].map(r=>[...r.cells].map(c=>clean(c.innerText)).join('\t')).join('\n')}
-else{let h=[...document.querySelectorAll('h1,h2,h3,h4,h5,h6,div,span,p')].find(e=>e.childElementCount==0&&/^classifica$/i.test(e.innerText.trim()));
-let b=h;for(let i=0;i<8&&b&&!/squadra/i.test(b.innerText);i++)b=b.parentElement;s=b?b.innerText:''}
-if(!/squadra/i.test(s)||!/\d/.test(s)){alert('Flamingos Studio: classifica non trovata. Apri la pagina del girone e riprova.');return}
-const u='__APP__?__KEY__='+encodeURIComponent(s.slice(0,__MAX__));
-const w=window.open(u,'_blank');if(!w)location.href=u})()"""
+_BOOKMARKLET = r"""(()=>{const w=window.open('','_blank');(async()=>{const clean=s=>s.replace(/\s+/g,' ').trim();
+let tb=[...document.querySelectorAll('table')].find(x=>/squadra/i.test(x.innerText)&&/\bpt\b|punti/i.test(x.innerText));
+let t='',names=[];if(tb){const rows=[...tb.rows].map(r=>[...r.cells].map(c=>clean(c.innerText)));t=rows.map(r=>r.join('\t')).join('\n');
+names=rows.slice(1).map(r=>(r.find(c=>/[a-z]{2}/i.test(c))||'').toLowerCase()).filter(n=>n.length>1)}
+let ls=(document.querySelector('main')||document.body).innerText.split('\n').map(l=>l.replace(/[^\S\n]+/g,' ').trim()).filter(l=>l);
+const hit=l=>{const s=l.toLowerCase();return /\d{1,2}[\/.-]\d{1,2}|giornata|colori|giorno|squadra|classifica/.test(s)||names.some(n=>s.includes(n))};
+let keep=ls.map(hit);if(names.length)ls=ls.filter((l,i)=>keep.slice(Math.max(0,i-3),i+4).some(Boolean));
+let x=ls.join('\n').slice(0,__TEXT__);if(!/squadra/i.test(t+x)){if(w)w.close();alert('Flamingos Studio: classifica non trovata. Apri la pagina del girone e riprova.');return}
+let p=t;try{const j=JSON.stringify({v:2,u:location.href,t:t,x:x});const r=new Response(new Blob([j]).stream().pipeThrough(new CompressionStream('gzip')));
+const b=new Uint8Array(await r.arrayBuffer());let s='';for(let i=0;i<b.length;i+=8192)s+=String.fromCharCode.apply(null,b.subarray(i,i+8192));
+p='z'+btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}catch(e){p=(t||x).slice(0,__MAX__)}
+const u='__APP__?__KEY__='+encodeURIComponent(p);if(w)w.location=u;else location.href=u})()})()"""
 
 
 def bookmarklet(app_url=APP_URL):
     code = (_BOOKMARKLET.replace('__APP__', app_url).replace('__KEY__', QUERY_KEY)
-            .replace('__MAX__', str(MAX_QUERY_CHARS)))
+            .replace('__MAX__', str(MAX_QUERY_CHARS)).replace('__TEXT__', str(MAX_PAGE_TEXT)))
     return 'javascript:' + ''.join(line.strip() for line in code.splitlines())
 
 

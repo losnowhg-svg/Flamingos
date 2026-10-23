@@ -206,8 +206,9 @@ def intro_length(prepared, compose):
 
 
 def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seconds=1.0,
-                    format='Story 9:16', scale=2, progress_callback=None):
-    """scenes: list of (prepared, compose_function). One transition between each pair."""
+                    format='Story 9:16', scale=2, progress_callback=None, sound=False, volume=.8):
+    """scenes: list of (prepared, compose_function). One transition between each pair.
+    With sound=True a synthesised CRT soundtrack is muxed into the MP4."""
     from crt_presets import output_image, even_video_frame
     from renderer import video_writer, video_settings
     if not scenes:
@@ -234,19 +235,29 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
         if progress_callback and (done % fps == 0 or done == total):
             progress_callback(done/total)
 
+    events = []
     try:
         for index in range(len(scenes)):
             last = None
+            if sound:
+                from sounds import scene_events
+                events += scene_events(*scenes[index], start=done/fps, speed=speeds[index], until=done/fps+hold)
             for i in range(hold_frames):
                 last = frame_at(index, i/fps)
                 emit(last)
             if index < len(scenes)-1:
                 kind = transitions[index] if index < len(transitions) else 'channel'
                 nxt = frame_at(index+1, 0)
+                if sound:
+                    from sounds import TRANSITION_SOUNDS
+                    events.append((done/fps, TRANSITION_SOUNDS.get(kind, TRANSITION_SOUNDS['channel'])(trans_frames/fps)))
                 for i in range(trans_frames):
                     emit(transition_frame(kind, last, nxt, (i+1)/(trans_frames+1), index+2))
     finally:
         writer.close()
+    if sound:
+        from sounds import mix, mux
+        mux(path, mix(events, total/fps, volume))
     return str(path)
 
 

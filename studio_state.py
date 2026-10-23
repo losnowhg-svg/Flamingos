@@ -13,6 +13,8 @@ import matchday_renderer as matchday
 import fulltime_renderer as fulltime
 import convocati_renderer as convocati
 import classifica_renderer as classifica
+import calendario_renderer as calendario
+import datetime as _dt
 from classifica_data import MAX_TEAMS, empty_row
 from pixel_fonts import PIXEL_FONTS
 from crt_presets import PRESETS, FORMATS, DEFAULT_BRIGHTNESS
@@ -75,13 +77,31 @@ CLASSIFICA_DEFAULT = dict(
     **CRT_DEFAULT,
     title='CLASSIFICA',group='GIRONE D / SERIE C',round_label='GIORNATA 8',our_team='FLAMINGOS',
     source_url='https://live.centrosportivoitaliano.it/26/Calcio-a-7/Lombardia/Brescia/C102/?j=NEU9REZJJjRGPVBOSyY0Rz1FREYmNEg9RCY0ST1RJjRMPURGSSY0Mj1l',auto_update=False,
-    table_detail='Completa',team_count=8,title_size=24,info_size=10,table_size=10,logo_size=40,remove_white=True,
+    table_detail='Completa',team_count=8,show_zones=True,promo_count=3,playoff_count=2,
+    promo_color='#5BE6A4',playoff_color='#B98CFF',promo_label='PROMOZIONE',playoff_label='SPAREGGIO',
+    title_size=24,info_size=10,table_size=10,logo_size=40,remove_white=True,
     pink='#F268A8',cyan='#79DCF7',yellow='#FFC963',white='#F6F4FC',
     font_choice='CRT Terminal',logo_id='default',export_format='Post 4:5',
     duration=8,fps=24,video_scale=2,png_quality='Fine',
     standings=[dict(pos=i+1,team=t,pt=pt,g=g,v=v,n=n,p=p,gf=gf,gs=gs) for i,(t,pt,g,v,n,p,gf,gs) in enumerate(SAMPLE_STANDINGS)]
               +[empty_row(i+1) for i in range(len(SAMPLE_STANDINGS),MAX_TEAMS)],
     positions={k:list(v) for k,v in classifica.DEFAULT_POSITIONS.items()},
+)
+_MONTHS = ('GENNAIO','FEBBRAIO','MARZO','APRILE','MAGGIO','GIUGNO','LUGLIO','AGOSTO','SETTEMBRE','OTTOBRE','NOVEMBRE','DICEMBRE')
+_TODAY = _dt.date.today()
+CALENDARIO_DEFAULT = dict(
+    **CRT_DEFAULT,
+    title='CALENDARIO',month_label=f'{_MONTHS[_TODAY.month-1]} {_TODAY.year}',our_team='FLAMINGOS',
+    fixture_count=4,title_size=24,info_size=11,logo_size=40,remove_white=True,
+    pink='#F268A8',cyan='#79DCF7',yellow='#FFC963',white='#F6F4FC',
+    font_choice='CRT Terminal',logo_id='default',export_format='Post 4:5',
+    duration=8,fps=24,video_scale=2,png_quality='Fine',
+    fixtures=[dict(date='02/10',day='GIO',opponent='AVVERSARI A',side='C',time='20:45',score='3-1'),
+              dict(date='09/10',day='SAB',opponent='AVVERSARI B',side='T',time='15:00',score='2-2'),
+              dict(date='16/10',day='GIO',opponent='AVVERSARI C',side='C',time='20:45',score=''),
+              dict(date='23/10',day='VEN',opponent='AVVERSARI D',side='T',time='20:45',score='')]
+             +[calendario.empty_fixture() for _ in range(calendario.MAX_FIXTURES-4)],
+    positions={k:list(v) for k,v in calendario.DEFAULT_POSITIONS.items()},
 )
 RANGES = {
     'Starting 7': dict(title_size=(15,62),subtitle_size=(12,56),footer_size=(10,42),name_size=(10,35),logo_size=(50,210),texture=(0,100),duration=(7,18)),
@@ -92,17 +112,24 @@ RANGES['Full Time'] = dict(title_size=(18,42),label_size=(10,24),info_size=(9,20
     home_score=(0,99),away_score=(0,99),home_penalties=(0,99),away_penalties=(0,99),duration=(5,18))
 RANGES['Convocati'] = dict(title_size=(18,36),team_size=(9,20),info_size=(8,18),name_size=(9,16),
     logo_size=(30,58),roster_count=(7,18),duration=(5,18))
-RANGES['Classifica'] = dict(title_size=(16,34),info_size=(8,16),table_size=(7,14),logo_size=(26,56),
+RANGES['Classifica'] = dict(promo_count=(0,8),playoff_count=(0,8),title_size=(16,34),info_size=(8,16),table_size=(7,14),logo_size=(26,56),
     team_count=(2,MAX_TEAMS),duration=(5,18))
-CRT_TEMPLATES = ('Matchday Screen','Full Time','Convocati','Classifica')
+RANGES['Calendario'] = dict(title_size=(16,34),info_size=(8,16),logo_size=(26,56),fixture_count=(1,calendario.MAX_FIXTURES),duration=(5,18))
+CRT_TEMPLATES = ('Matchday Screen','Full Time','Convocati','Classifica','Calendario')
 for model in CRT_TEMPLATES:
     RANGES[model].update(season_round=(1,80),scanlines=(0,60),brightness=(0,100))
+for _model in (START_DEFAULT,MATCH_DEFAULT,FULLTIME_DEFAULT,CONVOCATI_DEFAULT,CLASSIFICA_DEFAULT,CALENDARIO_DEFAULT):
+    _model.update(sound=True,volume=80)
 DEFAULTS = {'Starting 7':START_DEFAULT,'Matchday Screen':MATCH_DEFAULT,
-            'Full Time':FULLTIME_DEFAULT,'Convocati':CONVOCATI_DEFAULT,'Classifica':CLASSIFICA_DEFAULT}
+            'Full Time':FULLTIME_DEFAULT,'Convocati':CONVOCATI_DEFAULT,'Classifica':CLASSIFICA_DEFAULT,
+            'Calendario':CALENDARIO_DEFAULT}
+for _model in RANGES.values():
+    _model['volume'] = (0,100)
 MODULES = {'Starting 7':starting,'Matchday Screen':matchday,'Full Time':fulltime,'Convocati':convocati,
-           'Classifica':classifica}
+           'Classifica':classifica,'Calendario':calendario}
 TEXT_LIMITS = dict(team_name=50,headline=60,footer=80,formation_text=80,title=36,date=24,home_name=42,away_name=42,kickoff=14,venue=72,kickoff_label=40,venue_label=22,competition=42,home_scorers=1200,away_scorers=1200,opponent=42,meeting_time=14,
-                   group=48,round_label=36,our_team=34,source_url=300)
+                   group=48,round_label=36,our_team=34,source_url=300,
+                   promo_label=20,playoff_label=20,month_label=30)
 
 
 def defaults(template):
@@ -153,6 +180,15 @@ def sanitize_config(template, raw):
                     row['team'] = str(item.get('team',''))[:34]
                     for field in ('pt','g','v','n','p','gf','gs'):
                         row[field] = _integer(item.get(field),0,0,999)
+                    config[key][i] = row
+        elif key == 'fixtures':
+            if isinstance(value,list):
+                for i in range(calendario.MAX_FIXTURES):
+                    item = value[i] if i < len(value) and isinstance(value[i],dict) else {}
+                    row = calendario.empty_fixture()
+                    for field,limit in (('date',8),('day',3),('opponent',30),('time',8),('score',7)):
+                        row[field] = str(item.get(field,'') or '')[:limit]
+                    row['side'] = item.get('side') if item.get('side') in ('C','T') else 'C'
                     config[key][i] = row
         elif key == 'table_detail':
             config[key] = value if value in classifica.DETAILS else default
@@ -284,6 +320,8 @@ def apply_match(template, config, raw_match):
     elif template == 'Classifica':
         output.update(our_team=ours, round_label=f"GIORNATA {match['round']}",
                       logo_id=match['our_logo_id'] if match['our_logo_id'] != 'none' else 'default')
+    elif template == 'Calendario':
+        output.update(our_team=ours, logo_id=match['our_logo_id'] if match['our_logo_id'] != 'none' else 'default')
     elif template == 'Starting 7':
         output.update(team_name=ours)
     if template in CRT_TEMPLATES_SET:

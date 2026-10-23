@@ -15,6 +15,9 @@ import renderer as r
 import fulltime_renderer as f
 import convocati_renderer as c
 import classifica_renderer as k
+import calendario_renderer as cal
+import captions as cap
+import sounds
 from classifica_data import MAX_TEAMS, empty_row, fetch_standings, parse_standings, sort_rows, bookmarklet, with_rows
 from library import save_project
 from render_utils import layout_warnings
@@ -23,7 +26,7 @@ from crt_presets import PRESETS, PRESET_IDS, FORMATS, CROPS, apply_preset, prese
 
 ROOT = Path(__file__).resolve().parent
 EDITOR = components.declare_component('flamingos_studio_editor',path=str(ROOT/'frontend'))
-SLUGS={'Starting 7':'starting7','Matchday Screen':'matchday','Full Time':'fulltime','Convocati':'convocati','Classifica':'classifica'}
+SLUGS={'Starting 7':'starting7','Matchday Screen':'matchday','Full Time':'fulltime','Convocati':'convocati','Classifica':'classifica','Calendario':'calendario'}
 
 
 def show_studio(root: Path, template: str, library: dict):
@@ -31,6 +34,7 @@ def show_studio(root: Path, template: str, library: dict):
     is_full=template=='Full Time'
     is_squad=template=='Convocati'
     is_table=template=='Classifica'
+    is_cal=template=='Calendario'
     is_crt=template!='Starting 7'
     has_opponent=is_match or is_full
     module=MODULES[template]
@@ -87,7 +91,8 @@ def show_studio(root: Path, template: str, library: dict):
         'Starting 7':'IN CAMPO / I sette titolari, con nomi, numeri e posizioni modificabili.',
         'Full Time':'DOPO IL FISCHIO FINALE / Risultato, marcatori e rigori nella stessa identita del Matchday.',
         'Convocati':'VERSO LA PARTITA / I convocati, inclusa la panchina, e le informazioni di ritrovo.',
-        'Classifica':'IL GIRONE / Importa la classifica dal link o incollandola, la tua squadra resta evidenziata.',
+        'Classifica':'IL GIRONE / La classifica dal sito CSI con un tocco: noi in rosa, promozione e spareggio colorati.',
+        'Calendario':'IL MESE / Le partite del mese con risultati colorati e la prossima gara in evidenza.',
     }[template])
 
     with st.expander('Progetti salvati - riapri una grafica',expanded=False):
@@ -166,6 +171,16 @@ def show_studio(root: Path, template: str, library: dict):
                 text('round_label','Giornata',36);text('our_team','La nostra squadra (evidenziata)',34)
                 select('table_detail','Colonne della tabella',k.DETAILS,
                        lambda x:'Completa - G V N P GF GS PT' if x=='Completa' else 'Compatta - G, differenza reti, PT')
+                check('show_zones','Colora le zone promozione e spareggio')
+                if config['show_zones']:
+                    a,b=st.columns(2)
+                    with a:number('promo_count','Posti promozione',0,8)
+                    with b:number('playoff_count','Posti spareggio',0,8)
+                    a,b=st.columns(2)
+                    with a:text('promo_label','Etichetta 1',20)
+                    with b:text('playoff_label','Etichetta 2',20)
+            elif is_cal:
+                text('title','Titolo',36);text('month_label','Mese',30);text('our_team','La nostra squadra',34)
             elif is_squad:
                 text('title','Titolo',36);text('team_name','Nome squadra',50)
                 text('opponent','Avversari / partita',42);text('date','Data',24)
@@ -202,6 +217,9 @@ def show_studio(root: Path, template: str, library: dict):
                 slider('info_size','Dimensione competizione e data',9,20)
                 slider('scorer_size','Dimensione marcatori',8,16)
                 slider('result_size','Dimensione esito',10,24)
+            elif is_cal:
+                slider('title_size','Dimensione titolo',16,34)
+                slider('info_size','Dimensione mese',8,16)
             elif is_table:
                 slider('title_size','Dimensione titolo',16,34)
                 slider('info_size','Dimensione girone e giornata',8,16)
@@ -233,13 +251,15 @@ def show_studio(root: Path, template: str, library: dict):
                 check('away_clear_white','Rimuovi bianco esterno - ospiti')
             else:
                 select('logo_id','Stemma',['default']+logos,label)
-                slider('logo_size','Dimensione stemma',*((30,58) if is_squad else (26,56) if is_table else (50,210)))
+                slider('logo_size','Dimensione stemma',*((30,58) if is_squad else (26,56) if (is_table or is_cal) else (50,210)))
                 check('remove_white','Rimuovi sfondo bianco esterno')
             st.caption('Stemmi riutilizzabili dall\'archivio. Il bianco interno degli scudi viene mantenuto.')
         with st.expander('Palette e atmosfera',expanded=False):
             if is_crt:
                 color('pink','Rosa / colore casa');color('cyan','Neon / colore ospiti')
                 color('yellow','Accento risultato');color('white','Testo chiaro')
+                if is_table and config['show_zones']:
+                    color('promo_color','Zona promozione');color('playoff_color','Zona spareggio')
                 slider('brightness','Luminosita per Instagram',0,100)
                 st.caption('Schiarisce sfondo e cornice senza toccare i testi. 55 e il valore consigliato per il feed; 0 riproduce la versione 1.5, piu scura.')
                 slider('scanlines','Intensita scanline CRT',0,60)
@@ -288,6 +308,51 @@ def show_studio(root: Path, template: str, library: dict):
                     st.warning('I rigori sono ancora in parita: verifica il risultato finale.')
         if config['show_result']:st.caption('Esito per la nostra squadra ('+config['our_side'].lower()+'): '+f.result_text(config))
 
+    if is_cal:
+        with st.expander('Partite del mese',expanded=True):
+            matches=st.session_state.get('csi_matches') or []
+            if matches:
+                from csi_page import fixtures_for_month, MONTHS
+                months=sorted({(m['date'].year,m['date'].month) for m in matches})
+                today=__import__('datetime').date.today()
+                current=(today.year,today.month) if (today.year,today.month) in months else months[0]
+                a,b=st.columns([2,1])
+                with a:chosen=st.selectbox('Mese dal sito CSI',months,index=months.index(current),
+                                           format_func=lambda x:f'{MONTHS[x[1]-1].capitalize()} {x[0]}',key=key('cal_month'))
+                with b:
+                    st.write('')
+                    if st.button('Riempi dal sito',key=key('cal_fill'),type='primary',width='stretch'):
+                        rows=fixtures_for_month(matches,config['our_team'],*chosen,limit=cal.MAX_FIXTURES)
+                        updated=copy.deepcopy(config)
+                        updated['fixtures']=rows+[cal.empty_fixture() for _ in range(len(rows),cal.MAX_FIXTURES)]
+                        updated['fixture_count']=max(1,len(rows))
+                        updated['month_label']=f'{MONTHS[chosen[1]-1]} {chosen[0]}'
+                        restart(updated)
+            else:
+                st.caption('Usa il segnalibro Invia a Flamingos sulla pagina del girone (scheda della Classifica): '
+                           'le partite arrivano qui e scegli il mese. Oppure compilale qui sotto.')
+            number('fixture_count','Numero di partite',1,cal.MAX_FIXTURES)
+            count=config['fixture_count']
+            columns={'date':st.column_config.TextColumn('Data',max_chars=8,help='GG/MM'),
+                     'day':st.column_config.TextColumn('Giorno',max_chars=3,help='LUN, MAR, MER...'),
+                     'opponent':st.column_config.TextColumn('Avversari',max_chars=30),
+                     'side':st.column_config.SelectboxColumn('Casa/Trasf.',options=['C','T'],required=True),
+                     'time':st.column_config.TextColumn('Ora',max_chars=8),
+                     'score':st.column_config.TextColumn('Risultato',max_chars=7,help='Gol casa-gol ospiti, es. 3-1. Vuoto se non giocata.')}
+            edited=st.data_editor([dict(f) for f in config['fixtures'][:count]],column_config=columns,
+                                  hide_index=True,num_rows='fixed',key=key('fixtures_editor'),width='stretch')
+            rows=edited.to_dict('records') if hasattr(edited,'to_dict') else list(edited)
+            for i,row in enumerate(rows[:count]):
+                clean=cal.empty_fixture()
+                for field,limit in (('date',8),('day',3),('opponent',30),('time',8),('score',7)):
+                    clean[field]=str(row.get(field) or '')[:limit]
+                clean['side']=row.get('side') if row.get('side') in ('C','T') else 'C'
+                config['fixtures'][i]=clean
+            st.caption('C = in casa, T = in trasferta. Il risultato va scritto come sul tabellone (casa-ospiti): '
+                       'la grafica colora vittoria, pareggio e sconfitta dal nostro punto di vista. La prima partita senza risultato e la NEXT.')
+            if any(f['opponent'].startswith('AVVERSARI ') for f in cal.active_fixtures(config)):
+                st.info('Il calendario contiene ancora partite di esempio.')
+
     if is_table:
         def load_rows(rows,message):
             st.session_state['standings_message']=message
@@ -316,7 +381,10 @@ def show_studio(root: Path, template: str, library: dict):
             with bookmark:
                 code=bookmarklet()
                 st.markdown('**Segnalibro "Invia a Flamingos"**: sulla pagina del girone su CSI LIVE lo tocchi e '
-                            'l\'app si apre con la classifica gia caricata. Funziona su Mac, iPhone e iPad, anche con Tuttocampo.')
+                            'l\'app si apre con **classifica, prossima partita e calendario del mese** gia compilati. '
+                            'Funziona su Mac, iPhone e iPad.')
+                st.info('Versione 2 del segnalibro: se avevi installato la prima, sostituiscila con questa una volta sola. '
+                        'Da ora in poi i miglioramenti alla lettura arrivano senza reinstallare.')
                 components.html('''<style>a{display:inline-block;padding:10px 18px;border-radius:9px;background:#e95396;color:#110d14;
                     font:600 15px system-ui,sans-serif;text-decoration:none;cursor:grab}p{color:#bca9c5;font:13px system-ui,sans-serif;margin:8px 0 0}</style>
                     <a href="'''+code.replace('"','&quot;')+'''" onclick="return false">Invia a Flamingos</a>
@@ -453,7 +521,7 @@ def show_studio(root: Path, template: str, library: dict):
                 if st.session_state.get('vault_command'):st.info('Salvataggio in corso: attendi la conferma nell\'archivio.')
         with right:
             # Video-only controls are excluded from the PNG cache key.
-            signature_config={k:v for k,v in config.items() if k not in ('duration','fps','video_scale')}
+            signature_config={k:v for k,v in config.items() if k not in ('duration','fps','video_scale','sound','volume')}
             signature=hashlib.sha256(json.dumps(signature_config,sort_keys=True).encode()+home+(away or b'')+(font_bytes or b'')).hexdigest()
             cache_key='png_'+template;cached=st.session_state.get(cache_key)
             if not cached or cached['signature']!=signature:
@@ -467,6 +535,13 @@ def show_studio(root: Path, template: str, library: dict):
             basename='flamingos_'+SLUGS[template]
             st.download_button('Scarica PNG - '+dimension,png,file_name=basename+'.png',mime='image/png',type='primary',width='stretch',key=key('download_png'))
             st.caption('Apri il PNG al 100% per valutare il dettaglio. I formati Post sono ritagli centrali della stessa composizione, non layout separati.')
+            texts=cap.captions(template,config)
+            if texts:
+                with st.expander(f'Didascalie per Instagram ({len(texts)} proposte)',expanded=False):
+                    st.caption('Scegli quella che ti piace e copiala con l\'icona in alto a destra del riquadro.'
+                               +(' Le proposte cambiano con il risultato.' if is_full else ' Le proposte cambiano con la posizione in classifica.' if is_table else ''))
+                    for i,value in enumerate(texts):
+                        st.code(value,language=None,wrap_lines=True)
             st.divider()
             with st.expander('Video MP4',expanded=False):
                 slider('duration','Durata in secondi',5 if is_crt else 7,18)
@@ -474,7 +549,10 @@ def show_studio(root: Path, template: str, library: dict):
                 select('video_scale','Risoluzione video',(2,1),lambda x:'1080 px - Full HD' if x==2 else '540 px - rapido')
                 if is_crt and config['export_format']=='Post 4:5' and config['video_scale']==1:
                     st.caption('MP4 ridotto 4:5: 540 x 676, con 1 px di bordo per il codec; nessuna deformazione.')
-                video_signature=hashlib.sha256((signature+str(config['duration'])+str(config['fps'])+str(config['video_scale'])).encode()).hexdigest()
+                check('sound','Suoni CRT (bip di comparsa e ronzio del tubo)')
+                if config['sound']:slider('volume','Volume',0,100)
+                video_signature=hashlib.sha256((signature+str(config['duration'])+str(config['fps'])+str(config['video_scale'])
+                                                +str(config['sound'])+str(config['volume'])).encode()).hexdigest()
                 if st.button('Genera video MP4',key=key('render_video'),width='stretch'):
                     progress=st.progress(0,text='Rendering video...')
                     try:
@@ -485,6 +563,9 @@ def show_studio(root: Path, template: str, library: dict):
                                 module.render_video(config,home,away,path,font_bytes,config['fps'],config['duration'],config['export_format'],config['video_scale'],callback)
                             else:
                                 r.render_video(config,home,path,font_bytes,config['fps'],config['duration'],config['video_scale'],callback)
+                            if config['sound']:
+                                progress.progress(1.0,text='Aggiungo i suoni CRT...')
+                                sounds.add_scene_audio(path,prepared,module.compose,config['duration'],config['volume']/100)
                             st.session_state['video_'+template]={'signature':video_signature,'data':path.read_bytes()}
                     except Exception as exc:st.error(f'Video non generato: {exc}')
                     finally:progress.empty()
@@ -493,7 +574,7 @@ def show_studio(root: Path, template: str, library: dict):
                     st.video(video['data'])
                     st.download_button('Scarica MP4',video['data'],file_name=basename+'.mp4',mime='video/mp4',key=key('download_video'),width='stretch')
                 else:st.caption('Genera il video per attivare il download. Ogni modifica rende il video precedente non aggiornato.')
-                st.caption('H.264 / CRF 18 / senza audio. La risoluzione 1080 richiede piu tempo e memoria.')
+                st.caption('H.264 / CRF 18 / audio AAC con i suoni attivi. La risoluzione 1080 richiede piu tempo e memoria.')
     except Exception as exc:
         st.error(f'Impossibile creare la grafica: {exc}')
         st.caption('Controlla i file o prova un font predefinito. Le impostazioni rimangono disponibili.')
