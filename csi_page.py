@@ -220,6 +220,7 @@ def match_fields(match, ours, cards=None, meeting_minutes=60):
     host = cards.get(match['home'], {})
     clock = match['time'] or host.get('time', '')
     venue = match['venue'] or host.get('venue', '')
+    venue = re.sub(r'\s+', ' ', re.sub(r'\b\d{5}\b', ' ', venue)).strip(' ,-')  # drop the CAP: shorter on the graphic
     fields = dict(opponent=opponent.upper(), our_side='Casa' if home else 'Ospiti',
                   date=match['date'].strftime('%d/%m/%Y'), kickoff=clock or 'HH:MM',
                   meeting_time=_minus(clock, meeting_minutes) if clock else 'HH:MM', venue=venue.upper()[:72])

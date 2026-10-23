@@ -143,6 +143,14 @@ class CsiPageTests(unittest.TestCase):
         self.assertEqual(result['fields']['kickoff'], '18:00')  # from the Lions 25 card
         self.assertEqual(result['fields']['venue'], 'CAMPO LIONS VIA MILANO 1 BRESCIA')
 
+    def test_venue_from_card_drops_the_postcode(self):
+        from csi_page import match_fields
+        match = dict(home='UNITED FLERO', away='FLAMINGOS', date=dt.date(2026, 10, 30), time='', score=None, venue='', round=6)
+        cards = {'UNITED FLERO': dict(time='21:15', venue='Oratorio Flero Via Giuseppe Mazzini 25020 Flero')}
+        fields = match_fields(match, 'FLAMINGOS', cards)
+        self.assertEqual((fields['venue'], fields['kickoff'], fields['meeting_time'], fields['our_side']),
+                         ('ORATORIO FLERO VIA GIUSEPPE MAZZINI FLERO', '21:15', '20:15', 'Ospiti'))
+
     def test_team_cards_do_not_bleed(self):
         cards = read_page(self.page(LINES), 'FLAMINGOS', TODAY)['cards']
         self.assertEqual((cards['FLAMINGOS']['colors'], cards['FLAMINGOS']['time']), ('Rosa', '20:45'))

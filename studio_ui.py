@@ -522,7 +522,7 @@ def show_studio(root: Path, template: str, library: dict):
         with right:
             # Video-only controls are excluded from the PNG cache key.
             signature_config={k:v for k,v in config.items() if k not in ('duration','fps','video_scale','sound','volume')}
-            signature=hashlib.sha256(json.dumps(signature_config,sort_keys=True).encode()+home+(away or b'')+(font_bytes or b'')).hexdigest()
+            signature=hashlib.sha256(json.dumps(signature_config,sort_keys=True).encode()+(home or b'')+(away or b'')+(font_bytes or b'')).hexdigest()
             cache_key='png_'+template;cached=st.session_state.get(cache_key)
             if not cached or cached['signature']!=signature:
                 ss=2 if config['png_quality']=='Fine' else 1
