@@ -1,4 +1,40 @@
-# Flamingos Studio 1.5
+# Flamingos Studio 1.6
+
+## Novita della 1.6
+
+- **Grafiche piu luminose per Instagram.** Nuovo cursore *Luminosita per
+  Instagram* (Palette e atmosfera, valore consigliato 55): schiarisce sfondo e
+  cornice con una curva che apre le ombre, senza toccare i testi. La luminosita
+  media del post e passata da circa 30 a 70-175 su 255 secondo il preset.
+  I progetti salvati con la 1.5 ricevono automaticamente il valore 55; con 0
+  ritrovi l'aspetto della 1.5.
+- **11 preset davvero diversi.** I sei preset esistenti hanno ora sfondi propri
+  (righe pastello, bande corallo, notte synthwave, carta millimetrata, prato a
+  strisce) e si aggiungono cinque mondi nuovi: **VHS Play**, **Televideo**,
+  **Pocket verde**, **Tabellone stadio** e **Poster riso** (il preset chiaro).
+- **Classifica**, nuovo editor: la classifica del girone su qualsiasi preset,
+  con la nostra squadra evidenziata, fino a 16 squadre, colonne complete
+  (G V N P GF GS PT) o compatte (G, DR, PT). I dati si caricano dal link
+  (Tuttocampo o simili), incollando la tabella copiata dal sito o a mano.
+- **Sequenza video** con transizioni CRT: scegli da 2 a 5 grafiche in ordine
+  (es. Matchday > Convocati) e tra una e l'altra *Cambio canale*, *Spegni e
+  riaccendi*, *Glitch RGB*, *Riavvolgimento VHS*, *Rolling verticale* o *Taglio
+  netto*. Anteprima a fotogrammi e MP4 in 1:1, 4:5 o 9:16.
+- **Partita della settimana** nella barra laterale: avversario, casa/trasferta,
+  data, giornata, orari, campo e stemma avversario si scrivono una volta e si
+  applicano a tutti gli editor. Layout, colori e preset restano i tuoi.
+- **Kit partita**: tutte le grafiche scelte in un file ZIP con un clic.
+
+### La classifica dal link
+
+Il link di Tuttocampo e gia inserito. *Aggiorna dal link* prova a leggere la
+pagina dal server dell'app; alcuni siti bloccano le letture automatiche, quindi
+la strada sempre valida e **Incolla la tabella**: apri la classifica, seleziona
+la tabella dalla prima all'ultima squadra, copia e incolla. L'app riconosce da
+sola l'ordine delle colonne (anche con una cella per riga o con la colonna
+delle ultime partite) e segnala le righe in cui V + N + P non torna con G.
+Controlla sempre i numeri nella scheda *Modifica a mano* prima di pubblicare.
+
 
 Studio Python / Streamlit per le grafiche Instagram di una squadra di calcio a 7.
 Quattro editor: **Matchday Screen, Starting 7, Full Time e Convocati**.
@@ -90,7 +126,7 @@ Starting 7 mantiene l'impaginazione sul campo, i sette giocatori e l'export Stor
 Ha accesso ai nuovi font; i preset degli oggetti CRT si applicano invece a
 Matchday, Full Time e Convocati, non sostituiscono il campo di Starting 7.
 
-## Sei preset da alternare nella stagione
+## Undici preset da alternare nella stagione
 
 La sezione **Preset CRT e rotazione di stagione** offre:
 
@@ -102,6 +138,11 @@ La sezione **Preset CRT e rotazione di stagione** offre:
 | Arcade club | Cabinato, marquee, joystick e pulsanti |
 | Save the game | Floppy disk turchese, etichetta e otturatore |
 | Tactics board | Lavagna tattica, clip e magneti da calcio a 7 |
+| VHS Play | Blu del videoregistratore, PLAY, contatore e tracking |
+| Televideo | Pagina 101, mosaici e i quattro tasti colorati |
+| Pocket verde | Console grigio chiaro, schermo a quattro verdi |
+| Tabellone stadio | Tabellone in acciaio, LED ambra, riflettori e tifosi |
+| Poster riso | Carta crema, retini e inchiostri sfalsati: il preset chiaro |
 
 Le cinque nuove cornici sono pixel art originale disegnata dal renderer, non
 semplici cambi di colore della tele. Tutte mantengono schermo scuro, neon e
@@ -109,7 +150,9 @@ scanline regolabili. Il catalogo visivo e incluso nell'app.
 
 In **Manuale** scegli un preset o premi Preset successivo. In **Per giornata**
 imposta il numero della giornata: 1 usa TV, 2 Console, 3 Mixtape, 4 Arcade,
-5 Floppy, 6 Lavagna, 7 ricomincia da TV. Il numero arriva fino a 80.
+5 Floppy, 6 Lavagna, 7 VHS, 8 Televideo, 9 Pocket, 10 Stadio, 11 Poster,
+12 ricomincia da TV. Il numero arriva fino a 80. La giornata della Partita della
+settimana aggiorna anche questo valore.
 La rotazione e una regola di selezione grafica, **non un calendario di
 pubblicazione automatica su Instagram**.
 
@@ -190,6 +233,15 @@ al browser non sostituisce un backup. Se lo storage e bloccato, l'app segnala
 **Solo sessione / Non salvato**, senza dichiarare una persistenza che non c'e.
 
 ## Verifiche
+
+**1.6:** 47 test automatici (`tests/test_v16.py` piu quelli della 1.5) passano:
+undici preset distinti tra loro, luminosita superiore a 55 su ogni preset,
+lettura della classifica da quattro formati diversi, classifica senza tagli in
+ogni preset fino a 16 squadre, partita condivisa in casa e trasferta, tutte le
+transizioni e un MP4 di sequenza. Tutte le pagine sono state eseguite con un
+sostituto di Streamlit, pulsanti compresi. Non sono stati verificati in questo
+ambiente l'avvio del server Streamlit reale e la lettura del link Tuttocampo,
+che il sandbox di sviluppo non poteva raggiungere.
 
 I risultati effettivi e i limiti dell'ambiente sono in `TEST_REPORT.md`.
 Il rendering, i nuovi schemi e i protocolli dei componenti sono stati verificati.

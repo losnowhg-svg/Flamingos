@@ -1,4 +1,4 @@
-# Flamingos Studio - dopo la 1.5
+# Flamingos Studio - dopo la 1.6
 
 ## Gia realizzato
 
@@ -7,11 +7,16 @@ rotazione per giornata, due caratteri pixel integrati; archivio font / stemmi,
 progetti e backup browser; editor trascinabile; PNG HD e MP4; formati quadrato,
 4:5 e Story per i modelli CRT.
 
+Dalla 1.6: undici preset con luminosita regolabile per Instagram, editor
+Classifica con import da link o copia-incolla, sequenze video con sei
+transizioni CRT, Partita della settimana condivisa e kit partita in ZIP.
+
 ## Idee successive, non incluse in questa consegna
 
-Un editor Player of the Match con foto e statistiche; classifica e risultati del
-girone; un calendario mensile; layout indipendenti per ogni rapporto; un kit di
-partita che generi in blocco Matchday, Convocati, Starting 7 e Full Time.
+Un editor Player of the Match con foto e statistiche; risultati della giornata
+del girone; un calendario mensile; layout indipendenti per ogni rapporto;
+transizioni anche nel video del singolo editor; salvataggio della Partita della
+settimana nell'archivio browser.
 
 Pubblicazione programmata, sincronizzazione cloud, gestione utenti e importazione
 automatica dei risultati richiederebbero integrazioni separate. Questa versione

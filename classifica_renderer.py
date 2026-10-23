@@ -1,0 +1,133 @@
+"""Classifica: the group standings on any CRT preset, with our team highlighted."""
+from __future__ import annotations
+
+from PIL import Image
+
+from render_utils import ScaledDraw, checked_scale, safe_positions
+from renderer import Layer, clean_logo, text_image, rgb
+from matchday_renderer import _decorate_text
+from crt_presets import background, STYLE, PRESETS
+from crt_common import compose, export_png, export_video
+from classifica_data import MAX_TEAMS
+
+TABLE_W, TABLE_H = 364, 287
+DEFAULT_POSITIONS = {'logo': (118, 346), 'title': (294, 337), 'subtitle': (294, 360), 'table': (270, 527)}
+LAYER_NAMES = {'logo': 'Stemma', 'title': 'Titolo classifica', 'subtitle': 'Girone e giornata', 'table': 'Tabella'}
+DETAILS = ('Completa', 'Compatta')
+COLUMNS = {
+    'Completa': (('G', 'g', 23), ('V', 'v', 23), ('N', 'n', 23), ('P', 'p', 23), ('GF', 'gf', 26), ('GS', 'gs', 26), ('PT', 'pt', 32)),
+    'Compatta': (('G', 'g', 30), ('DR', 'dr', 38), ('PT', 'pt', 38)),
+}
+
+
+def normalized_positions(config):
+    return safe_positions(config, DEFAULT_POSITIONS)
+
+
+def is_ours(team, ours):
+    a, b = str(team).strip().upper(), str(ours).strip().upper()
+    return bool(a and b) and (b in a or a in b)
+
+
+def active_rows(config):
+    count = max(2, min(MAX_TEAMS, int(config.get('team_count', 8))))
+    rows = [r for r in config.get('standings', [])[:count] if str(r.get('team', '')).strip()]
+    return rows
+
+
+def _value(row, key):
+    if key == 'dr':
+        diff = int(row.get('gf', 0))-int(row.get('gs', 0))
+        return f'+{diff}' if diff > 0 else str(diff)
+    return str(int(row.get(key, 0)))
+
+
+def table_image(config, font_bytes=None, s=1):
+    style = config.get('text_style', config.get('font_choice', 'CRT Terminal'))
+    preset = config.get('preset_id', 'crt')
+    panel = STYLE.get(preset, STYLE['crt'])['panel']
+    pink = rgb(config.get('pink', '#F268A8')); cyan = rgb(config.get('cyan', '#79DCF7'))
+    white = rgb(config.get('white', '#F6F4FC')); yellow = rgb(config.get('yellow', '#FFC963'))
+    dim = tuple(round(w*.78+p*.22) for w, p in zip(white, panel))
+    ink = (9, 11, 22)
+    rows = active_rows(config)
+    columns = COLUMNS.get(config.get('table_detail', 'Completa'), COLUMNS['Completa'])
+    size = int(config.get('table_size', 10))
+    image = Image.new('RGBA', (TABLE_W*s, TABLE_H*s))
+    d = ScaledDraw(image, s)
+    header_h = 18
+    row_h = min(33, (TABLE_H-header_h-2)/max(1, len(rows)))
+    text_h = max(6, min(size+2, row_h-5))
+    stats_w = sum(w for _, _, w in columns)
+    team_x, team_w = 30, TABLE_W-30-stats_w-6
+
+    def cell(value, color, x, y, width, align='center', h=None):
+        im = text_image(value, style, size, color, width, font_bytes, s, h or text_h)
+        if not im:
+            return
+        if align == 'left':
+            left = round(x*s)
+        else:
+            left = round((x+width/2)*s-im.width/2)
+        image.alpha_composite(im, (left, round(y*s-im.height/2)))
+
+    # Column header.
+    d.rectangle((0, 0, TABLE_W, header_h-3), fill=(*cyan, 46))
+    cell('#', cyan, 0, header_h/2-1, 26, h=9)
+    cell('SQUADRA', cyan, team_x, header_h/2-1, team_w, 'left', 9)
+    x = TABLE_W-stats_w
+    for label, _, width in columns:
+        cell(label, yellow if label == 'PT' else cyan, x, header_h/2-1, width, h=9)
+        x += width
+    ours = config.get('our_team', 'FLAMINGOS')
+    for i, row in enumerate(rows):
+        top = header_h+i*row_h
+        mid = top+row_h/2
+        highlight = is_ours(row.get('team', ''), ours)
+        if highlight:
+            d.rectangle((0, top+1, TABLE_W, top+row_h-1), fill=(*pink, 245))
+        elif i % 2 == 0:
+            d.rectangle((0, top+1, TABLE_W, top+row_h-1), fill=(255, 255, 255, 16))
+        pos = int(row.get('pos', i+1))
+        if pos <= 1 and not highlight:
+            d.rectangle((3, top+3, 25, top+row_h-3), fill=(*yellow, 255))
+        cell(str(pos), ink if (highlight or pos <= 1) else cyan, 0, mid, 28)
+        cell(str(row.get('team', '')).upper(), ink if highlight else white, team_x, mid, team_w, 'left')
+        x = TABLE_W-stats_w
+        for label, key, width in columns:
+            color = ink if highlight else (yellow if key == 'pt' else dim)
+            cell(_value(row, key), color, x, mid, width)
+            x += width
+        if not highlight and i < len(rows)-1:
+            d.line((4, top+row_h, TABLE_W-4, top+row_h), fill=(*cyan, 30), width=.5)
+    return image
+
+
+def get_layers(config, home_logo, away_logo=None, font_bytes=None, render_scale=1):
+    s = checked_scale(render_scale)
+    style = config.get('text_style', config.get('font_choice', 'CRT Terminal'))
+    pink = rgb(config.get('pink', '#F268A8')); white = rgb(config.get('white', '#F6F4FC'))
+    layers = [Layer('logo', LAYER_NAMES['logo'], clean_logo(home_logo, config.get('logo_size', 40), config.get('remove_white', True), s))]
+    title = _decorate_text(text_image(config.get('title', 'CLASSIFICA'), style, config.get('title_size', 24), white, 280, font_bytes, s, 24), s)
+    if title:
+        layers.append(Layer('title', LAYER_NAMES['title'], title))
+    parts = [str(config.get(k, '')).strip() for k in ('group', 'round_label')]
+    subtitle = ' / '.join(p for p in parts if p)
+    sub = _decorate_text(text_image(subtitle, style, config.get('info_size', 10), pink, 280, font_bytes, s, 13), s)
+    if sub:
+        layers.append(Layer('subtitle', LAYER_NAMES['subtitle'], sub))
+    layers.append(Layer('table', LAYER_NAMES['table'], table_image(config, font_bytes, s)))
+    return layers
+
+
+def scene(config, home_logo, away_logo=None, font_bytes=None, render_scale=2):
+    s = checked_scale(render_scale)
+    return background(config, 'classifica', s), get_layers(config, home_logo, away_logo, font_bytes, s), normalized_positions(config)
+
+
+def png_bytes(config, home_logo, away_logo=None, font_bytes=None, format='Story 9:16', scale=2, supersample=2):
+    return export_png(scene, config, home_logo, away_logo, font_bytes, format, scale, supersample)
+
+
+def render_video(config, home_logo, away_logo, path, font_bytes=None, fps=24, duration=8, format='Story 9:16', scale=2, progress_callback=None):
+    return export_video(scene, config, home_logo, away_logo, path, font_bytes, fps, duration, format, scale, progress_callback)
