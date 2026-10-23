@@ -297,20 +297,38 @@ def show_studio(root: Path, template: str, library: dict):
             st.session_state['standings_message']=message
             restart(updated)
 
+        # Automatic refresh: once per session, when the page opens with a link set.
+        auto_key='standings_auto_'+config.get('source_url','')
+        if config.get('auto_update') and config.get('source_url') and not st.session_state.get(auto_key):
+            st.session_state[auto_key]=True
+            with st.spinner('Aggiorno la classifica dal CSI...'):
+                try:
+                    rows=fetch_standings(config['source_url'])
+                    if config['team_count']!=len(rows) or rows!=[dict(r) for r in config['standings'][:len(rows)]]:
+                        load_rows(rows,f'Classifica aggiornata in automatico: {len(rows)} squadre.')
+                except ValueError as exc:
+                    st.session_state['standings_auto_error']=str(exc)
+
         with st.expander('Dati della classifica',expanded=True):
+            if st.session_state.get('standings_auto_error'):
+                st.warning('Aggiornamento automatico non riuscito: '+st.session_state['standings_auto_error'])
             if st.session_state.get('standings_message'):
                 st.success(st.session_state.pop('standings_message'))
             link,paste,manual=st.tabs(['Dal link','Incolla la tabella','Modifica a mano'])
             with link:
-                text('source_url','Link della classifica (Tuttocampo o simili)',300)
-                if st.button('Aggiorna dal link',key=key('fetch'),type='primary'):
+                text('source_url','Link del girone su CSI LIVE (live.centrosportivoitaliano.it)',300)
+                check('auto_update','Aggiorna in automatico quando apro la pagina')
+                if st.button('Aggiorna adesso',key=key('fetch'),type='primary'):
                     with st.spinner('Leggo la classifica...'):
                         try:
                             rows=fetch_standings(config['source_url'])
+                            st.session_state.pop('standings_auto_error',None)
                             load_rows(rows,f'Classifica aggiornata dal link: {len(rows)} squadre.')
                         except ValueError as exc:
                             st.error(str(exc))
-                st.caption('Tuttocampo blocca le letture dal server dell\'app (errore 403). In quel caso apri il link nel browser e usa la scheda Incolla la tabella: funziona sempre.')
+                st.caption('Il link predefinito e la Serie C Girone D 2026/27 del CSI Brescia sul portale ufficiale CSI LIVE. '
+                           'Per un altro girone apri live.centrosportivoitaliano.it, scegli il girone e copia qui l\'indirizzo. '
+                           'Tuttocampo invece blocca le letture dal server (errore 403): con quello usa Incolla la tabella.')
             with paste:
                 pasted=st.text_area('Testo della classifica',height=180,key=key('paste'),
                     placeholder='Apri la classifica, seleziona la tabella dalla prima squadra all\'ultima, copia e incolla qui.')

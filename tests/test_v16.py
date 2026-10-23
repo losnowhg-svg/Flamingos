@@ -83,6 +83,18 @@ class StandingsTests(unittest.TestCase):
         rows = _best_table(page)
         self.assertEqual(rows[1]['team'], 'FLAMINGOS'); self.assertEqual(rows[1]['pt'], 18)
 
+    def test_csi_live_girone_d_layout(self):
+        data = [(1, 'UMC', 10, 4, 3, 1, 0, 17, 7, 10), (6, 'Flamingos', 7, 5, 2, 1, 2, 14, 16, -2),
+                (8, 'As Ardens 2002', 6, 4, 2, 0, 2, 22, 18, 4), (10, 'Lions 25', 3, 4, 1, 0, 3, 18, 22, -4),
+                (13, 'Galba F.C.', 0, 5, 0, 0, 5, 18, 36, -18)]
+        head = ''.join(f'<th>{h}</th>' for h in ('#', 'Squadra', 'Pt', 'PG', 'V', 'N', 'P', 'GF', 'GS', 'DR'))
+        body = ''.join(f'<tr><td>{d[0]}</td><td><img src="l.png"> {d[1]}</td>'+''.join(f'<td>{v}</td>' for v in d[2:])+'</tr>' for d in data)
+        rows = _best_table(f'<table><tr>{head}</tr>{body}</table>')
+        self.assertEqual([r['team'] for r in rows], ['UMC', 'FLAMINGOS', 'AS ARDENS 2002', 'LIONS 25', 'GALBA F.C.'])
+        self.assertEqual([r['pos'] for r in rows], [1, 6, 8, 10, 13])
+        self.assertEqual((rows[1]['pt'], rows[1]['g'], rows[1]['gs']), (7, 5, 16))
+        self.assertIn('live.centrosportivoitaliano.it', defaults('Classifica')['source_url'])
+
     def test_bad_text_raises(self):
         for text in ('', 'ciao a tutti', 'SQUADRA PT\nFLAMINGOS'):
             with self.assertRaises(ValueError):
