@@ -250,6 +250,11 @@ def sanitize_squad(raw):
         seen.add(name)
         role = item.get('role','-')
         entry = dict(number=_integer(item.get('number'),0,0,99),name=name,role=role if role in SQUAD_ROLES else '-')
+        if item.get('look'):
+            import pixel_character
+            look = pixel_character.sanitize(item['look'])
+            if look:
+                entry['look'] = look
         avatar = item.get('avatar')
         if avatar:
             import avatars

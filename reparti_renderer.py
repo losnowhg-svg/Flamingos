@@ -86,7 +86,8 @@ def _card(member, config, w, h, font_bytes, s):
         t = i/11
         col = tuple(round(c*(.18+.22*(1-t))+p*(1-(.18+.22*(1-t)))) for c, p in zip(cyan, panel))
         td.rectangle((0, side*i/12, side, side*(i+1)/12+1), fill=(*col, 255))
-    picture = avatars.decode(member.get('avatar')) or avatars.placeholder(color=pink)
+    import pixel_character
+    picture = pixel_character.picture(member, config.get('preset_id', 'crt'))
     factor = max(1, int(side*s//picture.width))
     big = picture.resize((picture.width*factor, picture.height*factor), Image.Resampling.NEAREST)
     tile.alpha_composite(big, ((tile.width-big.width)//2, tile.height-big.height))
@@ -173,11 +174,12 @@ def slides(convocati, squad):
         role = p.get('role') if p.get('role') in ('P', 'D', 'C', 'A') else known.get('role')
         if role in ('P', 'D', 'C', 'A'):
             buckets[role].append(dict(name=p['name'], number=p.get('number', 0), role=role,
-                                      captain=bool(p.get('captain')), avatar=known.get('avatar', '')))
+                                      captain=bool(p.get('captain')), avatar=known.get('avatar', ''),
+                                      look=known.get('look')))
     staff = [p for p in squad or [] if p.get('role') in STAFF_ROLES]
     staff.sort(key=lambda p: (p['role'] != 'ALL', p['name']))
-    buckets['STAFF'] = [dict(name=p['name'], number=0, role=p['role'], captain=False, avatar=p.get('avatar', ''))
-                        for p in staff]
+    buckets['STAFF'] = [dict(name=p['name'], number=0, role=p['role'], captain=False, avatar=p.get('avatar', ''),
+                             look=p.get('look')) for p in staff]
     opponent = str(convocati.get('opponent', '')).strip()
     match = ' / '.join(x for x in ('VS '+opponent if opponent and opponent != 'AVVERSARI' else '',
                                    str(convocati.get('date', '')) if 'GG' not in str(convocati.get('date', '')) else '') if x)

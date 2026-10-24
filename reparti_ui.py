@@ -34,7 +34,7 @@ def show_departments(config, squad, home, font_bytes, key):
     if not slides:
         st.info('Scegli i convocati (con il ruolo) nella scheda Contenuti.')
         return
-    no_face = [m['name'] for _, s in slides for m in s['members'] if not m.get('avatar')]
+    no_face = [m['name'] for _, s in slides for m in s['members'] if not m.get('look') and not m.get('avatar')]
     if no_face:
         st.caption('Ancora senza avatar: '+', '.join(no_face)+'.')
     signature = _signature(config, squad, home, font_bytes)

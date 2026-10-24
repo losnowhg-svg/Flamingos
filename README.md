@@ -2,10 +2,12 @@
 
 ## Novita della 2.0: facce pixel e reparti
 
-- **Avatar pixel dalle foto** (Settimana > La rosa > *Avatar pixel dalle foto*): scegli la persona,
-  carica una foto del viso; l'app trova la faccia, toglie lo sfondo, riduce a 40x40 pixel con pochi
-  colori, contorno scuro e maglia rosa. Ritaglio, zoom, colori e sfondo si regolano con gli slider.
-  Si salva solo l'avatar (pochi KB) nella rosa del browser: la foto non viene conservata ne caricata su GitHub.
+- **Avatar pixel dei giocatori** (Settimana > La rosa > *Avatar pixel dei giocatori*): personaggi stilizzati
+  32x32 costruiti con pochi tratti - capelli (ciuffo, corti, rasati, lunghi, ricci, pelato), barba (corta,
+  piena, pizzetto, baffi), occhiali (da vista, da sole), sopracciglia - e tre colori. Una foto facoltativa
+  suggerisce i colori di pelle, capelli e barba e non viene salvata. Due stili: **Arcade luce neon** (maglia
+  rosa, riflesso ciano e rosa) per tutti i preset e **Game Boy** a quattro verdi, usato da solo con il preset
+  Pocket verde. Si salva solo la descrizione del personaggio nella rosa del browser.
 - **Convocati per reparti** (Convocati > *Esporta*): dopo il riepilogo, una schermata per portieri,
   difensori, centrocampisti, attaccanti e staff, con gli avatar, il numero e il capitano.
   Carosello ZIP (riepilogo + reparti) e video presentazione con cambio canale, suoni e, se attivo, il televisore.

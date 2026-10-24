@@ -169,3 +169,49 @@ class PagesTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+import pixel_character as pc
+
+
+class CharacterTests(unittest.TestCase):
+    def test_sanitize(self):
+        look = pc.sanitize(dict(hair='ricci', beard='xx', skin='#123456', hair_color='red'))
+        self.assertEqual((look['hair'], look['beard'], look['skin']), ('ricci', 'nessuna', '#123456'))
+        self.assertEqual(look['hair_color'], pc.DEFAULT_LOOK['hair_color'])
+        self.assertIsNone(pc.sanitize('nope'))
+
+    def test_every_combination_draws(self):
+        for hair in pc.HAIR_STYLES:
+            for beard in pc.BEARDS:
+                for glasses in pc.GLASSES:
+                    img = pc.image(dict(hair=hair, beard=beard, glasses=glasses), 'arcade')
+                    self.assertEqual(img.size, (pc.SIZE, pc.SIZE))
+        a = np.asarray(pc.image(dict(beard='nessuna')))
+        b = np.asarray(pc.image(dict(beard='piena')))
+        self.assertGreater(np.abs(a.astype(int)-b.astype(int)).sum(), 0)
+
+    def test_gameboy_has_four_greens(self):
+        arr = np.asarray(pc.image(dict(hair='ciuffo', beard='corta', glasses='sole'), 'gameboy'))
+        colours = {tuple(p) for p in arr[arr[..., 3] > 0][:, :3]}
+        self.assertTrue(colours <= {tuple(c) for c in pc.GAMEBOY})
+        self.assertGreaterEqual(len(colours), 3)
+
+    def test_colours_from_photo(self):
+        colours = pc.colors_from_photo(avatars.load_photo(portrait()))
+        self.assertEqual(set(colours), {'skin', 'hair_color', 'beard_color'})
+        skin = np.array(list(bytes.fromhex(colours['skin'][1:])))
+        hair = np.array(list(bytes.fromhex(colours['hair_color'][1:])))
+        self.assertGreater(skin.sum(), hair.sum()+150)
+
+    def test_squad_and_slides_use_the_look(self):
+        look = dict(hair='ciuffo', beard='corta')
+        squad = sanitize_squad([dict(name='teu', number=9, role='A', look=look), dict(name='nick', role='ALL', look=look)])
+        self.assertEqual(squad[0]['look']['hair'], 'ciuffo')
+        config = convocati(squad)
+        slides = dict(rr.slides(config, squad))
+        self.assertEqual(slides['A']['members'][0]['look']['hair'], 'ciuffo')
+        self.assertTrue(slides['STAFF']['members'][0]['look'])
+        green = np.asarray(pc.picture(slides['A']['members'][0], 'gameboy'))
+        self.assertTrue({tuple(p) for p in green[green[..., 3] > 0][:, :3]} <= {tuple(c) for c in pc.GAMEBOY})
+        rr.png_bytes(slides['A'], LOGO, None, None, 'Post 1:1', 1, 1)

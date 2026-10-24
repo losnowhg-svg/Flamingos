@@ -141,12 +141,13 @@ def squad(library):
 
 def save_squad(players):
     """Save the squad; avatars follow their player by name when the table drops them."""
-    old = {p['name']: p.get('avatar') for p in st.session_state.get('squad', []) if p.get('avatar')}
+    old = {p['name']: p for p in st.session_state.get('squad', [])}
     players = [dict(p) for p in players]
     for p in players:
         name = ' '.join(str(p.get('name', '')).upper().split())
-        if not p.get('avatar') and old.get(name):
-            p['avatar'] = old[name]
+        for field in ('avatar', 'look'):
+            if field not in p and old.get(name, {}).get(field):
+                p[field] = old[name][field]
     players = sanitize_squad(players)
     st.session_state['squad'] = players
     queue_save('Rosa', 'Rosa', {'players': players}, SQUAD_ID)
@@ -281,7 +282,7 @@ def show_squad(library):
         st.markdown('#### ③ La rosa')
         players = squad(library)
         staff = [p for p in players if p['role'] in STAFF_ROLES]
-        faces = sum(1 for p in players if p.get('avatar'))
+        faces = sum(1 for p in players if p.get('look') or p.get('avatar'))
         st.caption(f'{len(players)-len(staff)} giocatori e {len(staff)} dello staff salvati nel browser, {faces} con avatar. '
                    'Li scegli con un clic in Convocati e marcatori.' if players else
                    'Scrivi qui la rosa una volta sola (o carica quella ufficiale): poi la scegli con un clic.')
@@ -310,57 +311,60 @@ def show_squad(library):
 
 
 def show_avatar_maker(players):
-    with st.expander('🕹️ Avatar pixel dalle foto', expanded=False):
+    import pixel_character as pc
+    with st.expander('🕹️ Avatar pixel dei giocatori', expanded=False):
         if not players:
             st.caption('Prima salva la rosa.')
             return
-        with_face = [p for p in players if p.get('avatar')]
-        if with_face:
+        done = [p for p in players if p.get('look')]
+        if done:
             columns = st.columns(6)
-            for i, p in enumerate(with_face):
-                columns[i % 6].image(avatars.enlarge(avatars.decode(p['avatar']), 120), caption=p['name'], width='stretch')
-        st.caption('Scegli la persona e carica una foto del viso, meglio frontale e con luce buona. '
-                   'Si salva solo l\'avatar, non la foto.')
+            for i, p in enumerate(done):
+                columns[i % 6].image(avatars.enlarge(pc.image(p['look']), 128), caption=p['name'], width='stretch')
+        st.caption('Personaggi stilizzati: scegli capelli, barba e occhiali. Una foto (facoltativa) suggerisce '
+                   'i colori di pelle, capelli e barba; la foto non viene salvata.')
         names = [p['name'] for p in players]
-        label = lambda n: n+('  ✓' if any(p['name'] == n and p.get('avatar') for p in players) else '')
-        who = st.selectbox('Chi', names, format_func=label, key='avatar_who')
-        upload = st.file_uploader('Foto', type=['jpg', 'jpeg', 'png', 'webp'], key='avatar_photo')
-        if not upload:
-            return
-        data = upload.getvalue()
-        digest = hashlib.sha256(data).hexdigest()[:12]
-        try:
-            photo = avatars.load_photo(data)
-        except ValueError as exc:
-            st.error(str(exc))
-            return
-        if st.session_state.get('avatar_digest') != digest:
-            # New photo: frame the face automatically, then the sliders take over.
-            cx, cy, zoom = avatars.guess_face(photo)
-            st.session_state.update(avatar_digest=digest, avatar_cx=cx, avatar_cy=cy, avatar_zoom=min(6.0, zoom))
+        who = st.selectbox('Chi', names, format_func=lambda n: n+('  ✓' if any(p['name'] == n and p.get('look') for p in players) else ''),
+                           key='look_who')
+        person = next(p for p in players if p['name'] == who)
+        if st.session_state.get('look_loaded') != who:
+            # Switching person: load their saved look into the controls.
+            look = pc.sanitize(person.get('look')) or dict(pc.DEFAULT_LOOK)
+            st.session_state.update({'look_'+k: v for k, v in look.items()}, look_loaded=who)
+        upload = st.file_uploader('Foto per i colori (facoltativa)', type=['jpg', 'jpeg', 'png', 'webp'], key='look_photo')
+        if upload:
+            digest = hashlib.sha256(upload.getvalue()).hexdigest()[:12]
+            if st.session_state.get('look_digest') != digest+who:
+                try:
+                    colors = pc.colors_from_photo(avatars.load_photo(upload.getvalue()))
+                except ValueError as exc:
+                    st.error(str(exc)); colors = {}
+                if colors:
+                    st.session_state.update({'look_'+k: v for k, v in colors.items()})
+                else:
+                    st.caption('Non ho trovato il viso nella foto: scegli i colori a mano.')
+                st.session_state['look_digest'] = digest+who
         a, b = st.columns(2)
         with a:
-            cx = st.slider('Sinistra / destra', 0.0, 1.0, step=.01, key='avatar_cx')
-            cy = st.slider('Su / giu', 0.0, 1.0, step=.01, key='avatar_cy')
-            zoom = st.slider('Zoom', 1.0, 6.0, step=.05, key='avatar_zoom')
+            st.selectbox('Capelli', list(pc.HAIR_STYLES), format_func=pc.HAIR_STYLES.get, key='look_hair')
+            st.selectbox('Barba', list(pc.BEARDS), format_func=pc.BEARDS.get, key='look_beard')
+            st.selectbox('Occhiali', list(pc.GLASSES), format_func=pc.GLASSES.get, key='look_glasses')
+            st.selectbox('Sopracciglia', list(pc.BROWS), format_func=pc.BROWS.get, key='look_brows')
         with b:
-            colors = st.slider('Colori', 5, 12, 8, key='avatar_colors')
-            clear = st.checkbox('Togli lo sfondo', True, key='avatar_clear')
-            tolerance = st.slider('Quanto sfondo togliere', 15, 90, 40, key='avatar_tol', disabled=not clear)
-            jersey = st.checkbox('Maglia rosa Flamingos', True, key='avatar_shirt')
-        avatar = avatars.make_avatar(photo, cx, cy, zoom, colors, clear, tolerance, jersey)
+            st.color_picker('Pelle', key='look_skin')
+            st.color_picker('Capelli e sopracciglia', key='look_hair_color')
+            st.color_picker('Barba', key='look_beard_color')
+        look = pc.sanitize({k: st.session_state.get('look_'+k) for k in pc.DEFAULT_LOOK})
         a, b = st.columns(2)
-        a.image(avatars.crop(photo, cx, cy, zoom).resize((240, 240)), caption='Ritaglio', width='stretch')
-        b.image(avatars.enlarge(avatar, 240), caption='Avatar', width='stretch')
+        a.image(avatars.enlarge(pc.image(look, 'arcade'), 256), caption='Arcade luce neon (tutti i preset)', width='stretch')
+        b.image(avatars.enlarge(pc.image(look, 'gameboy'), 256), caption='Game Boy (preset Pocket verde)', width='stretch')
         a, b = st.columns(2)
-        if a.button(f'Salva avatar di {who}', type='primary', width='stretch', key='avatar_save'):
-            updated = [dict(p, avatar=avatars.encode(avatar)) if p['name'] == who else dict(p) for p in players]
-            save_squad(updated)
+        if a.button(f'Salva avatar di {who}', type='primary', width='stretch', key='look_save'):
+            save_squad([dict(p, look=look) if p['name'] == who else dict(p) for p in players])
             st.session_state['squad_msg'] = f'Avatar di {who} salvato.'
             st.rerun()
-        current = next((p for p in players if p['name'] == who), {})
-        if current.get('avatar') and b.button('Togli il suo avatar', width='stretch', key='avatar_drop'):
-            st.session_state['squad'] = [dict({k: v for k, v in p.items() if k != 'avatar'}) if p['name'] == who else p
+        if person.get('look') and b.button('Togli il suo avatar', width='stretch', key='look_drop'):
+            st.session_state['squad'] = [{k: v for k, v in p.items() if k not in ('look', 'avatar')} if p['name'] == who else p
                                          for p in players]
             save_squad(st.session_state['squad'])
             st.rerun()
