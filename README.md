@@ -1,4 +1,22 @@
-# Flamingos Studio 2.0
+# Flamingos Studio 2.1
+
+## Novita della 2.1: momenti forti nei video
+
+Tutto nell'animazione **Retro** (Esporta > Video):
+- **Matchday**: gli stemmi arrivano dai lati, si scontrano al centro con lampo e schermo che trema, poi il VS.
+- **Full Time**: punteggio a slot machine, **GOAL!** se abbiamo segnato, poi **STAGE CLEAR!**, **DRAW GAME**
+  o **GAME OVER / CONTINUE?** con fanfara, jingle o musichetta da sconfitta.
+- **Classifica**: la nostra riga sale (o scende) dalla posizione della settimana scorsa, con freccia ▲/▼ anche
+  nel PNG; corona e coriandoli se siamo primi. La posizione precedente si salva da sola quando aggiorni dal CSI
+  (o si scrive a mano in Classifica > Testi e zone).
+- **Calendario**: ogni risultato entra con un "ding", la prossima partita lampeggia.
+- **Convocati**: luce dorata sul capitano. **Reparti**: i portieri si tuffano, i difensori cadono con un tonfo,
+  gli attaccanti scattano, gli avatar sbattono le palpebre e ondeggiano, scintillii sul capitano.
+- **Intro PRESS START / PLAYER 1 READY**, **finale** con TV che si spegne o dissolvenza per Reel in loop.
+- **Dettagli VHS**: REC che lampeggia, contatore e disturbi di tracking.
+- **Musica chiptune** originale generata dall'app, con le entrate a tempo; anche sotto le sequenze video.
+- Il video si allunga da solo se intro, animazioni e finale non stanno nella durata scelta.
+
 
 ## Novita della 2.0: facce pixel e reparti
 

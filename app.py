@@ -21,7 +21,7 @@ h4{margin-bottom:.2rem!important}
 @media (max-width:640px){.block-container{padding-left:.8rem;padding-right:.8rem}h1{font-size:1.6rem!important}}
 </style>''',unsafe_allow_html=True)
 st.title('FLAMINGOS STUDIO')
-st.caption('2.0 / la settimana in ordine: aggiorna dal CSI, controlla, scarica')
+st.caption('2.1 / la settimana in ordine: aggiorna dal CSI, controlla, scarica')
 
 from library import show_library
 from studio_ui import show_studio

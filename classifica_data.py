@@ -260,6 +260,21 @@ def with_rows(config, rows):
     import copy
     updated = copy.deepcopy(config)
     rows = [dict(r) for r in rows[:MAX_TEAMS]]
+    # Remember where we were, so the video can show the climb (or the fall).
+    old = [r for r in config.get('standings', [])[:config.get('team_count', 0)] if str(r.get('team', '')).strip()]
+    ours = str(config.get('our_team', 'FLAMINGOS')).strip().upper()
+
+    def place(table):
+        for i, r in enumerate(table):
+            name = str(r.get('team', '')).strip().upper()
+            if ours and name and (ours in name or name in ours):
+                return int(r.get('pos', i+1) or i+1)
+        return 0
+
+    real = old and not any(str(r['team']).startswith('SQUADRA ') for r in old)
+    same = [(r.get('team'), r.get('pt'), r.get('g')) for r in old] == [(r.get('team'), r.get('pt'), r.get('g')) for r in rows]
+    if real and not same and place(old):
+        updated['prev_pos'] = place(old)
     updated['standings'] = rows + [empty_row(i+1) for i in range(len(rows), MAX_TEAMS)]
     updated['team_count'] = max(2, len(rows))
     return updated

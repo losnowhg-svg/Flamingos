@@ -140,6 +140,133 @@ def power_on():
     return thunk+whine+crackle
 
 
+def _note(freq, seconds, duty=.5, volume=.3, release=.05):
+    t = _t(seconds)
+    wave_ = np.where((t*freq) % 1 < duty, 1.0, -1.0)
+    return wave_*_env(len(t), .003, min(seconds*.8, release))*volume
+
+
+def _seq(notes, step, duty=.5, volume=.3):
+    """Notes (Hz, 0 = rest) one after another, step seconds each."""
+    out = [(_note(f, step, duty, volume) if f else np.zeros(int(step*SR))) for f in notes]
+    return np.concatenate(out)
+
+
+C4, D4, E4, F4, G4, A4, B4 = 261.63, 293.66, 329.63, 349.23, 392.0, 440.0, 493.88
+C5, E5, G5, C6 = 523.25, 659.25, 783.99, 1046.5
+
+
+def impact(strong=1):
+    t = _t(.35)
+    thud = np.sin(2*np.pi*(70-30*t/.35)*t)*np.exp(-t*(10 if strong else 18))*(.9 if strong else .5)
+    crack = _noise(len(t), 11)*np.exp(-t*40)*(.4 if strong else .2)
+    return thud+crack
+
+
+def whoosh(seconds=.32):
+    n = int(seconds*SR)
+    noise = _noise(n, 12)
+    swept = noise-_lowpass(noise, .02+.25*np.linspace(0, 1, n).mean())
+    return swept*np.sin(np.linspace(0, np.pi, n))*.35
+
+
+def goal():
+    arp = _seq([C5, E5, G5, C6, G5, C6], .07, .25, .28)
+    cheer = _lowpass(_noise(int(.9*SR), 13), .12)*4*np.minimum(1, np.linspace(1.5, 0, int(.9*SR)))
+    out = np.zeros(max(len(arp), len(cheer)))
+    out[:len(arp)] += arp
+    out[:len(cheer)] += cheer*.35
+    return out
+
+
+def fanfare():
+    return _seq([G4, G4, G4, C5, 0, A4, C5, E5, 0, C6], .11, .5, .25)
+
+
+def draw_jingle():
+    return _seq([E5, C5, E5, C5, G4], .12, .25, .22)
+
+
+def game_over():
+    notes = _seq([C5, B4, A4, G4, F4, E4, D4, C4], .13, .5, .22)
+    return notes*np.linspace(1, .6, len(notes))
+
+
+def ding(level=1):
+    freq = (880.0, 1174.66, 1567.98)[max(0, min(2, level))]
+    t = _t(.4)
+    return (np.sin(2*np.pi*freq*t)+.3*np.sin(2*np.pi*freq*2.01*t))*np.exp(-t*9)*.3
+
+
+def climb():
+    t = _t(.55)
+    freq = 300+900*(t/.55)**1.5
+    return np.sign(np.sin(2*np.pi*np.cumsum(freq)/SR))*_env(len(t), .005, .1)*.18
+
+
+def crown():
+    return _seq([C6, G5, C6, E5*2, C6*1.5], .06, .25, .2)
+
+
+def shine():
+    t = _t(.3)
+    return np.sin(2*np.pi*(2000+3000*t/.3)*t)*np.exp(-t*8)*.1
+
+
+def press_start(index=0):
+    return _note(988 if index % 2 == 0 else 1319, .09, .25, .25)
+
+
+def ready():
+    return _seq([C5, G5, C6], .08, .25, .25)
+
+
+def power_down():
+    t = _t(.6)
+    sweep = np.sin(2*np.pi*np.cumsum(np.linspace(900, 40, len(t)))/SR)*np.linspace(.35, 0, len(t))
+    return sweep+_noise(len(t), 14)*np.exp(-(.6-t)*30)*.2
+
+
+def chiptune(seconds, seed=0, bpm=120):
+    """An original 8-bit loop: bass, arpeggio, kick and hi-hat. Quiet, under the effects."""
+    beat = 60/bpm
+    progressions = (((C4, E4, G4), (A4/2*2, C5, E5), (F4, A4, C5), (G4, B4, D4*2)),
+                    ((A4/2*2, C5, E5), (F4, A4, C5), (C4, E4, G4), (G4, B4, D4*2)))
+    chords = progressions[seed % len(progressions)]
+    n = int(seconds*SR)+1
+    out = np.zeros(n)
+    bar = 4*beat
+    for b in range(int(seconds/bar)+1):
+        chord = chords[b % 4]
+        start = int(b*bar*SR)
+        for k in range(8):  # eighth-note arpeggio
+            note = _note(chord[k % 3]*2, beat/2, .25, .07)
+            i = start+int(k*beat/2*SR)
+            out[i:i+len(note)] += note[:max(0, n-i)]
+        for k in range(4):  # bass on the beat
+            note = _note(chord[0]/2, beat*.9, .5, .1)
+            i = start+int(k*beat*SR)
+            out[i:i+len(note)] += note[:max(0, n-i)]
+            if k in (0, 2):
+                t = _t(.12)
+                kick = np.sin(2*np.pi*(120-80*t/.12)*t)*np.exp(-t*30)*.25
+                out[i:i+len(kick)] += kick[:max(0, n-i)]
+            hat = _noise(int(.03*SR), 20+k)*np.linspace(.06, 0, int(.03*SR))
+            j = i+int(beat/2*SR)
+            out[j:j+len(hat)] += hat[:max(0, n-j)]
+    fade = min(n, int(.4*SR))
+    out[-fade:] *= np.linspace(1, 0, fade)
+    return out
+
+
+SOUNDS = {'power': lambda i: power_on(), 'glitch': lambda i: glitch(.22)*.6, 'tick': lambda i: tick(i),
+          'impact': lambda i: impact(i), 'whoosh': lambda i: whoosh(), 'goal': lambda i: goal(),
+          'win': lambda i: fanfare(), 'draw': lambda i: draw_jingle(), 'loss': lambda i: game_over(),
+          'ding': lambda i: ding(i), 'climb': lambda i: climb(), 'crown': lambda i: crown(),
+          'shine': lambda i: shine(), 'start': lambda i: press_start(i), 'ready': lambda i: ready(),
+          'power_off': lambda i: power_down()}
+
+
 def entrance_times(prepared, compose):
     """When each element of a scene starts appearing, in seconds (mirrors each compose)."""
     layers = prepared[1]
@@ -165,9 +292,11 @@ def scene_events(prepared, compose, start=0.0, speed=1.0, until=None):
             at = start+t/speed
             if until is not None and at >= until:
                 continue
-            sound = {'power': lambda i: power_on(), 'glitch': lambda i: glitch(.22)*.6,
-                     'tick': tick}.get(kind, blip)(i)
-            out.append((at, sound))
+            maker = SOUNDS.get(kind)
+            out.append((at, maker(i) if maker else blip(i if isinstance(i, int) else 0)))
+        if prepared[0].info.get('music'):
+            length = (until-start) if until is not None else 12
+            out.append((start, chiptune(max(1.0, length), len(prepared[1]))*.9))
         return out
     events = []
     for i, t in enumerate(entrance_times(prepared, compose)):

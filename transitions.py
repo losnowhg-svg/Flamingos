@@ -229,6 +229,13 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
     # the transition always starts from a finished graphic.
     for prepared, _ in scenes[1:]:
         prepared[0].info['power_on'] = False  # only the first scene switches the set on
+        prepared[0].info['intro'] = False
+    for prepared, _ in scenes:
+        prepared[0].info['ending'] = 'nessuno'
+        prepared[0].info.pop('duration', None)
+    music = any(p[0].info.get('music') for p, _ in scenes)
+    for prepared, _ in scenes:
+        prepared[0].info['music'] = False  # one soundtrack for the whole sequence, below
     speeds = [max(1.0, intro_length(p, c)/(hold*.65)) for p, c in scenes]
 
     def frame_at(index, t, animated=True):
@@ -270,7 +277,9 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
     finally:
         writer.close()
     if sound:
-        from sounds import mix, mux
+        from sounds import mix, mux, chiptune
+        if music:
+            events.append((0.0, chiptune(total/fps, len(scenes))*.9))
         mux(path, mix(events, total/fps, volume))
     return str(path)
 

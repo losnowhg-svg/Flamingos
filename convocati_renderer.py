@@ -40,7 +40,9 @@ def make_player(entry,index,config,font_bytes,s):
     tag='*' if captain else str(entry.get('role','-'))
     role=text_image(tag,style,9,yellow if captain else cyan,12,font_bytes,s,10)
     if role:im.alpha_composite(role,(round(169*s-role.width/2),round(9*s-role.height/2)))
-    return Layer(f'player_{index}',f"{index+1}. {name}",im,sequence=index)
+    layer=Layer(f'player_{index}',f"{index+1}. {name}",im,sequence=index)
+    layer.captain=captain
+    return layer
 
 
 def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
