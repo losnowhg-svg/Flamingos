@@ -232,7 +232,8 @@ def empty_library():
 # --- Squad register and week memory (stored as special browser projects) ----
 SQUAD_ID, WEEK_ID = 'rosa', 'settimana'
 MAX_SQUAD = 30
-SQUAD_ROLES = ('P','D','C','A','-')
+SQUAD_ROLES = ('P','D','C','A','ALL','DIR','-')
+STAFF_ROLES = ('ALL','DIR')
 
 
 def sanitize_squad(raw):
@@ -248,7 +249,18 @@ def sanitize_squad(raw):
             continue
         seen.add(name)
         role = item.get('role','-')
-        squad.append(dict(number=_integer(item.get('number'),0,0,99),name=name,role=role if role in SQUAD_ROLES else '-'))
+        entry = dict(number=_integer(item.get('number'),0,0,99),name=name,role=role if role in SQUAD_ROLES else '-')
+        if item.get('look'):
+            import pixel_character
+            look = pixel_character.sanitize(item['look'])
+            if look:
+                entry['look'] = look
+        avatar = item.get('avatar')
+        if avatar:
+            import avatars
+            if avatars.decode(avatar) is not None:
+                entry['avatar'] = avatar
+        squad.append(entry)
     return squad
 
 

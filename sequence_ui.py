@@ -15,7 +15,7 @@ from studio_state import (CRT_TEMPLATES, DEFAULTS, MODULES, apply_match, default
                           sanitize_config, sanitize_match)
 from transitions import TRANSITIONS, TRANSITION_IDS, preview_strip, render_sequence
 
-SLUGS = {'Starting 7': 'starting7', 'Matchday Screen': 'matchday', 'Full Time': 'fulltime',
+SLUGS = {'Calendario': 'calendario', 'Matchday Screen': 'matchday', 'Full Time': 'fulltime',
          'Convocati': 'convocati', 'Classifica': 'classifica'}
 
 
@@ -172,9 +172,8 @@ def show_kit(root: Path, library):
     st.subheader('KIT PARTITA')
     st.caption('Tutte le grafiche della settimana in un file ZIP, pronte da pubblicare. Usano i dati della Partita della settimana e le modifiche fatte negli editor.')
     a, b = st.columns([2, 1])
-    chosen = a.multiselect('Grafiche', list(DEFAULTS), default=['Matchday Screen', 'Convocati', 'Starting 7'], key='kit_items')
-    format = b.selectbox('Formato post', FORMATS, index=1, key='kit_format',
-                         help='Starting 7 ha un solo formato verticale e resta 9:16.')
+    chosen = a.multiselect('Grafiche', list(CRT_TEMPLATES), default=['Matchday Screen', 'Convocati', 'Classifica'], key='kit_items')
+    format = b.selectbox('Formato post', FORMATS, index=1, key='kit_format')
     if st.button('Crea kit ZIP', key='kit_build', width='stretch', disabled=not chosen):
         progress = st.progress(0, text='Creo le grafiche...')
         buffer = io.BytesIO()
@@ -182,10 +181,7 @@ def show_kit(root: Path, library):
             with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as archive:
                 for i, template in enumerate(chosen):
                     config, home, away, font_bytes = resolve_assets(root, template, current_config(template), library['assets'])
-                    if template == 'Starting 7':
-                        data = r.png_bytes(config, home, font_bytes, 2, 2)
-                    else:
-                        data = MODULES[template].png_bytes(config, home, away, font_bytes, format, 2, 2)
+                    data = MODULES[template].png_bytes(config, home, away, font_bytes, format, 2, 2)
                     archive.writestr(f'{i+1:02d}_flamingos_{SLUGS[template]}.png', data)
                     progress.progress((i+1)/len(chosen), text=f'{template} pronto')
             st.session_state['kit_zip'] = buffer.getvalue()

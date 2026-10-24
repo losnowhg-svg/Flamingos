@@ -20,7 +20,7 @@ import captions as cap
 import sounds
 import animations
 import themes
-from classifica_data import MAX_TEAMS, empty_row, fetch_standings, parse_standings, sort_rows, with_rows
+from classifica_data import MAX_TEAMS, empty_row, parse_standings, sort_rows, with_rows
 from library import save_project
 from render_utils import layout_warnings
 from studio_state import BUILTIN_FONTS, MODULES, defaults, sanitize_config
@@ -63,7 +63,8 @@ def show_studio(root: Path, template: str, library: dict):
     revision = revisions.setdefault(template, 0)
     namespace = SLUGS[template]+f'_{revision}'
     assets = library['assets']
-    players = squad(library)
+    full_squad = squad(library)
+    players = [p for p in full_squad if p['role'] not in ('ALL', 'DIR')]
     logos = [id_ for id_, a in assets.items() if a['kind'] == 'logo']
 
     def key(name): return namespace+'_'+name
@@ -264,7 +265,8 @@ def show_studio(root: Path, template: str, library: dict):
             if len({x['number'] for x in active}) < len(active): st.warning('Numeri di maglia duplicati.')
             if sum(x['captain'] for x in active) > 1: st.warning('Piu di un capitano.')
             if any(not x['name'].strip() for x in active): st.warning('Alcuni convocati non hanno il nome.')
-            st.caption('P portiere / D difensore / C centrocampista / A attaccante. Il capitano ha l\'asterisco * nella grafica.')
+            st.caption('P portiere / D difensore / C centrocampista / A attaccante. Il capitano ha l\'asterisco * nella grafica. '
+                       'Le schermate per reparto con gli avatar sono in Esporta.')
             with st.expander('Partita e ritrovo'):
                 a, b = st.columns(2)
                 with a: text('opponent', 'Avversari', 42)
@@ -292,11 +294,12 @@ def show_studio(root: Path, template: str, library: dict):
                 revisions[template] += 1
                 st.rerun()
 
-            site, paste, manual, server = st.tabs(['Dal sito CSI', 'Incolla', 'A mano', 'Dal server'])
+            site, paste, manual = st.tabs(['Dal sito CSI', 'Incolla', 'A mano'])
             with site:
-                st.markdown('Apri il girone e tocca il segnalibro **Invia a Flamingos**: la classifica arriva qui da sola.')
+                st.markdown('Apri il girone e tocca il segnalibro **Invia a Flamingos**, oppure incolla la pagina intera '
+                            'nella Settimana: arrivano anche prossima partita e calendario.')
                 st.link_button('Apri il Girone D su CSI LIVE', CSI_GIRONE, type='primary', width='stretch')
-                st.button('Installa il segnalibro (pagina Settimana)', key=key('to_week'), on_click=go, args=('Settimana',), width='stretch')
+                st.button('Vai ad Aggiorna dal sito CSI (Settimana)', key=key('to_week'), on_click=go, args=('Settimana',), width='stretch')
             with paste:
                 pasted = st.text_area('Testo della classifica', height=150, key=key('paste'),
                                       placeholder='Seleziona la tabella dalla prima squadra all\'ultima, copia e incolla qui.')
@@ -326,15 +329,6 @@ def show_studio(root: Path, template: str, library: dict):
                     config['standings'][i] = clean
                 if st.button('Ordina per punti', key=key('sort')):
                     load_rows(sort_rows(config['standings'][:count]), 'Classifica riordinata.')
-            with server:
-                text('source_url', 'Link del girone', 300)
-                if st.button('Leggi dal server', key=key('fetch')):
-                    try:
-                        rows = fetch_standings(config['source_url'])
-                        load_rows(rows, f'Classifica letta dal link: {len(rows)} squadre.')
-                    except ValueError as exc:
-                        st.error(str(exc))
-                st.caption('CSI LIVE e Tuttocampo oggi rifiutano le letture dal server (errore 403): usa il segnalibro.')
             active = k.active_rows(config)
             wrong = [x['team'] for x in active if x['v']+x['n']+x['p'] != x['g']]
             if wrong: st.warning('V + N + P non torna con le giocate per: '+', '.join(wrong[:4])+'.')
@@ -612,6 +606,10 @@ def show_studio(root: Path, template: str, library: dict):
                 with st.expander('Guarda il PNG finale'):
                     st.image(png, width='stretch')
             st.divider()
+            if is_squad:
+                from reparti_ui import show_departments
+                show_departments(config, full_squad, home, font_bytes, key)
+                st.divider()
             texts = cap.captions(template, config)
             if texts:
                 section(f'Didascalie ({len(texts)})', 'Copia quella che preferisci con l\'icona in alto a destra.'

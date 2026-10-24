@@ -30,7 +30,7 @@ def make_player(entry,index,config,font_bytes,s):
     im=Image.new('RGBA',(178*s,19*s));d=ScaledDraw(im,s)
     d.rectangle((0,0,178,18),fill=(6,14,27,245))
     d.rectangle((0,0,21,18),fill=(*pink,255))
-    number=text_image(str(entry.get('number',index+1)),style,11,(9,11,22),18,font_bytes,s,12)
+    number=text_image(str(entry.get('number',index+1) or '-'),style,11,(9,11,22),18,font_bytes,s,12)
     if number:im.alpha_composite(number,(round(10.5*s-number.width/2),round(9*s-number.height/2)))
     captain=bool(entry.get('captain',False))
     name=str(entry.get('name','GIOCATORE'))

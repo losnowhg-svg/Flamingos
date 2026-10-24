@@ -1,4 +1,23 @@
-# Flamingos Studio 1.9
+# Flamingos Studio 2.0
+
+## Novita della 2.0: facce pixel e reparti
+
+- **Avatar pixel dei giocatori** (Settimana > La rosa > *Avatar pixel dei giocatori*): personaggi stilizzati
+  32x32 costruiti con pochi tratti - capelli (ciuffo, corti, rasati, lunghi, ricci, pelato), barba (corta,
+  piena, pizzetto, baffi), occhiali (da vista, da sole), sopracciglia - e tre colori. Una foto facoltativa
+  suggerisce i colori di pelle, capelli e barba e non viene salvata. Due stili: **Arcade luce neon** (maglia
+  rosa, riflesso ciano e rosa) per tutti i preset e **Game Boy** a quattro verdi, usato da solo con il preset
+  Pocket verde. Si salva solo la descrizione del personaggio nella rosa del browser.
+- **Convocati per reparti** (Convocati > *Esporta*): dopo il riepilogo, una schermata per portieri,
+  difensori, centrocampisti, attaccanti e staff, con gli avatar, il numero e il capitano.
+  Carosello ZIP (riepilogo + reparti) e video presentazione con cambio canale, suoni e, se attivo, il televisore.
+- **Staff nella rosa**: nuovi ruoli ALL (allenatore) e DIR (dirigente); non compaiono tra i convocati.
+  Pulsante *Carica la rosa ufficiale* con la rosa 2026/27 (gli avatar gia fatti restano).
+- **Import CSI nella Settimana anche incollando la pagina**: apri il girone, *Seleziona tutto* > *Copia*,
+  incolla in *Incolla la pagina*: arrivano classifica, prossima partita e calendario come con il segnalibro.
+  Tolta la lettura dal link (CSI la blocca).
+- **Starting 7 rimosso** dal menu, dalla Settimana e dal kit.
+
 
 ## Novita della 1.9: televisore, animazioni, temi
 

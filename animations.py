@@ -29,12 +29,13 @@ TIMELINES = {
     'convocati': {'logo': .15, 'title': .4, 'team': .8, 'match': 1.05},
     'classifica': {'logo': .15, 'title': .4, 'subtitle': .85, 'table': 1.15},
     'calendario': {'logo': .15, 'title': .4, 'subtitle': .85, 'table': 1.15},
+    'reparto': {'logo': .15, 'title': .4, 'subtitle': .8},
 }
 ROW_STEP = .17
 
 
 def _kind(layer):
-    if layer.id in ('logo', 'home_logo', 'away_logo'):
+    if layer.id in ('logo', 'home_logo', 'away_logo') or layer.id.startswith('card_'):
         return 'glitch'
     if layer.id == 'vs':
         return 'pop'
