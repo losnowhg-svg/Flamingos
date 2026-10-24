@@ -1,4 +1,21 @@
-# Flamingos Studio 1.9
+# Flamingos Studio 2.0
+
+## Novita della 2.0: facce pixel e reparti
+
+- **Avatar pixel dalle foto** (Settimana > La rosa > *Avatar pixel dalle foto*): scegli la persona,
+  carica una foto del viso; l'app trova la faccia, toglie lo sfondo, riduce a 40x40 pixel con pochi
+  colori, contorno scuro e maglia rosa. Ritaglio, zoom, colori e sfondo si regolano con gli slider.
+  Si salva solo l'avatar (pochi KB) nella rosa del browser: la foto non viene conservata ne caricata su GitHub.
+- **Convocati per reparti** (Convocati > *Esporta*): dopo il riepilogo, una schermata per portieri,
+  difensori, centrocampisti, attaccanti e staff, con gli avatar, il numero e il capitano.
+  Carosello ZIP (riepilogo + reparti) e video presentazione con cambio canale, suoni e, se attivo, il televisore.
+- **Staff nella rosa**: nuovi ruoli ALL (allenatore) e DIR (dirigente); non compaiono tra i convocati.
+  Pulsante *Carica la rosa ufficiale* con la rosa 2026/27 (gli avatar gia fatti restano).
+- **Import CSI nella Settimana anche incollando la pagina**: apri il girone, *Seleziona tutto* > *Copia*,
+  incolla in *Incolla la pagina*: arrivano classifica, prossima partita e calendario come con il segnalibro.
+  Tolta la lettura dal link (CSI la blocca).
+- **Starting 7 rimosso** dal menu, dalla Settimana e dal kit.
+
 
 ## Novita della 1.9: televisore, animazioni, temi
 
