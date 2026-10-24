@@ -128,6 +128,7 @@ def show_sequence(root: Path, library):
             state['sound'] = st.checkbox('Suoni CRT (cambio canale, accensione, glitch, nastro, bip)', state['sound'], key='seq_sound')
             if state['sound']:
                 state['volume'] = st.slider('Volume', 0, 100, int(state['volume']), key='seq_volume')
+                state['music'] = st.checkbox('Musica chiptune sotto tutta la sequenza', state.get('music', False), key='seq_music')
             choices = ('own',)+PRESET_IDS
             state['preset'] = st.selectbox('Preset', choices, index=choices.index(state['preset']),
                 format_func=lambda x: 'Ognuna il suo preset' if x == 'own' else 'Tutte con '+PRESETS[x]['name'], key='seq_preset')
@@ -151,6 +152,8 @@ def show_sequence(root: Path, library):
             progress = st.progress(0, text='Preparo le grafiche...')
             try:
                 scenes = [_scene(root, t, library, state['preset'], state['scale']) for t in items]
+                for prepared, _ in scenes:
+                    prepared[0].info['music'] = bool(state.get('music')) and state['sound']
                 with tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)/'sequenza.mp4'
                     render_sequence(scenes, transitions, path, state['fps'], state['hold'], state['transition_seconds'],

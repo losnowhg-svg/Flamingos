@@ -43,7 +43,8 @@ MATCH_DEFAULT = dict(
     positions={k:list(v) for k,v in matchday.DEFAULT_POSITIONS.items()},
 )
 CRT_DEFAULT = dict(preset_id='crt',rotation_mode='Manuale',season_round=1,scanlines=16,brightness=DEFAULT_BRIGHTNESS,
-                   theme='auto',event_theme='',animation='Retro',power_on=True,mockup=False)
+                   theme='auto',event_theme='',animation='Retro',power_on=True,mockup=False,
+                   intro=False,details=True,music=False,ending='nessuno')
 MATCH_DEFAULT.update(CRT_DEFAULT)
 MATCH_DEFAULT.update(font_choice='CRT Terminal',our_side='Casa')
 FULLTIME_DEFAULT = dict(
@@ -85,6 +86,7 @@ CLASSIFICA_DEFAULT = dict(
     pink='#F268A8',cyan='#79DCF7',yellow='#FFC963',white='#F6F4FC',
     font_choice='CRT Terminal',logo_id='default',export_format='Post 4:5',
     duration=8,fps=24,video_scale=2,png_quality='Fine',
+    prev_pos=0,
     standings=[dict(pos=i+1,team=t,pt=pt,g=g,v=v,n=n,p=p,gf=gf,gs=gs) for i,(t,pt,g,v,n,p,gf,gs) in enumerate(SAMPLE_STANDINGS)]
               +[empty_row(i+1) for i in range(len(SAMPLE_STANDINGS),MAX_TEAMS)],
     positions={k:list(v) for k,v in classifica.DEFAULT_POSITIONS.items()},
@@ -114,7 +116,7 @@ RANGES['Full Time'] = dict(title_size=(18,42),label_size=(10,24),info_size=(9,20
     home_score=(0,99),away_score=(0,99),home_penalties=(0,99),away_penalties=(0,99),duration=(5,18))
 RANGES['Convocati'] = dict(title_size=(18,36),team_size=(9,20),info_size=(8,18),name_size=(9,16),
     logo_size=(30,58),roster_count=(7,18),duration=(5,18))
-RANGES['Classifica'] = dict(promo_count=(0,8),playoff_count=(0,8),title_size=(16,34),info_size=(8,16),table_size=(7,14),logo_size=(26,56),
+RANGES['Classifica'] = dict(prev_pos=(0,30),promo_count=(0,8),playoff_count=(0,8),title_size=(16,34),info_size=(8,16),table_size=(7,14),logo_size=(26,56),
     team_count=(2,MAX_TEAMS),duration=(5,18))
 RANGES['Calendario'] = dict(title_size=(16,34),info_size=(8,16),logo_size=(26,56),fixture_count=(1,calendario.MAX_FIXTURES),duration=(5,18))
 CRT_TEMPLATES = ('Matchday Screen','Full Time','Convocati','Classifica','Calendario')
@@ -206,6 +208,8 @@ def sanitize_config(template, raw):
             config[key] = value if value in themes.EVENTS else ''
         elif key == 'animation':
             config[key] = value if value in ('Retro','Classica') else default
+        elif key == 'ending':
+            config[key] = value if value in ('nessuno','spegnimento','loop') else default
         elif key in RANGES[template]:
             config[key] = _integer(value,default,*RANGES[template][key])
         elif key in ('fps','video_scale'):

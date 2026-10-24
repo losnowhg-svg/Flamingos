@@ -96,7 +96,8 @@ class AnimationTests(unittest.TestCase):
         prepared = scene('Matchday Screen')
         kinds = {l.id: l.anim for l in prepared[1]}
         self.assertEqual(kinds['title'], 'type')
-        self.assertEqual(kinds['home_logo'], 'glitch')
+        self.assertEqual(kinds['home_logo'], 'slide_left')
+        self.assertEqual(kinds['away_logo'], 'slide_right')
         self.assertEqual(kinds['vs'], 'pop')
         self.assertTrue(animations.rich(prepared))
         self.assertFalse(animations.rich(scene('Matchday Screen', animation='Classica')))

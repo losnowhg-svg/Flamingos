@@ -65,7 +65,7 @@ def normalized_positions(config):
     return safe_positions({}, defaults)
 
 
-def _card(member, config, w, h, font_bytes, s):
+def _card(member, config, w, h, font_bytes, s, blink=False, bob=False):
     style = config.get('text_style', config.get('font_choice', 'CRT Terminal'))
     pink = rgb(config.get('pink', '#F268A8')); cyan = rgb(config.get('cyan', '#79DCF7'))
     white = rgb(config.get('white', '#F6F4FC')); yellow = rgb(config.get('yellow', '#FFC963'))
@@ -87,10 +87,10 @@ def _card(member, config, w, h, font_bytes, s):
         col = tuple(round(c*(.18+.22*(1-t))+p*(1-(.18+.22*(1-t)))) for c, p in zip(cyan, panel))
         td.rectangle((0, side*i/12, side, side*(i+1)/12+1), fill=(*col, 255))
     import pixel_character
-    picture = pixel_character.picture(member, config.get('preset_id', 'crt'))
+    picture = pixel_character.picture(member, config.get('preset_id', 'crt'), blink)
     factor = max(1, int(side*s//picture.width))
     big = picture.resize((picture.width*factor, picture.height*factor), Image.Resampling.NEAREST)
-    tile.alpha_composite(big, ((tile.width-big.width)//2, tile.height-big.height))
+    tile.alpha_composite(big, ((tile.width-big.width)//2, tile.height-big.height-(factor if bob else 0)))
     image.alpha_composite(tile, (round(ax*s), round(ay*s)))
     d.rectangle((ax, ay, ax+side, ay+side), outline=(*cyan, 255), width=1.2)
     # Number badge and captain mark.
@@ -133,7 +133,13 @@ def get_layers(config, home_logo, away_logo=None, font_bytes=None, render_scale=
     members = config.get('members', [])[:MAX_CARDS]
     _, w, h = card_boxes(len(members), any(m.get('role') in STAFF_ROLES for m in members))
     for i, member in enumerate(members):
-        layers.append(Layer(f'card_{i}', str(member.get('name', '')), _card(member, config, w, h, font_bytes, s), sequence=i))
+        layer = Layer(f'card_{i}', str(member.get('name', '')), _card(member, config, w, h, font_bytes, s), sequence=i)
+        # Idle frames for the video: eyes closed, avatar one sprite pixel up.
+        layer.alive = {'blink': _card(member, config, w, h, font_bytes, s, blink=True),
+                       'bob': _card(member, config, w, h, font_bytes, s, bob=True)}
+        layer.group = config.get('group', '')
+        layer.captain = bool(member.get('captain'))
+        layers.append(layer)
     return layers
 
 
@@ -193,6 +199,7 @@ def slides(convocati, squad):
         config['slide_subtitle'] = ('ALLENATORE E DIRIGENTI' if group == 'STAFF' else
                                     ('CONVOCATI / '+match) if match else 'CONVOCATI')
         config['members'] = members
+        config['group'] = group
         out.append((group, config))
     return out
 

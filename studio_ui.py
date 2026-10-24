@@ -339,6 +339,7 @@ def show_studio(root: Path, template: str, library: dict):
             a, b = st.columns(2)
             with a: text('round_label', 'Giornata', 36)
             with b: text('our_team', 'La nostra squadra', 34)
+            number('prev_pos', 'Nostra posizione la settimana scorsa (0 = non mostrare la freccia)', 0, 30)
             if check('show_zones', 'Colora promozione e spareggio'):
                 a, b = st.columns(2)
                 with a: number('promo_count', 'Posti promozione', 0, 8)
@@ -629,12 +630,26 @@ def show_studio(root: Path, template: str, library: dict):
                     if config['animation'] == 'Retro':
                         check('power_on', 'Accensione del TV all\'inizio')
                 if config['animation'] == 'Retro':
-                    st.caption('Testi scritti come su un terminale, stemmi con glitch RGB, VS che esplode, '
-                               + ('punteggio che conta fino al risultato, ' if is_full else '')
-                               + ('tabella che si riempie riga per riga, ' if (is_table or is_cal) else '')
-                               + 'sfarfallio CRT.')
+                    st.caption({'Matchday Screen': 'Gli stemmi arrivano dai lati e si scontrano: lampo, schermo che trema, poi il VS.',
+                                'Full Time': 'Punteggio a slot machine, GOAL! se segniamo, poi STAGE CLEAR, DRAW GAME o GAME OVER.',
+                                'Classifica': 'La tabella si riempie riga per riga; la nostra riga sale o scende dalla posizione '
+                                              'della settimana scorsa; corona se siamo primi.',
+                                'Calendario': 'Ogni risultato entra con un ding; la prossima partita lampeggia.',
+                                'Convocati': 'Lista scritta come su un terminale, luce dorata sul capitano. '
+                                             'Nei reparti gli avatar sbattono le palpebre.'}.get(template, ''))
+                    a, b = st.columns(2)
+                    with a:
+                        check('intro', 'Intro PRESS START')
+                        check('music', 'Musica chiptune')
+                    with b:
+                        check('details', 'Dettagli VHS: REC, contatore, disturbi')
+                        select('ending', 'Finale', animations.ENDINGS,
+                               lambda x: {'nessuno': 'Nessuno', 'spegnimento': 'TV che si spegne',
+                                          'loop': 'Loop per Reel (dissolvenza al nero)'}[x])
             with st.expander('Impostazioni video'):
                 slider('duration', 'Durata (secondi)', 5 if is_crt else 7, 18)
+                if is_crt and config['animation'] == 'Retro':
+                    st.caption('Se intro, animazioni e finale non ci stanno, il video si allunga da solo.')
                 a, b = st.columns(2)
                 with a: select('fps', 'Fotogrammi al secondo', (12, 15, 24, 30))
                 with b: select('video_scale', 'Risoluzione', (2, 1), lambda x: '1080 px' if x == 2 else '540 px (rapido)')
@@ -655,7 +670,12 @@ def show_studio(root: Path, template: str, library: dict):
                             r.render_video(config, home, path, font_bytes, config['fps'], config['duration'], config['video_scale'], callback)
                         if config['sound']:
                             progress.progress(1.0, text='Aggiungo i suoni CRT...')
-                            sounds.add_scene_audio(path, prepared, module.compose, config['duration'], config['volume']/100)
+                            seconds = config['duration']
+                            if is_crt:
+                                from crt_common import video_length
+                                seconds = video_length(prepared, config['duration'])
+                                prepared[0].info['duration'] = seconds
+                            sounds.add_scene_audio(path, prepared, module.compose, seconds, config['volume']/100)
                         st.session_state['video_'+template] = {'signature': video_signature, 'data': path.read_bytes()}
                 except Exception as exc:
                     st.error(f'Video non generato: {exc}')

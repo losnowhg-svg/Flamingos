@@ -96,12 +96,26 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
     return layers
 
 
+def outcome(config):
+    """('win'|'draw'|'loss', our goals) from our side, penalties included."""
+    a,b=int(config.get('home_score',0)),int(config.get('away_score',0))
+    ours_home=config.get('our_side','Casa')=='Casa'
+    goals=a if ours_home else b
+    if a==b and config.get('show_penalties',False):
+        a,b=int(config.get('home_penalties',0)),int(config.get('away_penalties',0))
+    if a==b:
+        return 'draw',goals
+    return ('win' if (a>b)==ours_home else 'loss'),goals
+
+
 def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     import themes
     from crt_common import finish
     s=checked_scale(render_scale)
     config=themes.effective(config)
-    return finish((background(config,'fulltime' if config.get('show_scorers',True) else 'fulltime_clean',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)),config,'fulltime')
+    prepared=(background(config,'fulltime' if config.get('show_scorers',True) else 'fulltime_clean',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config))
+    prepared[0].info['outcome'],prepared[0].info['our_goals']=outcome(config)
+    return finish(prepared,config,'fulltime')
 
 
 def png_bytes(config,home_logo,away_logo=None,font_bytes=None,format='Story 9:16',scale=2,supersample=2):

@@ -28,6 +28,17 @@ def compose(prepared, t=999, animated=True):
     return image.convert('RGB')
 
 
+def video_length(prepared, duration):
+    """The requested length, stretched when intro, animations and ending need more."""
+    import animations
+    if not animations.rich(prepared) or duration < 3:  # very short test clips stay as asked
+        return duration
+    needed=(animations.intro_length(prepared) or 0)+1.6
+    if prepared[0].info.get('ending')=='spegnimento':
+        needed+=.6
+    return round(min(30,max(duration,needed)),2)
+
+
 def finish(prepared, config, kind):
     import animations
     return animations.prepare(prepared, config, kind)
@@ -54,6 +65,8 @@ def export_video(scene_function, config, home_logo, away_logo, path, font_bytes=
     compose_fn=compose_fn or compose
     fps,duration=video_settings(fps,duration,scale)
     prepared=scene_function(config,home_logo,away_logo,font_bytes,scale)
+    duration=video_length(prepared,duration)
+    prepared[0].info['duration']=duration
     writer=video_writer(path,fps)
     count=round(duration*fps)
     mockup=config.get('mockup',False)

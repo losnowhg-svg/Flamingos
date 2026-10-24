@@ -256,18 +256,23 @@ def _gameboy(rgba, g):
     return out
 
 
-@lru_cache(maxsize=128)
-def _image(items, style):
+@lru_cache(maxsize=256)
+def _image(items, style, blink=False):
     look = dict(items)
     g, rgba = _paint(look)
+    if blink:  # closed eyes: a darker lid line, no highlight
+        lid = np.clip(_rgb(look['skin'])*.55, 0, 255).astype(np.uint8)
+        rgba[np.isin(g, (EYE, WHITE))] = (*lid, 255)
     rgba = _gameboy(rgba, g) if style == 'gameboy' else _rim(rgba, g)
     return Image.fromarray(rgba, 'RGBA')
 
 
-def image(look, style='arcade'):
-    """The character as a 32x32 RGBA image."""
+def image(look, style='arcade', blink=False):
+    """The character as a 32x32 RGBA image (blink=True: eyes closed)."""
     look = sanitize(look) or dict(DEFAULT_LOOK)
-    return _image(tuple(sorted(look.items())), 'gameboy' if style == 'gameboy' else 'arcade').copy()
+    if look['glasses'] == 'sole':
+        blink = False
+    return _image(tuple(sorted(look.items())), 'gameboy' if style == 'gameboy' else 'arcade', bool(blink)).copy()
 
 
 def style_for(preset_id):
@@ -325,11 +330,11 @@ def gameboy_image(img):
     return Image.fromarray(arr, 'RGBA')
 
 
-def picture(member, preset_id='crt'):
+def picture(member, preset_id='crt', blink=False):
     """The sprite for a squad member: their look, an older photo avatar, or a silhouette."""
     import avatars
     style = style_for(preset_id)
     if member.get('look'):
-        return image(member['look'], style)
+        return image(member['look'], style, blink)
     picture = avatars.decode(member.get('avatar')) or avatars.placeholder(size=SIZE)
     return gameboy_image(picture) if style == 'gameboy' else picture

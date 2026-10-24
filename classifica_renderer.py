@@ -96,6 +96,7 @@ def table_image(config, font_bytes=None, s=1):
         cell(label, yellow if label == 'PT' else cyan, x, header_h/2-1, width, h=9)
         x += width
     ours = config.get('our_team', 'FLAMINGOS')
+    ours_index = None
     for i, row in enumerate(rows):
         top = header_h+i*row_h
         mid = top+row_h/2
@@ -103,6 +104,7 @@ def table_image(config, font_bytes=None, s=1):
         pos = int(row.get('pos', i+1))
         zone = zone_of(pos, config)
         if highlight:
+            ours_index = i if ours_index is None else ours_index
             d.rectangle((0, top+1, TABLE_W, top+row_h-1), fill=(*pink, 245))
         elif zone:
             d.rectangle((0, top+1, TABLE_W, top+row_h-1), fill=(*zones[zone], 38))
@@ -133,10 +135,32 @@ def table_image(config, font_bytes=None, s=1):
             if im:
                 image.alpha_composite(im, (round((x+13)*s), round(y*s-im.height/2)))
                 x += 13+im.width/s+16
+    # Arrow with the places gained or lost since last week.
+    prev = int(config.get('prev_pos', 0) or 0)
+    if ours_index is not None and prev:
+        now = int(rows[ours_index].get('pos', ours_index+1))
+        if prev != now:
+            up = prev > now
+            colour = (91, 230, 164) if up else (255, 107, 120)
+            top = header_h+ours_index*row_h
+            mid = top+row_h/2
+            ax = team_x+team_w-24
+            size_a = min(5, row_h*.22)
+            d.rectangle((ax-3, top+3, ax+22, top+row_h-3), fill=(9, 11, 22, 255))
+            if up:
+                d.polygon([(ax, mid+size_a*.7), (ax+size_a, mid-size_a*.7), (ax+2*size_a, mid+size_a*.7)], fill=(*colour, 255))
+            else:
+                d.polygon([(ax, mid-size_a*.7), (ax+size_a, mid+size_a*.7), (ax+2*size_a, mid-size_a*.7)], fill=(*colour, 255))
+            cell(str(abs(prev-now)), colour, ax+2*size_a+1, mid, 22-2*size_a, 'left')
     edges = [(0, header_h)]+[(header_h+i*row_h, header_h+(i+1)*row_h) for i in range(len(rows))]
     if show_legend:
         edges.append((TABLE_H-legend_h, TABLE_H))
     image.info['row_edges'] = edges
+    if ours_index is not None:
+        image.info['ours'] = ours_index+1          # index in row_edges (0 is the header)
+        if prev and 1 <= prev <= len(rows):
+            image.info['prev'] = prev
+        image.info['first'] = int(rows[ours_index].get('pos', ours_index+1)) == 1
     return image
 
 

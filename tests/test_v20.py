@@ -140,7 +140,9 @@ class DepartmentTests(unittest.TestCase):
             prepared = rr.scene(slide, LOGO, None, None, 1)
             cards = [l for l in prepared[1] if l.id.startswith('card_')]
             self.assertEqual(len(cards), len(slide['members']))
-            self.assertTrue(all(l.anim == 'glitch' for l in cards))
+            expected = {'P': 'dive', 'D': 'drop', 'C': 'glitch', 'A': 'dash', 'STAFF': 'pop'}[group]
+            self.assertTrue(all(l.anim == expected for l in cards))
+            self.assertTrue(all(set(l.alive) == {'blink', 'bob'} for l in cards))
             still = rr.compose(prepared, 999, False)
             self.assertEqual(still.size, (540, 960))
             rr.compose(prepared, 2.0, True)
