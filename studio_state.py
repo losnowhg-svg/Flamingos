@@ -15,6 +15,7 @@ import convocati_renderer as convocati
 import classifica_renderer as classifica
 import calendario_renderer as calendario
 import datetime as _dt
+import themes
 from classifica_data import MAX_TEAMS, empty_row
 from pixel_fonts import PIXEL_FONTS
 from crt_presets import PRESETS, FORMATS, DEFAULT_BRIGHTNESS
@@ -41,7 +42,8 @@ MATCH_DEFAULT = dict(
     export_format='Post 1:1', duration=8, fps=24, video_scale=2, png_quality='Fine',
     positions={k:list(v) for k,v in matchday.DEFAULT_POSITIONS.items()},
 )
-CRT_DEFAULT = dict(preset_id='crt',rotation_mode='Manuale',season_round=1,scanlines=16,brightness=DEFAULT_BRIGHTNESS)
+CRT_DEFAULT = dict(preset_id='crt',rotation_mode='Manuale',season_round=1,scanlines=16,brightness=DEFAULT_BRIGHTNESS,
+                   theme='auto',event_theme='',animation='Retro',power_on=True,mockup=False)
 MATCH_DEFAULT.update(CRT_DEFAULT)
 MATCH_DEFAULT.update(font_choice='CRT Terminal',our_side='Casa')
 FULLTIME_DEFAULT = dict(
@@ -198,6 +200,12 @@ def sanitize_config(template, raw):
             config[key] = value if value in ('Manuale','Per giornata') else default
         elif key == 'our_side':
             config[key] = value if value in ('Casa','Ospiti') else default
+        elif key == 'theme':
+            config[key] = value if value in themes.CHOICES else default
+        elif key == 'event_theme':
+            config[key] = value if value in themes.EVENTS else ''
+        elif key == 'animation':
+            config[key] = value if value in ('Retro','Classica') else default
         elif key in RANGES[template]:
             config[key] = _integer(value,default,*RANGES[template][key])
         elif key in ('fps','video_scale'):
@@ -357,7 +365,7 @@ def validate_library(raw):
 # --- Shared match: type the fixture once, every editor receives it ----------
 MATCH_FIELDS = dict(our_name='FLAMINGOS', opponent='AVVERSARI', our_side='Casa', date='GG/MM/AAAA',
                     kickoff='HH:MM', meeting_time='HH:MM', venue='VIA FORNACI, 82', round=1,
-                    our_logo_id='default', opponent_logo_id='none')
+                    our_logo_id='default', opponent_logo_id='none', event='auto')
 CRT_TEMPLATES_SET = set(CRT_TEMPLATES)
 
 
@@ -375,13 +383,16 @@ def sanitize_match(raw):
             match[key] = _integer(value, 1, 1, 80)
         elif key == 'our_side':
             match[key] = value if value in ('Casa', 'Ospiti') else default
+        elif key == 'event':
+            match[key] = value if value in themes.MATCH_EVENTS else default
         else:
             match[key] = str(value)[:72]
     return match
 
 
-def apply_match(template, config, raw_match):
-    """Copy the fixture into one editor without touching layout, sizes or colours."""
+def apply_match(template, config, raw_match, event_theme=None):
+    """Copy the fixture into one editor without touching layout, sizes or colours.
+    event_theme: derby / bigmatch / ultima worked out from the CSI data, if known."""
     from crt_presets import apply_preset, preset_for_round
     match = sanitize_match(raw_match)
     output = copy.deepcopy(config)
@@ -407,6 +418,7 @@ def apply_match(template, config, raw_match):
         output.update(team_name=ours)
     if template in CRT_TEMPLATES_SET:
         output['season_round'] = match['round']
+        output['event_theme'] = event_theme if event_theme is not None else themes.auto_event(match)
         if output.get('rotation_mode') == 'Per giornata':
             output = apply_preset(output, preset_for_round(match['round']))
     return sanitize_config(template, output)

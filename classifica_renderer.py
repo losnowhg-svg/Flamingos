@@ -133,6 +133,10 @@ def table_image(config, font_bytes=None, s=1):
             if im:
                 image.alpha_composite(im, (round((x+13)*s), round(y*s-im.height/2)))
                 x += 13+im.width/s+16
+    edges = [(0, header_h)]+[(header_h+i*row_h, header_h+(i+1)*row_h) for i in range(len(rows))]
+    if show_legend:
+        edges.append((TABLE_H-legend_h, TABLE_H))
+    image.info['row_edges'] = edges
     return image
 
 
@@ -153,9 +157,12 @@ def get_layers(config, home_logo, away_logo=None, font_bytes=None, render_scale=
     return layers
 
 
-def scene(config, home_logo, away_logo=None, font_bytes=None, render_scale=2):
-    s = checked_scale(render_scale)
-    return background(config, 'classifica', s), get_layers(config, home_logo, away_logo, font_bytes, s), normalized_positions(config)
+def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
+    import themes
+    from crt_common import finish
+    s=checked_scale(render_scale)
+    config=themes.effective(config)
+    return finish((background(config, 'classifica', s), get_layers(config, home_logo, away_logo, font_bytes, s), normalized_positions(config)),config,'classifica')
 
 
 def png_bytes(config, home_logo, away_logo=None, font_bytes=None, format='Story 9:16', scale=2, supersample=2):

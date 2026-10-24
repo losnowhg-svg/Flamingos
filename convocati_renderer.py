@@ -69,8 +69,11 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
 
 
 def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
+    import themes
+    from crt_common import finish
     s=checked_scale(render_scale)
-    return background(config,'convocati',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
+    config=themes.effective(config)
+    return finish((background(config,'convocati',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)),config,'convocati')
 
 
 def png_bytes(config,home_logo,away_logo=None,font_bytes=None,format='Story 9:16',scale=2,supersample=2):
