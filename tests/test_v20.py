@@ -215,3 +215,21 @@ class CharacterTests(unittest.TestCase):
         green = np.asarray(pc.picture(slides['A']['members'][0], 'gameboy'))
         self.assertTrue({tuple(p) for p in green[green[..., 3] > 0][:, :3]} <= {tuple(c) for c in pc.GAMEBOY})
         rr.png_bytes(slides['A'], LOGO, None, None, 'Post 1:1', 1, 1)
+
+
+class OurColourTests(unittest.TestCase):
+    def test_flamingos_pink_away_too(self):
+        from studio_state import MODULES
+        from renderer import rgb
+        for template in ('Matchday Screen', 'Full Time'):
+            for side, ours_id in (('Casa', 'home_name'), ('Ospiti', 'away_name')):
+                config = defaults(template)
+                config.update(theme='none', our_side=side)
+                if side == 'Ospiti':
+                    config.update(home_name='LIONS', away_name='FLAMINGOS')
+                layers = {l.id: l for l in MODULES[template].scene(config, LOGO, None, None, 1)[1]}
+                pink = np.array(rgb(config['pink']))
+                arr = np.asarray(layers[ours_id].image).astype(int)
+                opaque = arr[arr[..., 3] > 200][:, :3]
+                closest = np.abs(opaque-pink).sum(axis=1).min()
+                self.assertLess(closest, 30, (template, side))

@@ -134,7 +134,9 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
         image = clean_logo(data,config.get(f'{side}_logo_size',103),config.get(f'{side}_clear_white',True),s) if data else _unknown_shield(s)
         layers.append(Layer(f'{side}_logo',LAYER_NAMES[f'{side}_logo'],image))
     layers.append(Layer('vs','VS',_vs_sprite(yellow,style,font_bytes,config.get('vs_size',43),s)))
-    for side,color,default in [('home',pink,'FLAMINGOS'),('away',cyan,'AVVERSARI')]:
+    # Flamingos always pink, home or away; the opponents take the second colour.
+    ours = 'away' if config.get('our_side','Casa') == 'Ospiti' else 'home'
+    for side,color,default in [('home',pink if ours == 'home' else cyan,'FLAMINGOS'),('away',pink if ours == 'away' else cyan,'AVVERSARI')]:
         image = _name_text(config.get(f'{side}_name',default),style,config.get('label_size',18),color,font_bytes,s)
         if image: layers.append(Layer(f'{side}_name',LAYER_NAMES[f'{side}_name'],image))
     for id_,parts in [

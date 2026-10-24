@@ -83,11 +83,13 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
         layers[-1].variants=variants or [layers[-1].image]
     if config.get('show_penalties',False) and config.get('home_score',0)==config.get('away_score',0):
         text('penalties',f"{config.get('home_penalties',0)}-{config.get('away_penalties',0)} D.C.R.",10,white,142,12)
-    for side,col in (('home',pink),('away',cyan)):
+    ours='away' if config.get('our_side','Casa')=='Ospiti' else 'home'
+    side_color={'home':pink if ours=='home' else cyan,'away':pink if ours=='away' else cyan}
+    for side,col in (('home',side_color['home']),('away',side_color['away'])):
         im=_name_text(config.get(side+'_name',''),style,config.get('label_size',15),col,font_bytes,s)
         if im:layers.append(Layer(side+'_name',LAYER_NAMES[side+'_name'],im))
     text('result',result_text(config),config.get('result_size',16),yellow,330,22)
-    for side,col,label in (('home',pink,'MARCATORI CASA'),('away',cyan,'MARCATORI OSPITI')):
+    for side,col,label in (('home',side_color['home'],'MARCATORI CASA'),('away',side_color['away'],'MARCATORI OSPITI')):
         if config.get('show_scorers',True):
             im=_scorers(config.get(side+'_scorers',''),label,col,white,style,config.get('scorer_size',11),font_bytes,s)
             layers.append(Layer(side+'_scorers',LAYER_NAMES[side+'_scorers'],im))
