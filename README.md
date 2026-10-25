@@ -1,4 +1,18 @@
-# Flamingos Studio 2.2
+# Flamingos Studio 2.3
+
+## Novita della 2.3: la pagina Didascalie
+
+- Nuova pagina **✍️ Didascalie** nel menu: scegli la grafica (Matchday, Convocati, Presentazione reparti,
+  Full Time, Classifica, Calendario) e l'app scrive da 6 a 60 didascalie alla volta, tutte diverse,
+  con i dati veri della settimana (avversario, giorno, orario, campo, risultato, marcatori, doppiette,
+  porta inviolata, posizione, punti dalla vetta, posizioni guadagnate, serie di vittorie, derby, temi).
+- **Sei toni**: epico, ironico, retro gamer, telecronaca anni '90, sobrio, da spogliatoio.
+- Lunghezza corta / media / lunga, emoji si/no, hashtag nessuno / pochi / tanti (mai oltre i 30 di Instagram).
+- **🎲 Altre** per un nuovo giro, ricerca per parola, **⭐ preferite** da tenere da parte.
+- Migliaia di combinazioni per tono; le frasi che chiedono un dato mancante vengono saltate.
+- **Tag Instagram**: nuova colonna *Instagram* nella rosa; marcatori e convocati vengono taggati.
+- Negli editor, in *Esporta*: tre proposte veloci, *Altre tre* e il pulsante per aprire la pagina.
+
 
 ## Novita della 2.2: piu veloce, qualche dettaglio in piu
 
