@@ -20,11 +20,20 @@ SLUGS = {'Calendario': 'calendario', 'Matchday Screen': 'matchday', 'Full Time':
          'Convocati': 'convocati', 'Classifica': 'classifica'}
 
 
+def apply_sponsor(config):
+    """The sponsor is one setting for the whole studio (Settimana > Sponsor)."""
+    settings = st.session_state.get('sponsor')
+    if settings and 'sponsor_on' in config:
+        config.update(sponsor_on=bool(settings.get('on')), sponsor_logo_id=settings.get('logo_id', 'none'),
+                      sponsor_name=settings.get('name', ''))
+    return config
+
+
 def current_config(template):
     models = st.session_state.setdefault('studio_models', {})
     if template not in models:
         models[template] = defaults(template)
-    return sanitize_config(template, models[template])
+    return apply_sponsor(sanitize_config(template, models[template]))
 
 
 def resolve_assets(root: Path, template, config, assets):
@@ -91,6 +100,18 @@ def _scene(root, template, library, preset_override, scale):
     return module.scene(config, home, away, font_bytes, scale), module.compose
 
 
+def sponsor_scene(base_config, scale, font_bytes=None):
+    """(prepared, compose) for the sponsor thank-you slide, or None when it is off."""
+    import sponsor
+    settings = st.session_state.get('sponsor') or {}
+    if not (settings.get('on') and settings.get('end_slide', True)):
+        return None
+    config = dict(base_config, sponsor_on=True, sponsor_logo_id=settings.get('logo_id'), sponsor_name=settings.get('name', ''))
+    if not sponsor.active(config):
+        return None
+    return sponsor.scene(config, None, None, font_bytes, scale), sponsor.compose
+
+
 def _still(root, template, library, preset_override, format):
     prepared, compose = _scene(root, template, library, preset_override, 1)
     return output_image(compose(prepared, animated=False), format, 1)
@@ -153,6 +174,10 @@ def show_sequence(root: Path, library):
             progress = st.progress(0, text='Preparo le grafiche...')
             try:
                 scenes = [_scene(root, t, library, state['preset'], state['scale']) for t in items]
+                closing = sponsor_scene(current_config(items[-1]), state['scale'])
+                if closing:
+                    scenes.append(closing)
+                    transitions = list(transitions)+['channel']
                 for prepared, _ in scenes:
                     prepared[0].info['music'] = bool(state.get('music')) and state['sound']
                 with tempfile.TemporaryDirectory() as directory:

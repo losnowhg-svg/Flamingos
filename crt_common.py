@@ -41,13 +41,25 @@ def video_length(prepared, duration):
 
 def finish(prepared, config, kind):
     import animations
+    import sponsor
+    if kind != 'sponsor':
+        sponsor.decorate(prepared[0], config)
+    if sponsor.active(config) and kind != 'sponsor':
+        prepared[0].info['sponsor_cfg'] = {k: config.get(k) for k in ('sponsor_on', 'sponsor_logo_id', 'sponsor_name', 'cyan')}
     return animations.prepare(prepared, config, kind)
+
+
+def sponsor_sticker(prepared, scale):
+    """The sponsor pill for the TV mockup, from what the scene recorded."""
+    import sponsor
+    cfg = prepared[0].info.get('sponsor_cfg')
+    return sponsor.sticker(cfg, scale) if cfg else None
 
 
 def _frame(compose_fn, prepared, t, animated, format, scale, mockup, knob=0.0):
     if mockup:
         import mockup as tv
-        return tv.frame(compose_fn(prepared, t, animated), format, scale, knob)
+        return tv.frame(compose_fn(prepared, t, animated), format, scale, knob, sponsor_sticker(prepared, scale))
     return output_image(compose_fn(prepared, t, animated), format, scale)
 
 

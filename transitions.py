@@ -247,7 +247,8 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
         nonlocal done
         if mockup:
             import mockup as tv
-            image = tv.frame(image, format, scale, knob[0])
+            from crt_common import sponsor_sticker
+            image = tv.frame(image, format, scale, knob[0], sponsor_sticker(scenes[0][0], scale))
         writer.append_data(np.asarray(even_video_frame(image)))
         done += 1
         if progress_callback and (done % fps == 0 or done == total):

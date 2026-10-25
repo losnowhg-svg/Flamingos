@@ -66,6 +66,8 @@ def show_studio(root: Path, template: str, library: dict):
     else:
         models[template] = sanitize_config(template, models[template])
     config = models[template]
+    from sequence_ui import apply_sponsor
+    apply_sponsor(config)
     revisions = st.session_state.setdefault('studio_revisions', {})
     revision = revisions.setdefault(template, 0)
     namespace = SLUGS[template]+f'_{revision}'

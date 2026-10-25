@@ -198,7 +198,7 @@ def _spill(format, scale):
     return np.asarray(mask, np.float32)[..., None]/255
 
 
-def frame(source, format='Story 9:16', scale=2, knob=0.0):
+def frame(source, format='Story 9:16', scale=2, knob=0.0, sponsor=None):
     """The TV scene for one full 540x960-proportioned frame. knob in degrees."""
     format = format if format in FORMATS else 'Story 9:16'
     source = source.convert('RGB')
@@ -233,4 +233,9 @@ def frame(source, format='Story 9:16', scale=2, knob=0.0):
     vx, vy, vr = VOLUME
     d.line([m.p(vx, vy), m.p(vx+math.cos(a)*vr*.8, vy+math.sin(a)*vr*.8)], fill=(236, 230, 240),
            width=max(1, round(m.r(2.4))))
+    if sponsor is not None:  # a sticker on the TV body, under the screen
+        k = m.k*.9
+        pill = sponsor.resize((max(1, round(sponsor.width*k)), max(1, round(sponsor.height*k))), Image.Resampling.LANCZOS)
+        x, y = m.p((SCREEN[0]+SCREEN[2])/2, 361)
+        out.alpha_composite(pill, (round(x-pill.width/2), round(y-pill.height/2)))
     return out.convert('RGB')

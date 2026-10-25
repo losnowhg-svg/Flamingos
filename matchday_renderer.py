@@ -154,7 +154,8 @@ def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     from crt_presets import background as preset_background
     config = themes.effective(config)
     prepared = preset_background(config,'matchday',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
-    return animations.prepare(prepared,config,'matchday')
+    from crt_common import finish
+    return finish(prepared,config,'matchday')
 
 
 def compose(prepared,t=999,animated=True):
