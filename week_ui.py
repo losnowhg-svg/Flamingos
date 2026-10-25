@@ -17,6 +17,7 @@ from crt_presets import output_image
 from library import queue_save
 from sequence_ui import apply_match_everywhere, current_config, resolve_assets, show_kit
 import avatars
+from ui_utils import countdown
 from studio_state import (DEFAULTS, MODULES, SQUAD_ID, SQUAD_ROLES, STAFF_ROLES, WEEK_ID, defaults, matches_from_week,
                           matches_to_week, sanitize_config, sanitize_match, sanitize_squad, sanitize_week)
 
@@ -372,6 +373,8 @@ def show_avatar_maker(players):
 
 def show_graphics(root, library):
     st.markdown('#### ④ Le grafiche della settimana')
+    ready = sum(1 for template, _, _ in STEPS if not data_status(template, current_config(template)))
+    st.progress(ready/len(STEPS), text=f'{ready} su {len(STEPS)} pronte')
     st.caption('Tocca **Apri** per modificare. In giallo quello che sembra ancora un dato di esempio.')
     for row in (STEPS[:3], STEPS[3:]):
         columns = st.columns(3)
@@ -394,6 +397,9 @@ def show_graphics(root, library):
 def show_week(root: Path, library):
     st.subheader('LA TUA SETTIMANA')
     st.caption('Tutto in ordine: aggiorna dal CSI, controlla la partita, poi apri le grafiche una alla volta.')
+    line = countdown(sanitize_match(st.session_state.get('shared_match')))
+    if line:
+        st.info(line)
     if st.session_state.get('standings_message'):
         st.success(st.session_state.pop('standings_message'), icon='📡')
     if st.session_state.get('standings_import_error'):

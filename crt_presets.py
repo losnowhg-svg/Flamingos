@@ -487,7 +487,7 @@ BUILDERS = {'crt': _bg_crt, 'vhs': _bg_vhs, 'teletext': _bg_teletext,
             'gameboy': _bg_gameboy, 'stadium': _bg_stadium, 'poster': _bg_poster}
 
 
-@lru_cache(maxsize=5)
+@lru_cache(maxsize=4)
 def _background(preset_id, pink_hex, cyan_hex, yellow_hex, layout, intensity, s, brightness=DEFAULT_BRIGHTNESS):
     pink, cyan, yellow = _rgb(pink_hex), _rgb(cyan_hex), _rgb(yellow_hex)
     style = STYLE[preset_id]

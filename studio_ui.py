@@ -25,6 +25,7 @@ from library import save_project
 from render_utils import layout_warnings
 from studio_state import BUILTIN_FONTS, MODULES, defaults, sanitize_config
 from crt_presets import PRESETS, PRESET_IDS, FORMATS, CROPS, apply_preset, preset_for_round
+from ui_utils import file_stem, progress_with_eta
 from week_ui import CSI_GIRONE, data_status, go, player_label, save_week, squad
 
 ROOT = Path(__file__).resolve().parent
@@ -40,6 +41,7 @@ HEADERS = {
     'Calendario': ('CALENDARIO', 'Le partite del mese, risultati colorati e prossima gara in evidenza.'),
 }
 LOGO_LABELS = {'default': 'Flamingos - incluso', 'none': 'Scudo con ?'}
+VIDEO_ONLY = ('duration', 'fps', 'video_scale', 'sound', 'volume', 'intro', 'music', 'ending', 'details', 'power_on', 'animation')
 
 
 def show_studio(root: Path, template: str, library: dict):
@@ -559,12 +561,21 @@ def show_studio(root: Path, template: str, library: dict):
     away = default_logo if away_id == 'default' else assets[away_id]['bytes'] if away_id in assets else None
 
     try:
-        prepared = module.scene(config, home, away, font_bytes, 2) if is_crt else r.scene(config, home, font_bytes, 2)
+        # Same settings as the previous run (a tab click, an expander...): reuse scene and editor payload.
+        preview_key = hashlib.sha256(json.dumps({k_: v for k_, v in config.items() if k_ not in VIDEO_ONLY}, sort_keys=True).encode()
+                                     + (home or b'')+(away or b'')+(font_bytes or b'')).hexdigest()
+        memo = st.session_state.get('preview_'+template)
+        if memo and memo['key'] == preview_key:
+            prepared, editor_payload = memo['prepared'], memo['payload']
+        else:
+            prepared = module.scene(config, home, away, font_bytes, 2) if is_crt else r.scene(config, home, font_bytes, 2)
+            editor_scene = (animations.still_base(prepared),)+tuple(prepared[1:]) if is_crt else prepared
+            editor_payload = r.editor_data(editor_scene)
+            st.session_state['preview_'+template] = {'key': preview_key, 'prepared': prepared, 'payload': editor_payload}
         crop = CROPS[config['export_format']] if is_crt else None
         # ------------------------------------------------------ PREVIEW
         with preview_column:
-            editor_scene = (animations.still_base(prepared),)+tuple(prepared[1:]) if is_crt else prepared
-            changed = EDITOR(**r.editor_data(editor_scene), crop=crop, key=key('canvas'), default=None)
+            changed = EDITOR(**editor_payload, crop=crop, key=key('canvas'), default=None)
             if isinstance(changed, dict) and changed.get('event_id') != st.session_state.get('editor_event_'+template):
                 st.session_state['editor_event_'+template] = changed.get('event_id')
                 if isinstance(changed.get('positions'), dict):
@@ -598,8 +609,8 @@ def show_studio(root: Path, template: str, library: dict):
                 cached = {'signature': signature, 'data': image}; st.session_state[cache_key] = cached
             png = cached['data']
             height = {'Post 1:1': 1080, 'Post 4:5': 1350, 'Story 9:16': 1920}[config['export_format']]
-            basename = 'flamingos_'+SLUGS[template]
-            st.download_button(f'⬇ Scarica PNG  ·  1080 x {height}', png, file_name=basename+'.png', mime='image/png',
+            basename = file_stem(template, config)
+            st.download_button(f'⬇ Scarica PNG  ·  1080 x {height}  ·  {len(png)/1e6:.1f} MB', png, file_name=basename+'.png', mime='image/png',
                                type='primary', width='stretch', key=key('download_png'))
             if is_crt and config['mockup']:
                 st.image(png, width='stretch')
@@ -657,12 +668,36 @@ def show_studio(root: Path, template: str, library: dict):
                 if config['sound']: slider('volume', 'Volume', 0, 100)
             video_signature = hashlib.sha256((signature+str(config['duration'])+str(config['fps'])+str(config['video_scale'])
                                               + str(config['sound'])+str(config['volume'])).encode()).hexdigest()
-            if st.button('Genera video', key=key('render_video'), width='stretch'):
+            a, b = st.columns(2)
+            quick = a.button('⚡ Anteprima veloce', key=key('quick_video'), width='stretch',
+                             help='540 px, 12 fotogrammi al secondo, senza audio: per controllare le animazioni in pochi secondi.')
+            full = b.button('🎬 Genera video HD', key=key('render_video'), width='stretch', type='primary')
+            if quick:
+                bar = st.progress(0, text='Anteprima...')
+                try:
+                    with tempfile.TemporaryDirectory() as directory:
+                        path = Path(directory)/'quick.mp4'
+                        if is_crt:
+                            module.render_video(config, home, away, path, font_bytes, 12, config['duration'],
+                                                config['export_format'], 1, progress_with_eta(bar, 'Anteprima'))
+                        else:
+                            r.render_video(config, home, path, font_bytes, 12, config['duration'], 1, progress_with_eta(bar, 'Anteprima'))
+                        st.session_state['quick_'+template] = {'signature': video_signature, 'data': path.read_bytes()}
+                except Exception as exc:
+                    st.error(f'Anteprima non generata: {exc}')
+                finally:
+                    bar.empty()
+            preview = st.session_state.get('quick_'+template)
+            video_now = st.session_state.get('video_'+template)
+            if preview and preview['signature'] == video_signature and not (video_now and video_now['signature'] == video_signature):
+                st.video(preview['data'], loop=True, autoplay=True, muted=True)
+                st.caption('Anteprima a bassa risoluzione: per pubblicare usa Genera video HD.')
+            if full:
                 progress = st.progress(0, text='Rendering video...')
                 try:
                     with tempfile.TemporaryDirectory() as directory:
                         path = Path(directory)/'export.mp4'
-                        callback = lambda fraction: progress.progress(fraction, text=f'Rendering: {round(fraction*100)}%')
+                        callback = progress_with_eta(progress)
                         if is_crt:
                             module.render_video(config, home, away, path, font_bytes, config['fps'], config['duration'],
                                                 config['export_format'], config['video_scale'], callback)

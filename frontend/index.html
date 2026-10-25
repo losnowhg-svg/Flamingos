@@ -83,7 +83,7 @@ window.addEventListener('message',ev=>{
   else{history=[];future=[];selected=null}
  }
  positions=incoming;layers=Array.isArray(args.layers)?args.layers:[];crop=Array.isArray(args.crop)?args.crop:null;
- $('background').src='data:image/png;base64,'+(args.background||'');
+ $('background').src='data:'+(args.background_type||'image/png')+';base64,'+(args.background||'');
  const hadFocus=stage.contains(document.activeElement);
  stage.querySelectorAll('.piece').forEach(el=>el.remove());
  layers.forEach((item,i)=>{if(positions[item.id])stage.appendChild(makeElement(item,i))});

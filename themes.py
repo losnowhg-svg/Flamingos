@@ -234,7 +234,7 @@ def _brackets(d, color, s):
         d.rectangle((min(x, x+sx*w), min(y, y+sy*L), max(x, x+sx*w), max(y, y+sy*L)), fill=(*color, 255))
 
 
-@lru_cache(maxsize=8)
+@lru_cache(maxsize=3)
 def _overlay(theme, s):
     """Full-frame transparent details for one theme, at scale s."""
     size = (540*s, 960*s)
@@ -313,8 +313,9 @@ def draw_particles(canvas, theme, t):
         return
     kind = THEMES[theme]['particles']
     s = canvas.width/540
-    layer = Image.new('RGBA', canvas.size)
-    d = ScaledDraw(layer, s)
+    # On an opaque RGB frame draw in place, blended; on RGBA use a transparent layer.
+    layer = canvas if canvas.mode == 'RGB' else Image.new('RGBA', canvas.size)
+    d = ScaledDraw(layer, s, 'RGBA' if canvas.mode == 'RGB' else None)
     spec = THEMES[theme]
     yellow, cyan = _rgb(spec['yellow']), _rgb(spec['cyan'])
 
@@ -379,7 +380,8 @@ def draw_particles(canvas, theme, t):
                 ang = k/12*math.tau
                 px, py = cx+math.cos(ang)*radius, cy+math.sin(ang)*radius+local*local*10
                 d.rectangle((px, py, px+2.5, py+2.5), fill=(*col, a))
-    canvas.alpha_composite(layer)
+    if layer is not canvas:
+        canvas.alpha_composite(layer)
 
 
 STILL_TIME = 2.3

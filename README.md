@@ -1,4 +1,22 @@
-# Flamingos Studio 2.1
+# Flamingos Studio 2.2
+
+## Novita della 2.2: piu veloce, qualche dettaglio in piu
+
+Velocita (misurata sullo stesso computer, prima/dopo):
+- PNG HD: da 0,8-1,3 s a circa 0,17 s (compressione PNG piu rapida, file solo ~3% piu grandi).
+- Anteprima trascinabile: da 0,16-0,28 s a 0,01 s, e da 0,8-1,3 MB a 0,2 MB trasferiti al telefono
+  a ogni modifica (sfondo in JPEG); se non cambia niente l'anteprima non viene ricalcolata.
+- Video: circa 1,5 volte piu veloce (fotogrammi composti direttamente, codifica veryfast).
+- Meno memoria occupata su Streamlit Cloud (cache piu piccole), anteprime dei reparti ridisegnate
+  solo per il reparto che cambia.
+
+Dettagli:
+- **Anteprima veloce** del video (540 px, senza audio) in pochi secondi, accanto a *Genera video HD*.
+- Tempo rimanente durante ogni rendering ("62% · circa 4 s").
+- Nomi dei file parlanti: `flamingos_matchday_vs-united-flero_29-10.png`; peso del PNG sul pulsante.
+- Nella Settimana: conto alla rovescia alla partita ("Mancano 4 giorni...", "Oggi si gioca!",
+  "Partita giocata: inserisci il risultato") e barra delle grafiche pronte.
+
 
 ## Novita della 2.1: momenti forti nei video
 

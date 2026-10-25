@@ -273,7 +273,10 @@ def _put(canvas, img, layer, pos, alpha=1.0, dx=0.0, dy=0.0):
         return
     if (left, top, right, bottom) != (0, 0, img.width, img.height):
         img = img.crop((left, top, right, bottom))
-    canvas.alpha_composite(img, (x+left, y+top))
+    if canvas.mode == 'RGB':
+        canvas.paste(img, (x+left, y+top), img)   # straight-alpha blend onto the opaque frame
+    else:
+        canvas.alpha_composite(img, (x+left, y+top))
 
 
 def _typed(img, a):
@@ -462,7 +465,7 @@ def _moment_overlay(canvas, prepared, t, local, kind, data):
     if kind == 'goal' and local < .9:
         layer = by_id[data['layer']]
         cx, cy = positions[layer.id]
-        d = ScaledDraw(canvas, s)
+        d = ScaledDraw(canvas, s, 'RGBA')
         k = local/.9
         rng = np.random.default_rng(7)
         for i in range(18):
@@ -486,13 +489,11 @@ def _moment_overlay(canvas, prepared, t, local, kind, data):
         elif local > 1.15:
             slide = _ease((local-1.15)/.15)*540
         y = 470
-        panel = Image.new('RGBA', canvas.size)
-        d = ScaledDraw(panel, s)
+        d = ScaledDraw(canvas, s, 'RGBA')
         h = 34 if outcome != 'loss' else 46
         d.rectangle((78+slide, y-h/2, 462+slide, y+h/2), fill=(10, 8, 18, 235))
         d.rectangle((78+slide, y-h/2, 462+slide, y-h/2+2), fill=(*colour, 255))
         d.rectangle((78+slide, y+h/2-2, 462+slide, y+h/2), fill=(*colour, 255))
-        canvas.alpha_composite(panel)
         label = _label(text, colour, 20, max(1, round(s)))
         _put(canvas, label, None, (270+slide, y-(6 if outcome == 'loss' else 0)))
         if outcome == 'loss':
@@ -522,7 +523,7 @@ def _moment_overlay(canvas, prepared, t, local, kind, data):
         y0, _ = _band(table, data['ours'])
         cx, cy = tx-tw/2+16, ty-th/2+y0-10
         pop = _back(min(1, local/.3))
-        d = ScaledDraw(canvas, s)
+        d = ScaledDraw(canvas, s, 'RGBA')
         gold = (255, 214, 90, round(255*min(1, (1.2-local)*3)))
         w = 13*pop
         d.polygon([(cx-w, cy+5*pop), (cx-w, cy-3*pop), (cx-w/2, cy+1*pop), (cx, cy-6*pop), (cx+w/2, cy+1*pop),
@@ -540,9 +541,7 @@ def _moment_overlay(canvas, prepared, t, local, kind, data):
             tx, ty = positions['table']
             th, tw = table.image.height/s, table.image.width/s
             y0, y1 = table.image.info['row_edges'][data['row']]
-            overlay = Image.new('RGBA', canvas.size)
-            ScaledDraw(overlay, s).rectangle((tx-tw/2, ty-th/2+y0+2, tx+tw/2, ty-th/2+y1-2), fill=(255, 255, 255, 46))
-            canvas.alpha_composite(overlay)
+            ScaledDraw(canvas, s, 'RGBA').rectangle((tx-tw/2, ty-th/2+y0+2, tx+tw/2, ty-th/2+y1-2), fill=(255, 255, 255, 46))
     elif kind == 'shine' and local < .45:
         layer = by_id[data['layer']]
         img = layer.image
@@ -560,7 +559,7 @@ def _sparkles(canvas, prepared, t):
     base, layers, positions = prepared
     s = canvas.width/540
     from render_utils import ScaledDraw
-    d = ScaledDraw(canvas, s)
+    d = ScaledDraw(canvas, s, 'RGBA')
     for layer in layers:
         if not (layer.id.startswith('card_') and getattr(layer, 'captain', False)):
             continue
@@ -583,7 +582,7 @@ def _details(canvas, t):
     s = max(1, round(canvas.width/540))
     if int(t*2) % 2 == 0:
         from render_utils import ScaledDraw
-        ScaledDraw(canvas, canvas.width/540).ellipse((84, 298, 92, 306), fill=(255, 60, 70, 255))
+        ScaledDraw(canvas, canvas.width/540, 'RGBA').ellipse((84, 298, 92, 306), fill=(255, 60, 70, 255))
         _put(canvas, _label('REC', (255, 245, 245), 8, s), None, (106, 302))
     frames = int(t*25)
     code = f'SP {frames//(25*60):d}:{(frames//25) % 60:02d}:{frames % 25:02d}'
@@ -701,14 +700,16 @@ def _intro(frame, t):
 def compose(prepared, t=999, animated=True):
     base, layers, positions = prepared
     info = base.info
-    canvas = base.copy()
+    if animated and info.get('intro') and t < INTRO:
+        return _intro(base, t)
+    # The whole frame is built on an opaque RGB canvas: overlays blend in place,
+    # no full-frame transparent layers to allocate and merge on every frame.
+    canvas = base.convert('RGB')
     particles(canvas, prepared, t, animated)
     if not animated:
         for layer in layers:
             _put(canvas, layer.image, layer, positions[layer.id])
-        return canvas.convert('RGB')
-    if info.get('intro') and t < INTRO:
-        return _intro(canvas, t)
+        return canvas
     offset = _offset(prepared)
     frame_index = int(t*24)
     all_moments = moments(prepared)
@@ -720,13 +721,11 @@ def compose(prepared, t=999, animated=True):
     _sparkles(canvas, prepared, t)
     s = canvas.width/540
     from render_utils import ScaledDraw
-    overlay = Image.new('RGBA', canvas.size)
     y = 318+((t*.6) % 1)*354
-    ScaledDraw(overlay, s).rectangle((78, y, 462, y+6), fill=(255, 255, 255, 10))
-    canvas.alpha_composite(overlay)
+    ScaledDraw(canvas, s, 'RGBA').rectangle((78, y, 462, y+6), fill=(255, 255, 255, 10))
     if info.get('details', True):
         _details(canvas, t)
-    frame = canvas.convert('RGB')
+    frame = canvas
     if info.get('details', True):
         frame = _tracking(frame, t)
     frame = _shake(frame, t, [(at, d) for at, k, d in all_moments if k == 'impact'], s)

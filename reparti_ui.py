@@ -14,6 +14,7 @@ import convocati_renderer as c
 import reparti_renderer as rr
 from crt_presets import output_image
 from transitions import render_sequence
+from ui_utils import progress_with_eta
 
 TITLES = dict(rr.GROUPS)
 
@@ -38,17 +39,20 @@ def show_departments(config, squad, home, font_bytes, key):
     if no_face:
         st.caption('Ancora senza avatar: '+', '.join(no_face)+'.')
     signature = _signature(config, squad, home, font_bytes)
-    cache = st.session_state.setdefault('reparti_thumbs', {})
-    if cache.get('signature') != signature:
-        thumbs = []
-        for group, slide in slides:
+    # One cache entry per slide: changing a goalkeeper redraws only the goalkeepers.
+    cache = st.session_state.setdefault('reparti_slide_thumbs', {})
+    thumbs, keep = [], {}
+    for group, slide in slides:
+        slide_key = _signature(slide, [], home, font_bytes)
+        image = cache.get(slide_key)
+        if image is None:
             image = output_image(rr.compose(rr.scene(slide, home, None, font_bytes, 1), 999, False), config['export_format'], 1)
             image.thumbnail((360, 640))
-            thumbs.append((group, image))
-        cache.clear()
-        cache.update(signature=signature, thumbs=thumbs)
+        keep[slide_key] = image
+        thumbs.append((group, image))
+    st.session_state['reparti_slide_thumbs'] = keep
     columns = st.columns(3)
-    for i, (group, image) in enumerate(cache['thumbs']):
+    for i, (group, image) in enumerate(thumbs):
         columns[i % 3].image(image, caption=TITLES[group].title(), width='stretch')
 
     a, b = st.columns(2)
@@ -78,7 +82,7 @@ def show_departments(config, squad, home, font_bytes, key):
                 path = Path(folder)/'reparti.mp4'
                 render_sequence(scenes, ['channel']*(len(scenes)-1), path, config['fps'], 3.5, .9,
                                 config['export_format'], scale,
-                                lambda f: progress.progress(f, text=f'Rendering: {round(f*100)}%'),
+                                progress_with_eta(progress),
                                 sound=config['sound'], volume=config['volume']/100, mockup=config.get('mockup', False))
                 st.session_state['reparti_mp4'] = {'signature': signature, 'data': path.read_bytes()}
         except Exception as exc:

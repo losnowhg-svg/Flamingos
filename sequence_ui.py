@@ -14,6 +14,7 @@ from crt_presets import FORMATS, PRESETS, PRESET_IDS, apply_preset, output_image
 from studio_state import (CRT_TEMPLATES, DEFAULTS, MODULES, apply_match, defaults,
                           sanitize_config, sanitize_match)
 from transitions import TRANSITIONS, TRANSITION_IDS, preview_strip, render_sequence
+from ui_utils import progress_with_eta
 
 SLUGS = {'Calendario': 'calendario', 'Matchday Screen': 'matchday', 'Full Time': 'fulltime',
          'Convocati': 'convocati', 'Classifica': 'classifica'}
@@ -158,7 +159,7 @@ def show_sequence(root: Path, library):
                     path = Path(directory)/'sequenza.mp4'
                     render_sequence(scenes, transitions, path, state['fps'], state['hold'], state['transition_seconds'],
                                     state['format'], state['scale'],
-                                    lambda f: progress.progress(f, text=f'Rendering: {round(f*100)}%'),
+                                    progress_with_eta(progress),
                                     sound=state['sound'], volume=state['volume']/100, mockup=state['mockup'])
                     st.session_state['sequence_video'] = path.read_bytes()
             except Exception as exc:

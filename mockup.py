@@ -64,7 +64,7 @@ def _gradient(size, top, bottom):
     return np.repeat(col, w, axis=1)
 
 
-@lru_cache(maxsize=6)
+@lru_cache(maxsize=3)
 def _room(format, scale):
     """Room, TV and cabinet with a black screen (RGB), plus the screen mask."""
     height = HEIGHTS.get(format, 960)
@@ -148,7 +148,7 @@ def _text(image, value, center, size, color):
         image.alpha_composite(label, (round(center[0]-label.width/2), round(center[1]-label.height/2)))
 
 
-@lru_cache(maxsize=6)
+@lru_cache(maxsize=3)
 def _lens(width, height):
     """Barrel distortion lookup plus vignette for the curved glass."""
     y, x = np.mgrid[0:height, 0:width].astype(np.float32)
@@ -164,7 +164,7 @@ def _lens(width, height):
     return sy, sx, shade[..., None].astype(np.float32)
 
 
-@lru_cache(maxsize=6)
+@lru_cache(maxsize=3)
 def _glass(format, scale):
     """Reflections on the glass (RGBA, full frame)."""
     height = HEIGHTS.get(format, 960)
@@ -182,7 +182,7 @@ def _glass(format, scale):
     return glass
 
 
-@lru_cache(maxsize=6)
+@lru_cache(maxsize=3)
 def _spill(format, scale):
     """Where the screen light falls: around the TV, the cabinet and the floor."""
     height = HEIGHTS.get(format, 960)

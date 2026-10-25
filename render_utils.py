@@ -18,8 +18,9 @@ def checked_scale(value: int, maximum: int = 4) -> int:
 class ScaledDraw:
     """Draw vector primitives directly at output resolution (never enlarge a bitmap)."""
 
-    def __init__(self, image: Image.Image, scale: int = 1):
-        self.draw = ImageDraw.Draw(image)
+    def __init__(self, image: Image.Image, scale: int = 1, mode=None):
+        # mode='RGBA' blends translucent fills over the pixels instead of replacing them.
+        self.draw = ImageDraw.Draw(image, mode) if mode else ImageDraw.Draw(image)
         self.scale = scale
 
     def coords(self, value):
