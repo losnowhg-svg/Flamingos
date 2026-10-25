@@ -31,15 +31,7 @@ STEPS = (
 CSI_GIRONE = ('https://live.centrosportivoitaliano.it/26/Calcio-a-7/Lombardia/Brescia/C102/'
               '?j=NEU9REZJJjRGPVBOSyY0Rz1FREYmNEg9RCY0ST1RJjRMPURGSSY0Mj1l')
 EXAMPLE_NAMES = {p['name'] for p in defaults('Starting 7')['players']}
-OFFICIAL_SQUAD = [
-    dict(number=0, name='NICK', role='ALL'),
-    dict(number=1, name='BRAMBO', role='P'), dict(number=12, name='OLI', role='P'),
-    dict(number=6, name='GIANLU', role='D'), dict(number=13, name='COCCO', role='D'),
-    dict(number=4, name='BOBBI', role='C'), dict(number=14, name='DEMA', role='C'), dict(number=0, name='KEVIN', role='C'),
-    dict(number=3, name='LUCA', role='C'), dict(number=10, name='CAVA', role='C'), dict(number=11, name='SCATTO', role='C'),
-    dict(number=8, name='ELVIN', role='C'), dict(number=15, name='STRINGA', role='C'),
-    dict(number=5, name='TABE', role='A'), dict(number=9, name='TEU', role='A'),
-]
+from team_looks import OFFICIAL_SQUAD
 ROLE_HELP = 'P portiere / D difensore / C centrocampista / A attaccante / ALL allenatore / DIR dirigente.'
 
 
@@ -342,10 +334,27 @@ def show_squad(library):
                 st.session_state['squad_msg'] = f'Rosa salvata: {len(saved)} persone.'
                 st.rerun()
             if b.button('Carica la rosa ufficiale', width='stretch', key='squad_official',
-                        help='Nick, Brambo, Oli, Gianlu, Cocco, Bobbi, Dema, Kevin, Luca, Cava, Scatto, Elvin, Stringa, Tabe, Teu. '
-                             'Gli avatar gia fatti restano.'):
-                saved = save_squad([dict(p) for p in OFFICIAL_SQUAD])
-                st.session_state['squad_msg'] = f'Rosa ufficiale caricata: {len(saved)} persone.'
+                        help='Giocatori, mister e dirigenti 2026/27 con i loro sprite già pronti. '
+                             'Gli sprite che hai già personalizzato restano.'):
+                mine = {p['name']: p for p in players}
+                official = []
+                for entry in OFFICIAL_SQUAD:
+                    entry = dict(entry)
+                    if mine.get(entry['name'], {}).get('look'):
+                        entry['look'] = mine[entry['name']]['look']   # keep the customised sprite
+                    if mine.get(entry['name'], {}).get('ig'):
+                        entry['ig'] = mine[entry['name']]['ig']
+                    official.append(entry)
+                others = [p for p in players if p['name'] not in {e['name'] for e in OFFICIAL_SQUAD}]
+                saved = save_squad(official+others)
+                st.session_state['squad_msg'] = f'Rosa ufficiale caricata: {len(saved)} persone, con gli sprite.'
+                st.rerun()
+            if players and st.button('Rimetti gli sprite ufficiali a tutti', width='stretch', key='squad_official_looks',
+                                     help='Sovrascrive gli sprite personalizzati di chi è nella rosa ufficiale.'):
+                looks = {e['name']: e['look'] for e in OFFICIAL_SQUAD}
+                save_squad([dict(p, look=looks[p['name']]) if p['name'] in looks else dict(p) for p in players])
+                st.session_state.pop('look_loaded', None)
+                st.session_state['squad_msg'] = 'Sprite ufficiali rimessi.'
                 st.rerun()
             st.caption(ROLE_HELP+' Aggiungi righe con il + in fondo alla tabella; N. 0 = senza numero.')
         show_avatar_maker(players)
@@ -393,14 +402,25 @@ def show_avatar_maker(players):
             st.selectbox('Barba', list(pc.BEARDS), format_func=pc.BEARDS.get, key='look_beard')
             st.selectbox('Occhiali', list(pc.GLASSES), format_func=pc.GLASSES.get, key='look_glasses')
             st.selectbox('Sopracciglia', list(pc.BROWS), format_func=pc.BROWS.get, key='look_brows')
+            st.selectbox('Viso', list(pc.FACES), format_func=pc.FACES.get, key='look_face')
+            st.selectbox('Espressione', list(pc.EXPRESSIONS), format_func=pc.EXPRESSIONS.get, key='look_expression')
         with b:
             st.color_picker('Pelle', key='look_skin')
             st.color_picker('Capelli e sopracciglia', key='look_hair_color')
             st.color_picker('Barba', key='look_beard_color')
+            st.selectbox('Occhi', list(pc.EYES), format_func=pc.EYES.get, key='look_eyes')
+            if st.session_state.get('look_accessory') == 'orecchini':   # old looks: earrings are a checkbox now
+                st.session_state.update(look_accessory='nessuno', look_earrings=True)
+            st.selectbox('Accessorio', [k for k in pc.ACCESSORIES if k != 'orecchini'], format_func=pc.ACCESSORIES.get,
+                         key='look_accessory')
+            if st.session_state.get('look_accessory', 'nessuno') != 'nessuno':
+                st.color_picker('Colore accessorio', key='look_accessory_color')
+            st.checkbox('Orecchini', key='look_earrings')
         look = pc.sanitize({k: st.session_state.get('look_'+k) for k in pc.DEFAULT_LOOK})
         a, b = st.columns(2)
-        a.image(avatars.enlarge(pc.image(look, 'arcade'), 256), caption='Arcade luce neon (tutti i preset)', width='stretch')
-        b.image(avatars.enlarge(pc.image(look, 'gameboy'), 256), caption='Game Boy (preset Pocket verde)', width='stretch')
+        a.image(pc.idle_gif(look, 'arcade', 256), caption='Arcade luce neon (tutti i preset)', width='stretch')
+        b.image(pc.idle_gif(look, 'gameboy', 256), caption='Game Boy (preset Pocket verde)', width='stretch')
+        st.caption('Anteprima animata: così si muovono nei video (palpebre, occhiolino, sorriso, riflesso sugli occhiali).')
         a, b = st.columns(2)
         if a.button(f'Salva avatar di {who}', type='primary', width='stretch', key='look_save'):
             save_squad([dict(p, look=look) if p['name'] == who else dict(p) for p in players])
@@ -411,6 +431,11 @@ def show_avatar_maker(players):
                                          for p in players]
             save_squad(st.session_state['squad'])
             st.rerun()
+        from instagram_ui import team_photo_png
+        st.download_button('🖼 Scarica la foto di squadra pixel', team_photo_png(players, 'crt'),
+                           file_name='flamingos_foto_squadra.png', mime='image/png', width='stretch', key='team_photo_week',
+                           help='Tutta la rosa in sprite, per reparto (1080 x 1350). Altri formati e stile Game Boy '
+                                'nella pagina Instagram.')
 
 
 def show_graphics(root, library):

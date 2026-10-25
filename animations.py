@@ -379,15 +379,38 @@ def _outlined(label, s, color=(16, 10, 24)):
     return out
 
 
+SPECIAL_EVERY = 5.3      # seconds between a card's special idle moves
+HOP = .36                # the little jump after a card lands
+
+
 def _idle_card(layer, t, index):
+    """The card's frame while it waits: blinks, a rotating special move
+    (wink / smile / brows / glint) and a gentle bob."""
     alive = getattr(layer, 'alive', None)
     if not alive:
         return layer.image
-    if (t+index*.83) % 2.7 < .13:
+    if 'blink' in alive and (t+index*.83) % 2.7 < .13:
         return alive['blink']
-    if (t*2+index*.37) % 1 < .5:
+    specials = [k for k in ('wink', 'smile', 'brows', 'glint') if k in alive]
+    if specials:
+        phase = t+index*1.9
+        if phase % SPECIAL_EVERY < .55:
+            return alive[specials[int(phase//SPECIAL_EVERY+index) % len(specials)]]
+    if 'bob' in alive and (t*2+index*.37) % 1 < .5:
         return alive['bob']
     return layer.image
+
+
+def _card_hop(layer, local, t):
+    """Vertical offset: a hop right after landing and a tiny one with each special move."""
+    after = local-layer.dur
+    dy = 0.0
+    if 0 <= after < HOP:
+        dy -= 9*math.sin(math.pi*after/HOP)
+    phase = t+layer.sequence*1.9
+    if getattr(layer, 'alive', None) and len(layer.alive) > 2 and phase % SPECIAL_EVERY < .3:
+        dy -= 4*math.sin(math.pi*(phase % SPECIAL_EVERY)/.3)
+    return dy
 
 
 def _draw(canvas, layer, pos, local, frame_index, t, info):
@@ -413,14 +436,16 @@ def _draw(canvas, layer, pos, local, frame_index, t, info):
         return
     if a >= 1:
         img = layer.image
+        dy = 0.0
         if layer.id.startswith('card_'):
             img = _idle_card(layer, t, layer.sequence)
+            dy = _card_hop(layer, local, t)
         dx = 0.0
         if kind in ('slide_left', 'slide_right'):  # recoil after the crash
             after = local-layer.dur
             if after < .3:
                 dx = (1 if kind == 'slide_left' else -1)*22*(1-_ease(after/.3))
-        _put(canvas, img, layer, pos, 1, dx)
+        _put(canvas, img, layer, pos, 1, dx, dy)
         return
     if kind == 'type':
         _put(canvas, _typed(layer.image, a), layer, pos)

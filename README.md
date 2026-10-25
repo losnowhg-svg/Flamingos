@@ -1,4 +1,22 @@
-# Flamingos Studio 2.4
+# Flamingos Studio 2.5
+
+## Novita della 2.5: gli sprite della squadra
+
+- **Sprite gia pronti per tutta la rosa.** "Carica la rosa ufficiale" (Settimana, card La rosa) porta giocatori,
+  mister e dirigenti con il loro personaggio pixel, ispirato ai tratti di ognuno (capelli, barba, occhiali,
+  cappelli). Nella lista base ci sono ora anche i dirigenti **Manu**, **Choppa** e **Bana**.
+  Gli sprite che hai gia personalizzato restano; "Rimetti gli sprite ufficiali a tutti" li riporta all'originale.
+- **Editor piu ricco.** Nuove acconciature (ricci, ricci lunghi, mossi, frangia, stempiato...), baffi e pizzetto,
+  occhiali spessi, forma del viso (normale, tondo, magro), colore degli occhi, espressione, accessori
+  (cappello da pescatore, cappellino al contrario, cappuccio, fascia) con il loro colore e orecchini.
+  L'anteprima e animata: vedi subito come si muove lo sprite.
+- **Sprite vivi nei video dei reparti.** Oltre a sbattere le palpebre, ogni giocatore fa a turno una mossa sua:
+  occhiolino, sorriso, sopracciglia alzate, riflesso sugli occhiali (chi ha gli occhiali da sole non sbatte le
+  palpebre). Ogni card fa un saltello quando atterra e uno piccolo a ogni mossa.
+- **Foto di squadra pixel.** Tutta la rosa per reparto, con numeri e staff, in 4:5, storia o quadrato, in stile
+  Arcade neon o Game Boy: pagina Profilo e copertine, scheda Foto di squadra (e un download veloce nella card La rosa).
+
+Le foto dei giocatori non sono nel repository: gli sprite sono solo tratti stilizzati scritti in `team_looks.py`.
 
 ## Novita della 2.4: Wrapped, sponsor, profilo e copertine
 

@@ -7,7 +7,10 @@ from pathlib import Path
 
 import streamlit as st
 
+import json
+
 import profile_pics as pp
+import team_photo as tp
 
 
 def _logo(root, library, key):
@@ -34,11 +37,37 @@ def _cover(name, style, logo, label):
     return _png(pp.highlight_cover(name, style, logo, label))
 
 
+@st.cache_data(show_spinner=False, max_entries=16)
+def _team_photo(squad_json, preset_id, logo, size):
+    return tp.png_bytes(json.loads(squad_json), preset_id, logo, size=size)
+
+
+def team_photo_png(squad, preset_id='crt', logo=None, size='Post 4:5'):
+    keep = [{k: p.get(k) for k in ('name', 'number', 'role', 'look', 'avatar')} for p in squad or []]
+    return _team_photo(json.dumps(keep, sort_keys=True), preset_id, logo, size)
+
+
 def show_instagram(root, library):
     st.subheader('📱 PROFILO E COPERTINE')
-    st.caption('La foto profilo e le copertine delle storie in evidenza, nello stile dei preset. '
-               'Tutto resta dentro il cerchio che mostra Instagram.')
-    profile, covers = st.tabs(['🦩 Foto profilo', '⭕ Copertine in evidenza'])
+    st.caption('La foto profilo, le copertine delle storie in evidenza e la foto di squadra pixel. Foto profilo e copertine '
+               'restano dentro il cerchio che mostra Instagram.')
+    profile, covers, team = st.tabs(['🦩 Foto profilo', '⭕ Copertine in evidenza', '👾 Foto di squadra'])
+    with team:
+        squad = st.session_state.get('squad') or library.get('squad') or []
+        st.caption('Tutta la rosa in sprite pixel, divisa per reparto, con numeri e staff. Gli sprite si '
+                   'personalizzano nella Settimana, card La rosa.')
+        if not squad:
+            st.info('Prima carica la rosa nella Settimana (Carica la rosa ufficiale).')
+        else:
+            logo = _logo(root, library, 'team_logo')
+            a, b = st.columns(2)
+            look = a.radio('Stile', ['crt', 'gameboy'], horizontal=True, key='team_style',
+                           format_func={'crt': 'Arcade neon', 'gameboy': 'Game Boy'}.get)
+            size = b.radio('Formato', list(tp.SIZES), horizontal=True, key='team_size')
+            data = team_photo_png(squad, look, logo, size)
+            st.image(data, width='stretch')
+            st.download_button('⬇ Scarica foto di squadra', data, file_name=f'flamingos_squadra_{look}.png',
+                               mime='image/png', type='primary', width='stretch', key='team_download')
     with profile:
         logo = _logo(root, library, 'ig_logo')
         style = st.radio('Stile', list(pp.STYLES), format_func=pp.STYLES.get, horizontal=True, key='ig_style')
