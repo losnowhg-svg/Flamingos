@@ -42,6 +42,9 @@ TIMELINES = {
     'classifica': {'logo': .15, 'title': .4, 'subtitle': .85, 'table': 1.15},
     'calendario': {'logo': .15, 'title': .4, 'subtitle': .85, 'table': 1.15},
     'reparto': {'logo': .15, 'title': .4, 'subtitle': .8},
+    'sponsor': {'title': .3, 'subtitle': .7, 'logo': 1.1, 'name': 1.9, 'line': 2.4},
+    'wrapped': {'logo': .15, 'title': .35, 'subtitle': .7, 'big': 1.0, 'label': 1.9, 'bar': 2.2, 'left': 1.2,
+                'right': 1.5, 'list': 1.1, 'line1': 2.5, 'line2': 2.8},
 }
 CARD_ENTRANCE = {'P': 'dive', 'D': 'drop', 'C': 'glitch', 'A': 'dash', 'STAFF': 'pop'}
 
@@ -55,12 +58,14 @@ def _kind(layer, kind):
         return 'glitch'
     if layer.id == 'vs':
         return 'pop'
-    if layer.id == 'score':
+    if layer.id in ('score', 'big'):
         return 'count' if getattr(layer, 'variants', None) else 'pop'
     if layer.id == 'result':
         return 'pop'
     if layer.id == 'table':
         return 'rows' if layer.image.info.get('row_edges') else 'type'
+    if layer.id in ('bar', 'left', 'right', 'list'):
+        return 'glitch' if layer.id == 'list' else 'pop'
     return 'type'
 
 

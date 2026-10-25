@@ -44,7 +44,8 @@ MATCH_DEFAULT = dict(
 )
 CRT_DEFAULT = dict(preset_id='crt',rotation_mode='Manuale',season_round=1,scanlines=16,brightness=DEFAULT_BRIGHTNESS,
                    theme='auto',event_theme='',animation='Retro',power_on=True,mockup=False,
-                   intro=False,details=True,music=False,ending='nessuno')
+                   intro=False,details=True,music=False,ending='nessuno',
+                   sponsor_on=False,sponsor_logo_id='none',sponsor_name='')
 MATCH_DEFAULT.update(CRT_DEFAULT)
 MATCH_DEFAULT.update(font_choice='CRT Terminal',our_side='Casa')
 FULLTIME_DEFAULT = dict(
@@ -133,7 +134,7 @@ MODULES = {'Starting 7':starting,'Matchday Screen':matchday,'Full Time':fulltime
            'Classifica':classifica,'Calendario':calendario}
 TEXT_LIMITS = dict(team_name=50,headline=60,footer=80,formation_text=80,title=36,date=24,home_name=42,away_name=42,kickoff=14,venue=72,kickoff_label=40,venue_label=22,competition=42,home_scorers=1200,away_scorers=1200,opponent=42,meeting_time=14,
                    group=48,round_label=36,our_team=34,source_url=300,
-                   promo_label=20,playoff_label=20,month_label=30)
+                   promo_label=20,playoff_label=20,month_label=30,sponsor_name=24,sponsor_logo_id=80)
 
 
 def defaults(template):
@@ -276,7 +277,22 @@ def sanitize_week(raw):
     if not isinstance(raw,dict):
         return None
     week = dict(match=sanitize_match(raw.get('match')),updated=str(raw.get('updated',''))[:32],
-                standings=[],fixtures=[],month_label=str(raw.get('month_label',''))[:30],matches=[])
+                standings=[],fixtures=[],month_label=str(raw.get('month_label',''))[:30],matches=[],
+                sponsor=sanitize_sponsor(raw.get('sponsor')),season=[],scorers=[])
+    for item in (raw.get('season') or [])[:120] if isinstance(raw.get('season'),list) else []:
+        if not isinstance(item,dict):
+            continue
+        try:
+            date = _dt.date.fromisoformat(str(item.get('date',''))[:10]).isoformat()
+        except ValueError:
+            continue
+        opp = re.sub(r'\s+',' ',str(item.get('opp',''))).strip()[:40]
+        if opp:
+            week['season'].append(dict(date=date,opp=opp,home=item.get('home') is True,
+                                       us=_integer(item.get('us'),0,0,99),them=_integer(item.get('them'),0,0,99)))
+    for item in (raw.get('scorers') or [])[:40] if isinstance(raw.get('scorers'),list) else []:
+        if isinstance(item,dict) and str(item.get('name','')).strip():
+            week['scorers'].append(dict(name=str(item['name']).strip().upper()[:27],goals=_integer(item.get('goals'),0,0,999)))
     for i,item in enumerate((raw.get('standings') or [])[:classifica.MAX_TEAMS] if isinstance(raw.get('standings'),list) else []):
         if isinstance(item,dict) and str(item.get('team','')).strip():
             row = dict(pos=_integer(item.get('pos'),i+1,1,99),team=str(item['team'])[:34])
@@ -306,6 +322,13 @@ def sanitize_week(raw):
                                     time=str(item.get('time',''))[:5],score=score,venue=str(item.get('venue',''))[:80],
                                     round=_integer(item.get('round'),0,0,80) or None))
     return week
+
+
+def sanitize_sponsor(raw):
+    raw = raw if isinstance(raw,dict) else {}
+    logo = raw.get('logo_id')
+    return dict(on=raw.get('on') is True, logo_id=logo if isinstance(logo,str) and logo.startswith('logo:') else 'none',
+                name=str(raw.get('name',''))[:24], end_slide=raw.get('end_slide',True) is not False)
 
 
 def matches_from_week(week):

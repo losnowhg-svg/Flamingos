@@ -62,6 +62,10 @@ def save_week():
         fixtures=[dict(f) for f in calendar['fixtures'][:calendar['fixture_count']]] if calendar else [],
         month_label=calendar['month_label'] if calendar else '',
         matches=matches_to_week(st.session_state.get('csi_matches') or []),
+        sponsor=st.session_state.get('sponsor') or {},
+        season=[dict(g, date=g['date'].isoformat() if hasattr(g['date'], 'isoformat') else g['date'])
+                for g in st.session_state.get('season_games') or []],
+        scorers=st.session_state.get('season_scorers') or [],
     )
     st.session_state['week_saved'] = week['updated']
     queue_save('Settimana', 'Settimana', sanitize_week(week), WEEK_ID)
@@ -73,6 +77,10 @@ def restore_week(library):
         return
     st.session_state['week_restored'] = True
     week = library.get('week')
+    if week:
+        st.session_state.setdefault('sponsor', week.get('sponsor') or {})
+        st.session_state.setdefault('season_games', [dict(g, date=dt.date.fromisoformat(g['date'])) for g in week.get('season', [])])
+        st.session_state.setdefault('season_scorers', week.get('scorers', []))
     if not week or st.session_state.get('shared_match'):
         return
     models = st.session_state.setdefault('studio_models', {})
@@ -278,6 +286,38 @@ def show_match_form(library):
             st.success('Fatto: partita copiata in tutte le grafiche e salvata nel browser.')
 
 
+def show_sponsor(library):
+    import sponsor
+    from studio_state import sanitize_sponsor
+    with st.expander('🤝 Sponsor', expanded=False):
+        settings = sanitize_sponsor(st.session_state.get('sponsor'))
+        logos = {id_: a['name'] for id_, a in library['assets'].items() if a['kind'] == 'logo'}
+        st.caption('Il logo dello sponsor va in un piccolo adesivo sotto lo schermo di tutte le grafiche, sul televisore '
+                   'del mockup e, se vuoi, in una slide finale dei video.')
+        if not logos:
+            st.info('Carica prima il logo dello sponsor con **+ Stemmi** nella barra laterale (Archivio).')
+            return
+        options = ['none']+list(logos)
+        with st.form('sponsor_form', border=False):
+            on = st.toggle('Mostra lo sponsor', settings['on'])
+            logo_id = st.selectbox('Logo', options, index=options.index(settings['logo_id']) if settings['logo_id'] in options else 0,
+                                   format_func=lambda x: 'Scegli...' if x == 'none' else logos[x])
+            name = st.text_input('Nome (facoltativo)', settings['name'], max_chars=24, placeholder='es. Pizzeria Da Mario')
+            end = st.checkbox('Slide di ringraziamento alla fine dei video', settings['end_slide'])
+            if st.form_submit_button('Applica a tutte le grafiche', type='primary', width='stretch'):
+                st.session_state['sponsor'] = sanitize_sponsor(dict(on=on and logo_id != 'none', logo_id=logo_id, name=name,
+                                                                    end_slide=end))
+                for key in [k for k in st.session_state if k.startswith(('png_', 'preview_', 'thumbs'))]:
+                    st.session_state.pop(key, None)
+                save_week()
+                st.rerun()
+        current = dict(sponsor_on=True, sponsor_logo_id=settings['logo_id'], sponsor_name=settings['name'])
+        sponsor.register(library['assets'])
+        pill = sponsor.sticker(current, 2) if settings['logo_id'] != 'none' else None
+        if pill is not None:
+            st.image(pill, caption='L\'adesivo sotto lo schermo' + ('' if settings['on'] else ' (spento)'))
+
+
 def show_squad(library):
     with st.container(border=True):
         st.markdown('#### ③ La rosa')
@@ -412,6 +452,7 @@ def show_week(root: Path, library):
         show_squad(library)
     with right:
         show_match_form(library)
+        show_sponsor(library)
     st.divider()
     show_graphics(root, library)
     st.divider()

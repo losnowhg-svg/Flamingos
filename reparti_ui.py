@@ -78,6 +78,10 @@ def show_departments(config, squad, home, font_bytes, key):
             scale = config['video_scale']
             scenes = [(c.scene(config, home, None, font_bytes, scale), c.compose)]
             scenes += [(rr.scene(slide, home, None, font_bytes, scale), rr.compose) for _, slide in slides]
+            from sequence_ui import sponsor_scene
+            closing = sponsor_scene(config, scale, font_bytes)
+            if closing:
+                scenes.append(closing)
             with tempfile.TemporaryDirectory() as folder:
                 path = Path(folder)/'reparti.mp4'
                 render_sequence(scenes, ['channel']*(len(scenes)-1), path, config['fps'], 3.5, .9,

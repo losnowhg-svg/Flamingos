@@ -21,7 +21,7 @@ h4{margin-bottom:.2rem!important}
 @media (max-width:640px){.block-container{padding-left:.8rem;padding-right:.8rem}h1{font-size:1.6rem!important}}
 </style>''',unsafe_allow_html=True)
 st.title('FLAMINGOS STUDIO')
-st.caption('2.3 / la settimana in ordine: aggiorna dal CSI, controlla, scarica')
+st.caption('2.4 / la settimana in ordine: aggiorna dal CSI, controlla, scarica')
 
 from library import show_library
 from studio_ui import show_studio
@@ -39,6 +39,8 @@ PAGES = {
     'Calendario':'Calendario - il mese',
     'Sequenza video':'🎬  Video con transizioni',
     'Didascalie':'✍️  Didascalie',
+    'Wrapped':'🎁  Flamingos Wrapped',
+    'Instagram':'📱  Profilo e copertine',
 }
 
 # Girone page sent by the "Invia a Flamingos" bookmark: standings, next match, calendar.
@@ -61,6 +63,8 @@ library = show_library()
 if library is None:
     st.info('Caricamento dell\'archivio font e stemmi dal browser. Se il browser lo blocca, usa Continua senza archivio nella barra laterale.')
     st.stop()
+import sponsor
+sponsor.register(library['assets'])
 restore_week(library)
 root = Path(__file__).resolve().parent
 if template == 'Settimana':
@@ -70,5 +74,11 @@ elif template == 'Sequenza video':
 elif template == 'Didascalie':
     from caption_ui import show_captions
     show_captions(library)
+elif template == 'Wrapped':
+    from wrapped_ui import show_wrapped
+    show_wrapped(root,library)
+elif template == 'Instagram':
+    from instagram_ui import show_instagram
+    show_instagram(root,library)
 else:
     show_studio(root,template,library)

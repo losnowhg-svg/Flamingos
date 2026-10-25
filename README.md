@@ -1,4 +1,18 @@
-# Flamingos Studio 2.3
+# Flamingos Studio 2.4
+
+## Novita della 2.4: Wrapped, sponsor, profilo e copertine
+
+- **🎁 Flamingos Wrapped** (nuova pagina): la stagione, il girone d'andata o un mese in slide retro -
+  partite giocate con barra V/N/P, gol fatti e subiti, la vittoria piu bella, la serie migliore, casa e
+  trasferta, bomber con avatar, posizione in classifica, finale "GAME SAVED". Le partite arrivano dal
+  sito CSI e si possono correggere o aggiungere; i marcatori si scrivono nella pagina. Carosello ZIP e
+  video con cambio canale; stile, tema, musica e televisore dall'editor Classifica. I numeri contano nei video.
+- **🤝 Sponsor** (Settimana > Sponsor): il logo, scelto dall'archivio, va in un adesivo sotto lo schermo di
+  tutte le grafiche, sul televisore del mockup e in una slide "Grazie a" alla fine di sequenze, reparti e Wrapped.
+- **📱 Profilo e copertine** (nuova pagina): foto profilo in 4 stili (Neon CRT, Synthwave, Stemma a pixel,
+  Rosa pieno) e 10 copertine per le storie in evidenza con icone pixel (Partite, Risultati, Rosa, Classifica,
+  Calendario, Matchday, Allenamenti, Foto, Sponsor, Stemma), scaricabili in ZIP.
+
 
 ## Novita della 2.3: la pagina Didascalie
 
