@@ -146,7 +146,7 @@ def save_squad(players):
     players = [dict(p) for p in players]
     for p in players:
         name = ' '.join(str(p.get('name', '')).upper().split())
-        for field in ('avatar', 'look'):
+        for field in ('avatar', 'look', 'ig'):
             if field not in p and old.get(name, {}).get(field):
                 p[field] = old[name][field]
     players = sanitize_squad(players)
@@ -288,11 +288,13 @@ def show_squad(library):
                    'Li scegli con un clic in Convocati e marcatori.' if players else
                    'Scrivi qui la rosa una volta sola (o carica quella ufficiale): poi la scegli con un clic.')
         with st.expander('Modifica la rosa', expanded=not players):
-            rows = [dict(number=p['number'], name=p['name'], role=p['role']) for p in players] or [dict(number=0, name='', role='-')]
+            rows = [dict(number=p['number'], name=p['name'], role=p['role'], ig=p.get('ig', '')) for p in players] \
+                or [dict(number=0, name='', role='-', ig='')]
             edited = st.data_editor(rows, num_rows='dynamic', hide_index=True, width='stretch', key='squad_editor',
                 column_config={'number': st.column_config.NumberColumn('N.', min_value=0, max_value=99, step=1, width='small'),
                                'name': st.column_config.TextColumn('Nome', max_chars=27),
-                               'role': st.column_config.SelectboxColumn('Ruolo', options=list(SQUAD_ROLES), width='small')})
+                               'role': st.column_config.SelectboxColumn('Ruolo', options=list(SQUAD_ROLES), width='small'),
+                               'ig': st.column_config.TextColumn('Instagram', max_chars=31, help='Senza @: serve per taggarli nelle didascalie')})
             edited = edited.to_dict('records') if hasattr(edited, 'to_dict') else list(edited)
             a, b = st.columns(2)
             if a.button('Salva la rosa', type='primary', width='stretch', key='squad_save'):

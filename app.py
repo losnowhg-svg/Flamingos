@@ -21,7 +21,7 @@ h4{margin-bottom:.2rem!important}
 @media (max-width:640px){.block-container{padding-left:.8rem;padding-right:.8rem}h1{font-size:1.6rem!important}}
 </style>''',unsafe_allow_html=True)
 st.title('FLAMINGOS STUDIO')
-st.caption('2.2 / la settimana in ordine: aggiorna dal CSI, controlla, scarica')
+st.caption('2.3 / la settimana in ordine: aggiorna dal CSI, controlla, scarica')
 
 from library import show_library
 from studio_ui import show_studio
@@ -38,6 +38,7 @@ PAGES = {
     'Classifica':'Classifica - il girone',
     'Calendario':'Calendario - il mese',
     'Sequenza video':'🎬  Video con transizioni',
+    'Didascalie':'✍️  Didascalie',
 }
 
 # Girone page sent by the "Invia a Flamingos" bookmark: standings, next match, calendar.
@@ -66,5 +67,8 @@ if template == 'Settimana':
     show_week(root,library)
 elif template == 'Sequenza video':
     show_sequence(root,library)
+elif template == 'Didascalie':
+    from caption_ui import show_captions
+    show_captions(library)
 else:
     show_studio(root,template,library)

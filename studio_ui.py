@@ -44,6 +44,11 @@ LOGO_LABELS = {'default': 'Flamingos - incluso', 'none': 'Scudo con ?'}
 VIDEO_ONLY = ('duration', 'fps', 'video_scale', 'sound', 'volume', 'intro', 'music', 'ending', 'details', 'power_on', 'animation')
 
 
+def _open_captions(template):
+    st.session_state['caption_context'] = template
+    st.session_state['studio_template'] = 'Didascalie'
+
+
 def show_studio(root: Path, template: str, library: dict):
     is_match = template == 'Matchday Screen'
     is_full = template == 'Full Time'
@@ -622,13 +627,16 @@ def show_studio(root: Path, template: str, library: dict):
                 from reparti_ui import show_departments
                 show_departments(config, full_squad, home, font_bytes, key)
                 st.divider()
-            texts = cap.captions(template, config)
-            if texts:
-                section(f'Didascalie ({len(texts)})', 'Copia quella che preferisci con l\'icona in alto a destra.'
-                        + (' Cambiano con il risultato.' if is_full else ' Cambiano con la posizione.' if is_table else ''))
-                choice = st.radio('Proposta', list(range(len(texts))), format_func=lambda i: f'{i+1}', horizontal=True,
-                                  key=key('caption_pick'), label_visibility='collapsed')
-                st.code(texts[choice], language=None, wrap_lines=True)
+            if template != 'Starting 7':
+                from caption_ui import quick
+                section('Didascalie', 'Tre proposte veloci. Centinaia di altre, con toni e filtri, nella pagina Didascalie.')
+                for item in quick(template, 3, st.session_state.get('caption_quick_seed', 0), library):
+                    st.code(item['text'], language=None, wrap_lines=True)
+                a, b = st.columns(2)
+                if a.button('🎲 Altre tre', key=key('caption_roll'), width='stretch'):
+                    st.session_state['caption_quick_seed'] = st.session_state.get('caption_quick_seed', 0)+1
+                    st.rerun()
+                b.button('✍️ Apri Didascalie', key=key('caption_page'), width='stretch', on_click=_open_captions, args=(template,))
                 st.divider()
             section('Video MP4')
             if is_crt:
