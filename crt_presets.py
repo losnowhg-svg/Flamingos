@@ -1,4 +1,4 @@
-"""Seasonal CRT art direction: eleven distinct, code-drawn retro worlds.
+"""Seasonal CRT art direction: twenty-three distinct, code-drawn retro worlds (12-23 in preset_worlds.py).
 
 Every preset only changes the art direction (frame, background, panels and
 palette). Match data, assets, fonts and positions always stay the user's.
@@ -52,6 +52,8 @@ PRESETS = {
                 description='Carta crema, retini e inchiostri sfalsati: il preset chiaro.',
                 pink='#FF82B5', cyan='#88DBFF', yellow='#FFDA55', white='#FFF7E8', font='CRT Terminal'),
 }
+import preset_worlds as _worlds
+PRESETS.update(_worlds.PRESETS)
 PRESET_IDS = tuple(PRESETS)
 FORMATS = ('Post 1:1', 'Post 4:5', 'Story 9:16')
 CROPS = {'Post 1:1': (0, 210, 540, 750), 'Post 4:5': (0, 142.5, 540, 817.5), 'Story 9:16': None}
@@ -70,6 +72,7 @@ STYLE = {
     'gameboy': dict(panel=(15, 56, 15), border=(155, 188, 15), scan=(155, 188, 15), veil=0),
     'stadium': dict(panel=(10, 9, 8), border=(255, 181, 36), scan=(255, 181, 36), veil=0),
     'poster': dict(panel=(22, 28, 66), border=(255, 130, 181), scan=(136, 219, 255), veil=0),
+    **_worlds.STYLE,
 }
 
 PANEL_LAYOUTS = {
@@ -484,7 +487,7 @@ def _bg_poster(pink, cyan, yellow, s):
 
 
 BUILDERS = {'crt': _bg_crt, 'vhs': _bg_vhs, 'teletext': _bg_teletext,
-            'gameboy': _bg_gameboy, 'stadium': _bg_stadium, 'poster': _bg_poster}
+            'gameboy': _bg_gameboy, 'stadium': _bg_stadium, 'poster': _bg_poster, **_worlds.BUILDERS}
 
 
 @lru_cache(maxsize=4)

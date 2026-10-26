@@ -26,8 +26,8 @@ def luminance(image):
 
 
 class PresetTests(unittest.TestCase):
-    def test_eleven_distinct_worlds(self):
-        self.assertEqual(len(PRESET_IDS), 11)
+    def test_distinct_worlds(self):
+        self.assertEqual(len(PRESET_IDS), 23)   # 11 originals + 12 from 2.7
         backgrounds = {}
         for preset in PRESET_IDS:
             image = background(apply_preset(defaults('Matchday Screen'), preset), 'matchday', 1)

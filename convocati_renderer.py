@@ -28,9 +28,13 @@ def make_player(entry,index,config,font_bytes,s):
     pink=rgb(config.get('pink','#F268A8'));cyan=rgb(config.get('cyan','#79DCF7'))
     white=rgb(config.get('white','#F6F4FC'));yellow=rgb(config.get('yellow','#FFC963'))
     im=Image.new('RGBA',(178*s,19*s));d=ScaledDraw(im,s)
-    d.rectangle((0,0,178,18),fill=(6,14,27,245))
+    from crt_presets import STYLE
+    from render_utils import contrast_ink, is_light
+    panel=STYLE.get(config.get('preset_id','crt'),STYLE['crt'])['panel']
+    # Light screens (LCD) get light rows; every other preset keeps the dark strip.
+    d.rectangle((0,0,178,18),fill=(*([round(c*.9) for c in panel] if is_light(panel) else (6,14,27)),245))
     d.rectangle((0,0,21,18),fill=(*pink,255))
-    number=text_image(str(entry.get('number',index+1) or '-'),style,11,(9,11,22),18,font_bytes,s,12)
+    number=text_image(str(entry.get('number',index+1) or '-'),style,11,contrast_ink(pink),18,font_bytes,s,12)
     if number:im.alpha_composite(number,(round(10.5*s-number.width/2),round(9*s-number.height/2)))
     captain=bool(entry.get('captain',False))
     name=str(entry.get('name','GIOCATORE'))
