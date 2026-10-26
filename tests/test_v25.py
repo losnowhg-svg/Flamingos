@@ -128,5 +128,46 @@ class TeamPhoto(unittest.TestCase):
         self.assertEqual(tp.season_label(dt.date(2027, 3, 1)), '2026/27')
 
 
+def _audio_rms(path):
+    import subprocess
+    import imageio_ffmpeg
+    import numpy as np
+    raw = subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), '-v', 'error', '-i', str(path), '-f', 's16le', '-ac', '1',
+                          '-ar', '8000', '-'], capture_output=True).stdout
+    samples = np.frombuffer(raw, np.int16).astype(float)
+    return float(np.sqrt(np.mean(samples**2))) if len(samples) else 0.0
+
+
+class MusicWithoutEffects(unittest.TestCase):
+    """2.5.1: the chiptune plays even when Suoni CRT is off (department video, sequences)."""
+
+    def _scenes(self, music):
+        members = [dict(p, captain=False) for p in OFFICIAL_SQUAD if p['role'] == 'P']
+        out = []
+        for group in ('P', 'D'):
+            prepared = rr.scene(dict(members=members, group=group, slide_title=group, music=music, theme='none'),
+                                LOGO, None, None, 1)
+            out.append((prepared, rr.compose))
+        return out
+
+    def test_music_only_sequence_has_audio(self):
+        import tempfile
+        from transitions import render_sequence
+        with tempfile.TemporaryDirectory() as folder:
+            loud = Path(folder)/'music.mp4'
+            render_sequence(self._scenes(True), ['channel'], loud, 12, 1.5, .5, 'Story 9:16', 1, sound=False)
+            mute = Path(folder)/'mute.mp4'
+            render_sequence(self._scenes(False), ['channel'], mute, 12, 1.5, .5, 'Story 9:16', 1, sound=False)
+            self.assertGreater(_audio_rms(loud), 500)
+            self.assertEqual(_audio_rms(mute), 0.0)
+
+    def test_music_only_events(self):
+        import sounds
+        prepared, compose = self._scenes(True)[0]
+        self.assertEqual(len(sounds.scene_events(prepared, compose, until=4, effects=False)), 1)
+        prepared, compose = self._scenes(False)[0]
+        self.assertEqual(sounds.scene_events(prepared, compose, until=4, effects=False), [])
+
+
 if __name__ == '__main__':
     unittest.main()

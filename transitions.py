@@ -259,7 +259,7 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
     try:
         for index in range(len(scenes)):
             last = None
-            if sound:
+            if sound:   # CRT effects; the music is added once, below
                 from sounds import scene_events
                 events += scene_events(*scenes[index], start=done/fps, speed=speeds[index], until=done/fps+hold)
             for i in range(hold_frames):
@@ -277,11 +277,11 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
                     emit(transition_frame(kind, last, nxt, p, index+2))
     finally:
         writer.close()
-    if sound:
+    if sound or music:   # the chiptune plays even with the CRT effects off
         from sounds import mix, mux, chiptune
         if music:
             events.append((0.0, chiptune(total/fps, len(scenes))*.9))
-        mux(path, mix(events, total/fps, volume))
+        mux(path, mix(events, total/fps, volume, ambient=sound))
     return str(path)
 
 

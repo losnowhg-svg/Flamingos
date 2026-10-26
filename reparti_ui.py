@@ -25,6 +25,10 @@ def _signature(config, squad, home, font_bytes, extra=''):
 
 
 def show_departments(config, squad, home, font_bytes, key):
+    # The audio switches live further down the Esporta tab: read their current
+    # widget state so a change made just now is already used here.
+    config = dict(config, **{name: st.session_state[key(name)] for name in ('sound', 'music', 'volume')
+                             if key(name) in st.session_state})
     st.markdown('**Presentazione per reparti**')
     st.caption('Dopo il riepilogo, una schermata per reparto con le facce pixel: portieri, difensori, '
                'centrocampisti, attaccanti, staff. Gli avatar si creano nella Settimana, nella card La rosa.')
@@ -55,6 +59,10 @@ def show_departments(config, squad, home, font_bytes, key):
     for i, (group, image) in enumerate(thumbs):
         columns[i % 3].image(image, caption=TITLES[group].title(), width='stretch')
 
+    audio = {(True, True): 'musica chiptune + suoni CRT', (False, True): 'solo musica chiptune',
+             (True, False): 'solo suoni CRT', (False, False): 'muto'}[(bool(config.get('sound')), bool(config.get('music')))]
+    st.caption(f'Audio del video: **{audio}**. Si cambia più sotto, in Video MP4: Musica chiptune e, in '
+               'Impostazioni video, Suoni CRT.')
     a, b = st.columns(2)
     if a.button('Crea carosello ZIP', key=key('reparti_zip'), width='stretch'):
         ss = 2 if config.get('png_quality') == 'Fine' else 1

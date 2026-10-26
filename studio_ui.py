@@ -675,9 +675,9 @@ def show_studio(root: Path, template: str, library: dict):
                 with a: select('fps', 'Fotogrammi al secondo', (12, 15, 24, 30))
                 with b: select('video_scale', 'Risoluzione', (2, 1), lambda x: '1080 px' if x == 2 else '540 px (rapido)')
                 check('sound', 'Suoni CRT')
-                if config['sound']: slider('volume', 'Volume', 0, 100)
+                if config['sound'] or config.get('music'): slider('volume', 'Volume', 0, 100)
             video_signature = hashlib.sha256((signature+str(config['duration'])+str(config['fps'])+str(config['video_scale'])
-                                              + str(config['sound'])+str(config['volume'])).encode()).hexdigest()
+                                              + str(config['sound'])+str(config.get('music'))+str(config['volume'])).encode()).hexdigest()
             a, b = st.columns(2)
             quick = a.button('⚡ Anteprima veloce', key=key('quick_video'), width='stretch',
                              help='540 px, 12 fotogrammi al secondo, senza audio: per controllare le animazioni in pochi secondi.')
@@ -713,14 +713,15 @@ def show_studio(root: Path, template: str, library: dict):
                                                 config['export_format'], config['video_scale'], callback)
                         else:
                             r.render_video(config, home, path, font_bytes, config['fps'], config['duration'], config['video_scale'], callback)
-                        if config['sound']:
-                            progress.progress(1.0, text='Aggiungo i suoni CRT...')
+                        if config['sound'] or config.get('music'):
+                            progress.progress(1.0, text='Aggiungo l\'audio...')
                             seconds = config['duration']
                             if is_crt:
                                 from crt_common import video_length
                                 seconds = video_length(prepared, config['duration'])
                                 prepared[0].info['duration'] = seconds
-                            sounds.add_scene_audio(path, prepared, module.compose, seconds, config['volume']/100)
+                            sounds.add_scene_audio(path, prepared, module.compose, seconds, config['volume']/100,
+                                                   effects=config['sound'])
                         st.session_state['video_'+template] = {'signature': video_signature, 'data': path.read_bytes()}
                 except Exception as exc:
                     st.error(f'Video non generato: {exc}')

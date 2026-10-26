@@ -284,8 +284,13 @@ def entrance_times(prepared, compose):
     return sorted(1.0 if l.id == 'score' else .18+i*.12 for i, l in enumerate(layers))
 
 
-def scene_events(prepared, compose, start=0.0, speed=1.0, until=None):
+def scene_events(prepared, compose, start=0.0, speed=1.0, until=None, effects=True):
     import animations
+    if not effects:   # music only
+        if not prepared[0].info.get('music'):
+            return []
+        length = (until-start) if until is not None else 12
+        return [(start, chiptune(max(1.0, length), len(prepared[1]))*.9)]
     if animations.rich(prepared):
         out = []
         for t, kind, i in animations.events(prepared):
@@ -343,6 +348,7 @@ def mux(video_path, samples):
     return str(video_path)
 
 
-def add_scene_audio(video_path, prepared, compose, seconds, volume=.8, ambient=True):
-    """Blips for a single editor's MP4."""
-    return mux(video_path, mix(scene_events(prepared, compose, until=seconds), seconds, volume, ambient))
+def add_scene_audio(video_path, prepared, compose, seconds, volume=.8, ambient=True, effects=True):
+    """Sounds for a single editor's MP4. effects=False: only the chiptune (if music is on)."""
+    return mux(video_path, mix(scene_events(prepared, compose, until=seconds, effects=effects), seconds, volume,
+                               ambient and effects))
