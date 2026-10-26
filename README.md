@@ -1,4 +1,29 @@
-# Flamingos Studio 2.6
+# Flamingos Studio 2.7
+
+## Novita della 2.7: dodici preset nuovi (23 in tutto)
+
+Si scelgono come sempre in editor > Stile > Preset (e ruotano con *Cambia preset da solo a ogni giornata*):
+
+| N. | Preset | Il mondo intorno allo schermo |
+|----|--------|-------------------------------|
+| 12 | Calcio da tavolo | panno verde con le linee del campo, omini sulle basette, scatola di legno |
+| 13 | Album figurine | pagina dell'album con le caselle numerate, figurina lucida che si stacca |
+| 14 | Radiolina | radio di legno con la scala delle frequenze, manopole, carta da parati |
+| 15 | PC anni 90 | monitor beige, schermo blu con il prompt, tastiera, post-it della partita |
+| 16 | Bar Sport | muro di mattoni, insegna al neon, bancone con la sciarpa |
+| 17 | Flipper | vetro illuminato, display a punti arancioni, bumper e palette |
+| 18 | Gioco LCD | piastra rossa spazzolata e schermo LCD chiaro con scritte scure |
+| 19 | Cinema | sipario di velluto, insegna PRIMA VISIONE con le lampadine, poltrone |
+| 20 | Spazio 8-bit | nebulose, pianeta con l'anello, alieni pixel, navicella |
+| 21 | Tabellone partenze | palette della stazione, orologio sulle 21, binario 7 |
+| 22 | Prima pagina | quotidiano sportivo rosa: testata, titolone, colonne di testo |
+| 23 | Vaporwave | sole a righe, mare, palme e scacchi, dentro una vecchia finestra |
+
+Gioco LCD e il primo preset con lo schermo chiaro: numeri, righe evidenziate e badge scelgono da soli
+l'inchiostro chiaro o scuro per restare leggibili. Il catalogo (*Guarda tutti i 23 preset*) e aggiornato.
+
+Nella Settimana, *Installa o aggiorna il segnalibro* ora spiega anche Windows (Chrome, Edge, Firefox) e Android.
+
 
 ## Novita della 2.6: varieta
 
@@ -324,7 +349,7 @@ Starting 7 mantiene l'impaginazione sul campo, i sette giocatori e l'export Stor
 Ha accesso ai nuovi font; i preset degli oggetti CRT si applicano invece a
 Matchday, Full Time e Convocati, non sostituiscono il campo di Starting 7.
 
-## Undici preset da alternare nella stagione
+## I preset da alternare nella stagione (11 originali + 12 della 2.7)
 
 La sezione **Preset CRT e rotazione di stagione** offre:
 

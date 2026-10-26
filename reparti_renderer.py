@@ -105,13 +105,15 @@ def _card(member, config, w, h, font_bytes, s, blink=False, bob=False, frame=Non
     if number and not staff:
         bw = max(16, min(30, side*.24))
         d.rectangle((ax, ay, ax+bw, ay+bw*.78), fill=(*pink, 255))
-        n = text_image(str(number), style, round(bw*.52), (12, 10, 18), bw-4, font_bytes, s, round(bw*.6))
+        from render_utils import contrast_ink
+        n = text_image(str(number), style, round(bw*.52), contrast_ink(pink, (12, 10, 18)), bw-4, font_bytes, s, round(bw*.6))
         if n:
             image.alpha_composite(n, (round((ax+bw/2)*s-n.width/2), round((ay+bw*.39)*s-n.height/2)))
     if member.get('captain'):
         cw = max(14, min(24, side*.2))
         d.rectangle((ax+side-cw, ay, ax+side, ay+cw*.8), fill=(*yellow, 255))
-        cap = text_image('C', style, round(cw*.55), (12, 10, 18), cw-2, font_bytes, s, round(cw*.6))
+        from render_utils import contrast_ink
+        cap = text_image('C', style, round(cw*.55), contrast_ink(yellow, (12, 10, 18)), cw-2, font_bytes, s, round(cw*.6))
         if cap:
             image.alpha_composite(cap, (round((ax+side-cw/2)*s-cap.width/2), round((ay+cw*.4)*s-cap.height/2)))
     # Name and staff role.

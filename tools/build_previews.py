@@ -14,6 +14,7 @@ from crt_presets import PRESET_IDS,PRESETS,apply_preset,output_image
 
 def demo(template):
     cfg=defaults(template)
+    cfg['theme']='none'   # the catalogue shows the presets, not the seasonal themes
     if template=='Full Time':
         cfg.update(home_score=4,away_score=2,home_scorers="ROSSI 12', 38'\nBIANCHI 26'\nVERDI 51'",
                    away_scorers="NERI 18'\nCONTI 45'",date='18/10/2026',away_name='ATLETICO',competition='CSI / GIORNATA 04')

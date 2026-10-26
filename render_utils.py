@@ -15,6 +15,17 @@ def checked_scale(value: int, maximum: int = 4) -> int:
     return number
 
 
+def contrast_ink(color, dark=(9, 11, 22), light=(246, 244, 236)):
+    """Dark text on light accents, light text on dark ones (the LCD preset has dark accents)."""
+    r, g, b = color[:3]
+    return dark if (.299*r+.587*g+.114*b) > 115 else light
+
+
+def is_light(color):
+    r, g, b = color[:3]
+    return (.299*r+.587*g+.114*b) > 140
+
+
 class ScaledDraw:
     """Draw vector primitives directly at output resolution (never enlarge a bitmap)."""
 

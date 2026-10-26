@@ -43,7 +43,8 @@ def table_image(config, font_bytes=None, s=1):
     style = config.get('text_style', config.get('font_choice', 'CRT Terminal'))
     pink = rgb(config.get('pink', '#F268A8')); cyan = rgb(config.get('cyan', '#79DCF7'))
     white = rgb(config.get('white', '#F6F4FC')); yellow = rgb(config.get('yellow', '#FFC963'))
-    ink = (9, 11, 22)
+    from render_utils import contrast_ink
+    ink = contrast_ink(pink)
     rows = active_fixtures(config)
     image = Image.new('RGBA', (TABLE_W*s, TABLE_H*s))
     d = ScaledDraw(image, s)

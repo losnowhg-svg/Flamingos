@@ -222,9 +222,21 @@ def show_csi(library):
                 components.html('''<style>a{display:inline-block;padding:10px 18px;border-radius:9px;background:#e95396;color:#110d14;
                     font:600 15px system-ui,sans-serif;text-decoration:none;cursor:grab}p{color:#bca9c5;font:13px system-ui,sans-serif;margin:8px 0 0}</style>
                     <a href="'''+code.replace('"', '&quot;')+'''" onclick="return false">Invia a Flamingos</a>
-                    <p>Mac: trascina il pulsante nella barra dei Preferiti di Safari o Chrome.</p>''', height=86)
-                st.markdown('**iPhone / iPad:** aggiungi un segnalibro qualsiasi chiamato *Invia a Flamingos*, poi in '
-                            '*Modifica* sostituisci l\'indirizzo con questo codice.')
+                    <p>Computer: trascina il pulsante nella barra dei preferiti (Safari, Chrome, Edge, Firefox).</p>''', height=86)
+                st.markdown(
+                    '**Mac:** in Safari o Chrome mostra la barra dei preferiti (*Vista > Mostra barra dei preferiti*, '
+                    'oppure Cmd+Maiusc+B) e trascinaci il pulsante rosa.\n\n'
+                    '**Windows (Chrome, Edge, Firefox):** mostra la barra dei preferiti con **Ctrl+Maiusc+B** e '
+                    'trascinaci il pulsante rosa. Se il trascinamento non va: tasto destro sulla barra > *Aggiungi '
+                    'pagina* (Chrome) o *Aggiungi preferito* (Edge, Firefox), nome *Invia a Flamingos*, e come indirizzo '
+                    'incolla il codice qui sotto.\n\n'
+                    '**iPhone / iPad:** aggiungi un segnalibro qualsiasi chiamato *Invia a Flamingos*, poi in '
+                    '*Modifica* sostituisci l\'indirizzo con il codice qui sotto. Sulla pagina del girone aprilo dai '
+                    'Preferiti.\n\n'
+                    '**Android (Chrome):** aggiungi la pagina ai preferiti (stellina nel menu ⋮), poi in *Preferiti* > '
+                    '*Modifica* chiamalo *Invia a Flamingos* e come URL incolla il codice qui sotto. Per usarlo, sulla '
+                    'pagina del girone **scrivi Invia a Flamingos nella barra degli indirizzi** e tocca il segnalibro che '
+                    'compare tra i suggerimenti (aprirlo dall\'elenco dei preferiti non funziona).')
                 st.code(code, language=None, wrap_lines=True)
         with paste:
             st.caption('Apri il girone, tieni premuto sul testo > **Seleziona tutto** > **Copia**, poi incolla qui sotto. '

@@ -62,7 +62,8 @@ def table_image(config, font_bytes=None, s=1):
     pink = rgb(config.get('pink', '#F268A8')); cyan = rgb(config.get('cyan', '#79DCF7'))
     white = rgb(config.get('white', '#F6F4FC')); yellow = rgb(config.get('yellow', '#FFC963'))
     dim = tuple(round(w*.78+p*.22) for w, p in zip(white, panel))
-    ink = (9, 11, 22)
+    from render_utils import contrast_ink
+    ink = contrast_ink(pink)
     rows = active_rows(config)
     columns = COLUMNS.get(config.get('table_detail', 'Completa'), COLUMNS['Completa'])
     size = int(config.get('table_size', 10))
@@ -114,7 +115,7 @@ def table_image(config, font_bytes=None, s=1):
             # Zone colour on the position badge, also on our own pink row.
             d.rectangle((0, top+1, 3, top+row_h-1), fill=(*zones[zone], 255))
             d.rectangle((5, top+3, 26, top+row_h-3), fill=(*zones[zone], 255))
-        cell(str(pos), ink if (highlight or zone) else cyan, 2, mid, 28)
+        cell(str(pos), contrast_ink(zones[zone]) if zone else (ink if highlight else cyan), 2, mid, 28)
         cell(str(row.get('team', '')).upper(), ink if highlight else white, team_x, mid, team_w, 'left')
         x = TABLE_W-stats_w
         for label, key, width in columns:
