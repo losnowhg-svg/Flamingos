@@ -1,4 +1,4 @@
-"""📱 Profilo e copertine: Instagram profile picture and highlight covers."""
+"""📱 Squadra e copertine: pixel team photo and Instagram highlight covers."""
 from __future__ import annotations
 
 import io
@@ -27,11 +27,6 @@ def _png(image):
     return out.getvalue()
 
 
-@st.cache_data(show_spinner=False, max_entries=24)
-def _profile(logo, style):
-    return _png(pp.profile_picture(logo, style))
-
-
 @st.cache_data(show_spinner=False, max_entries=64)
 def _cover(name, style, logo, label):
     return _png(pp.highlight_cover(name, style, logo, label))
@@ -48,10 +43,10 @@ def team_photo_png(squad, preset_id='crt', logo=None, size='Post 4:5'):
 
 
 def show_instagram(root, library):
-    st.subheader('📱 PROFILO E COPERTINE')
-    st.caption('La foto profilo, le copertine delle storie in evidenza e la foto di squadra pixel. Foto profilo e copertine '
-               'restano dentro il cerchio che mostra Instagram.')
-    profile, covers, team = st.tabs(['🦩 Foto profilo', '⭕ Copertine in evidenza', '👾 Foto di squadra'])
+    st.subheader('📱 SQUADRA E COPERTINE')
+    st.caption('La foto di squadra pixel e le copertine delle storie in evidenza (restano dentro il cerchio che mostra '
+               'Instagram).')
+    team, covers = st.tabs(['👾 Foto di squadra', '⭕ Copertine in evidenza'])
     with team:
         squad = st.session_state.get('squad') or library.get('squad') or []
         st.caption('Tutta la rosa in sprite pixel, divisa per reparto, con numeri e staff. Gli sprite si '
@@ -68,17 +63,6 @@ def show_instagram(root, library):
             st.image(data, width='stretch')
             st.download_button('⬇ Scarica foto di squadra', data, file_name=f'flamingos_squadra_{look}.png',
                                mime='image/png', type='primary', width='stretch', key='team_download')
-    with profile:
-        logo = _logo(root, library, 'ig_logo')
-        style = st.radio('Stile', list(pp.STYLES), format_func=pp.STYLES.get, horizontal=True, key='ig_style')
-        data = _profile(logo, style)
-        a, b = st.columns(2)
-        from PIL import Image
-        a.image(pp.circle_preview(Image.open(io.BytesIO(data)), 360), caption='Come la vedi su Instagram', width='stretch')
-        b.image(data, caption='Il file 1080 x 1080', width='stretch')
-        st.download_button('⬇ Scarica foto profilo', data, file_name=f'flamingos_profilo_{style}.png', mime='image/png',
-                           type='primary', width='stretch', key='ig_download')
-        st.caption('Su Instagram: Modifica profilo > Modifica immagine > carica il file.')
     with covers:
         logo = _logo(root, library, 'cover_logo')
         a, b = st.columns([2, 1])

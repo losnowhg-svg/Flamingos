@@ -148,9 +148,9 @@ def show_sequence(root: Path, library):
             state['scale'] = st.selectbox('Risoluzione', (2, 1), index=(2, 1).index(state['scale']),
                 format_func=lambda x: '1080 px - Full HD' if x == 2 else '540 px - rapido', key='seq_scale')
             state['sound'] = st.checkbox('Suoni CRT (cambio canale, accensione, glitch, nastro, bip)', state['sound'], key='seq_sound')
-            if state['sound']:
+            state['music'] = st.checkbox('Musica chiptune sotto tutta la sequenza', state.get('music', False), key='seq_music')
+            if state['sound'] or state['music']:
                 state['volume'] = st.slider('Volume', 0, 100, int(state['volume']), key='seq_volume')
-                state['music'] = st.checkbox('Musica chiptune sotto tutta la sequenza', state.get('music', False), key='seq_music')
             choices = ('own',)+PRESET_IDS
             state['preset'] = st.selectbox('Preset', choices, index=choices.index(state['preset']),
                 format_func=lambda x: 'Ognuna il suo preset' if x == 'own' else 'Tutte con '+PRESETS[x]['name'], key='seq_preset')
@@ -179,7 +179,7 @@ def show_sequence(root: Path, library):
                     scenes.append(closing)
                     transitions = list(transitions)+['channel']
                 for prepared, _ in scenes:
-                    prepared[0].info['music'] = bool(state.get('music')) and state['sound']
+                    prepared[0].info['music'] = bool(state.get('music'))
                 with tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)/'sequenza.mp4'
                     render_sequence(scenes, transitions, path, state['fps'], state['hold'], state['transition_seconds'],

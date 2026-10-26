@@ -1,4 +1,11 @@
-# Flamingos Studio 2.5
+# Flamingos Studio 2.5.1
+
+## Correzioni della 2.5.1
+
+- **Musica nei video dei reparti (e in Wrapped, Sequenza, editor):** prima la musica chiptune si sentiva solo se
+  erano accesi anche i Suoni CRT; ora parte anche da sola. Sopra i pulsanti dei reparti c'e scritto quale audio
+  avra il video (musica + suoni, solo musica, solo suoni, muto).
+- **Via la foto profilo:** la pagina diventa *Squadra e copertine*, con foto di squadra pixel e copertine in evidenza.
 
 ## Novita della 2.5: gli sprite della squadra
 
@@ -14,7 +21,7 @@
   occhiolino, sorriso, sopracciglia alzate, riflesso sugli occhiali (chi ha gli occhiali da sole non sbatte le
   palpebre). Ogni card fa un saltello quando atterra e uno piccolo a ogni mossa.
 - **Foto di squadra pixel.** Tutta la rosa per reparto, con numeri e staff, in 4:5, storia o quadrato, in stile
-  Arcade neon o Game Boy: pagina Profilo e copertine, scheda Foto di squadra (e un download veloce nella card La rosa).
+  Arcade neon o Game Boy: pagina Squadra e copertine (e un download veloce nella card La rosa).
 
 Le foto dei giocatori non sono nel repository: gli sprite sono solo tratti stilizzati scritti in `team_looks.py`.
 
