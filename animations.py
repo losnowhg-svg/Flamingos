@@ -96,11 +96,19 @@ def prepare(prepared, config, kind):
     info['anim'] = config.get('animation') if config.get('animation') in STYLES else 'Retro'
     info['power_on'] = bool(config.get('power_on', True))
     info['intro'] = bool(config.get('intro', False))
+    import variety
+    info['intro_style'] = variety.intro_style(config, kind)
+    info['level'] = int(config.get('season_round', 1) or 1)
+    if kind in ('matchday', 'fulltime'):
+        away_us = config.get('our_side', 'Casa') == 'Ospiti'
+        home, away = str(config.get('home_name', 'FLAMINGOS')), str(config.get('away_name', 'AVVERSARI'))
+        info['intro_names'] = (away, home) if away_us else (home, away)
     info['details'] = bool(config.get('details', True))
     info['music'] = bool(config.get('music', False))
     info['ending'] = config.get('ending') if config.get('ending') in ENDINGS else 'nessuno'
     info['kind'] = kind
     info.setdefault('theme', '')
+    info['music_track'] = variety.music_track(config, kind, info.get('outcome'), info.get('theme', ''))
     timeline = TIMELINES.get(kind, {})
     last = max(timeline.values(), default=0)
     players = [l for l in layers if l.id.startswith('player_')]
@@ -193,9 +201,8 @@ def events(prepared):
     out = []
     offset = _offset(prepared)
     if info.get('intro') and info.get('anim') == 'Retro':
-        for k in range(3):
-            out.append((k*.5, 'start', k))
-        out.append((1.0, 'ready', 0))
+        import intros
+        out += intros.sound_events(info.get('intro_style', 'press_start'), info.get('level', 1))
     if info.get('power_on') and info.get('anim') == 'Retro':
         out.append((_power_start(prepared), 'power', 0))
     for i, layer in enumerate(sorted(prepared[1], key=lambda l: l.start)):
@@ -396,8 +403,8 @@ def _idle_card(layer, t, index):
         phase = t+index*1.9
         if phase % SPECIAL_EVERY < .55:
             return alive[specials[int(phase//SPECIAL_EVERY+index) % len(specials)]]
-    if 'bob' in alive and (t*2+index*.37) % 1 < .5:
-        return alive['bob']
+    if (t*2+index*.37) % 1 < .5:
+        return alive.get('pose') or alive.get('bob') or layer.image   # the pose's second frame, or a bob
     return layer.image
 
 
@@ -731,7 +738,8 @@ def compose(prepared, t=999, animated=True):
     base, layers, positions = prepared
     info = base.info
     if animated and info.get('intro') and t < INTRO:
-        return _intro(base, t)
+        import intros
+        return intros.frame(base, t, info)
     # The whole frame is built on an opaque RGB canvas: overlays blend in place,
     # no full-frame transparent layers to allocate and merge on every frame.
     canvas = base.convert('RGB')

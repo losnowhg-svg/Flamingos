@@ -38,7 +38,10 @@ GAMEBOY = np.array([(15, 56, 15), (48, 98, 48), (139, 172, 15), (155, 188, 15)])
 PINK = (242, 104, 168)
 
 (EMPTY, SKIN, SHADE, EAR, HAIR, HAIRL, BUZZ, BROW, EYE, WHITE, STUBBLE, BEARD, MOUTH, NOSE,
- SHIRT, SHIRTD, COLLAR, FRAME, LENS, LENSL, SHINE, LID, FRAMED, ACC, ACCD, ACCL, GOLD) = range(27)
+ SHIRT, SHIRTD, COLLAR, FRAME, LENS, LENSL, SHINE, LID, FRAMED, ACC, ACCD, ACCL, GOLD,
+ BALL, BALLD, GLOVE, GLOVED) = range(31)
+POSES = ('ferma', 'esultanza', 'conserte', 'pollice', 'palleggio', 'saluto', 'guanti')
+MOVING_POSES = ('esultanza', 'pollice', 'palleggio', 'saluto', 'guanti')   # these have a second frame
 
 
 def sanitize(raw):
@@ -62,8 +65,69 @@ def _rgb(value):
     return np.array(list(bytes.fromhex(value.lstrip('#'))), np.float32)
 
 
-def build(look, frame=None):
-    """The character as a grid of part codes. frame: an idle animation frame (blink, wink, smile, glint, brows)."""
+def _arm(g, rows, mirror=False):
+    """rows: (y, x1, x2, code) for the left arm; mirror draws the right one."""
+    n = g.shape[1]
+    for y, x1, x2, code in rows:
+        if mirror:
+            x1, x2 = n-1-x2, n-1-x1
+        x1, x2 = max(0, x1), min(n-1, x2)
+        if 0 <= y < g.shape[0] and x1 <= x2:
+            g[y, x1:x2+1] = code
+
+
+def _pose(g, pose, beat=0):
+    """Arms, hands and props for a pose; beat 1 is the second animation frame."""
+    if pose == 'esultanza':
+        lift = 0 if beat == 0 else 2          # fists pumping
+        arm = [(31, 3, 6, SHIRT), (30, 3, 6, SHIRT), (29, 2, 5, SHIRT), (28, 2, 4, SHIRT), (27, 2, 4, SHIRTD)]
+        arm += [(y, 1, 3, SKIN) for y in range(19+lift, 27)]
+        arm += [(y, 0, 4, SKIN) for y in range(15+lift, 19+lift)]+[(15+lift, 0, 4, SHADE), (18+lift, 4, 4, SHADE)]
+        _arm(g, arm); _arm(g, arm, True)
+    elif pose == 'conserte':
+        _arm(g, [(y, 3, 6, SHIRTD) for y in range(27, 32)]); _arm(g, [(y, 3, 6, SHIRTD) for y in range(27, 32)], True)
+        g[28, 7:25] = SHIRTD
+        g[29, 6:26] = SKIN
+        g[30, 6:26] = SHADE
+        g[29, 6:8] = SHADE; g[29, 24:26] = SHADE
+    elif pose == 'pollice':
+        arm = [(31, 3, 7, SHIRT), (30, 2, 6, SHIRT), (29, 2, 5, SHIRT), (28, 2, 5, SHIRTD)]
+        arm += [(y, 2, 4, SKIN) for y in range(23, 28)]
+        # A sideways fist (curled fingers on the outer side) with the thumb up along the inner edge.
+        arm += [(y, 0, 5, SKIN) for y in range(18, 23)]
+        arm += [(19, 0, 2, SHADE), (21, 0, 2, SHADE), (22, 0, 5, SHADE)]
+        arm += [(y, 4, 6, SKIN) for y in range(14, 18)]+[(14, 4, 6, SHINE), (17, 4, 4, SHADE)]
+        _arm(g, arm, True)
+        if beat:
+            g[12, 29] = LENSL; g[11, 30] = LENSL; g[13, 28] = LENSL   # a sparkle by the thumb
+    elif pose == 'palleggio':
+        y0 = 19 if beat == 0 else 11
+        for y, x1, x2 in ((0, 2, 4), (1, 1, 5), (2, 1, 5), (3, 1, 5), (4, 1, 5), (5, 2, 4)):
+            g[y0+y, x1:x2+1] = BALL
+        g[y0+2, 3] = BALLD; g[y0+3, 2] = BALLD; g[y0+3, 4] = BALLD; g[y0+1, 1] = BALLD; g[y0+4, 5] = BALLD
+        if beat == 0:   # the knee/foot that kicks it, as a shirt-coloured block under the ball
+            _arm(g, [(29, 1, 5, SHIRTD), (30, 1, 5, SHIRT), (31, 1, 5, SHIRT)])
+    elif pose == 'saluto':
+        tilt = 0 if beat == 0 else 1
+        arm = [(31, 3, 7, SHIRT), (30, 2, 6, SHIRT), (29, 2, 5, SHIRT), (28, 2, 5, SHIRTD)]
+        arm += [(y, 2, 4, SKIN) for y in range(21, 28)]
+        arm += [(y, 1-tilt, 5-tilt, SKIN) for y in range(16, 21)]+[(20, 1, 5, SHADE)]
+        arm += [(15, 1-tilt, 1-tilt, SKIN), (15, 3-tilt, 3-tilt, SKIN), (15, 5-tilt, 5-tilt, SKIN),
+                (14, 1-tilt, 1-tilt, SKIN), (14, 3-tilt, 3-tilt, SKIN), (14, 5-tilt, 5-tilt, SKIN)]
+        _arm(g, arm)
+    elif pose == 'guanti':
+        k = 0 if beat == 0 else 1             # gloves come together a little
+        arm = [(31, 3, 6, SHIRT), (30, 2, 5, SHIRT), (29, 2, 4, SHIRT), (28, 2, 4, SHIRT)]
+        arm += [(y, 2, 4, SHIRTD) for y in range(21, 28)]
+        arm += [(y, 0+k, 5+k, GLOVE) for y in range(15, 21)]+[(20, 0+k, 5+k, GLOVED), (15, 0+k, 0+k, GLOVED),
+                                                            (17, 2+k, 4+k, GLOVED)]
+        _arm(g, arm); _arm(g, arm, True)
+    return g
+
+
+def build(look, frame=None, pose=None, beat=0):
+    """The character as a grid of part codes. frame: an idle animation frame (blink, wink, smile, glint, brows);
+    pose: arms and props (POSES); beat: 0 or 1, the pose's two animation frames."""
     look = dict(DEFAULT_LOOK, **look)
     face = look['face']
     n, top, cx = SIZE, 8, 16
@@ -326,6 +390,8 @@ def build(look, frame=None):
             g[top+8, cx-hw-1] = GOLD
         if g[top+8, cx+hw] in (EAR, EMPTY, SKIN):
             g[top+8, cx+hw] = GOLD
+    if pose and pose != 'ferma':
+        _pose(g, pose, beat)
     return g
 
 
@@ -340,7 +406,8 @@ def _palette(look):
             FRAMED: (20, 18, 24), ACC: acc, ACCD: acc*.62, ACCL: np.minimum(255, acc*1.25+30), GOLD: (255, 214, 90),
             STUBBLE: beard, BEARD: beard*.9, MOUTH: skin*.62+np.array((40, 0, 0)), NOSE: skin*.78,
             SHIRT: pink, SHIRTD: pink*.68, COLLAR: (30, 20, 34), FRAME: (96, 84, 110), LENS: (22, 18, 34),
-            LENSL: (150, 210, 240), SHINE: np.minimum(255, skin*1.12+20)}
+            LENSL: (150, 210, 240), SHINE: np.minimum(255, skin*1.12+20),
+            BALL: (250, 248, 244), BALLD: (30, 24, 36), GLOVE: (196, 240, 72), GLOVED: (110, 150, 40)}
 
 
 def _outline(rgba, color=(28, 18, 34)):
@@ -352,8 +419,8 @@ def _outline(rgba, color=(28, 18, 34)):
     return rgba
 
 
-def _paint(look, frame=None):
-    g = build(look, frame)
+def _paint(look, frame=None, pose=None, beat=0):
+    g = build(look, frame, pose, beat)
     pal = _palette(look)
     rgba = np.zeros((SIZE, SIZE, 4), np.uint8)
     for code, col in pal.items():
@@ -379,7 +446,7 @@ def _rim(rgba, g, left=(80, 230, 255), right=(255, 92, 190)):
 
 GB_TONES = {SKIN: 3, SHINE: 3, WHITE: 3, LENSL: 3, SHADE: 2, EAR: 2, NOSE: 2, SHIRT: 2, BUZZ: 1, STUBBLE: 1,
             BEARD: 1, HAIRL: 1, MOUTH: 1, SHIRTD: 1, FRAME: 1, HAIR: 0, BROW: 0, EYE: 0, COLLAR: 0, LENS: 0,
-            LID: 1, FRAMED: 0, ACC: 1, ACCD: 0, ACCL: 2, GOLD: 3}
+            LID: 1, FRAMED: 0, ACC: 1, ACCD: 0, ACCL: 2, GOLD: 3, BALL: 3, BALLD: 0, GLOVE: 3, GLOVED: 1}
 
 
 def _gameboy(rgba, g):
@@ -397,10 +464,10 @@ def _gameboy(rgba, g):
     return out
 
 
-@lru_cache(maxsize=512)
-def _image(items, style, frame=None):
+@lru_cache(maxsize=1024)
+def _image(items, style, frame=None, pose=None, beat=0):
     look = dict(items)
-    g, rgba = _paint(look, frame)
+    g, rgba = _paint(look, frame, pose, beat)
     rgba = _gameboy(rgba, g) if style == 'gameboy' else _rim(rgba, g)
     return Image.fromarray(rgba, 'RGBA')
 
@@ -416,13 +483,15 @@ def frames_for(look):
     return out
 
 
-def image(look, style='arcade', blink=False, frame=None):
-    """The character as a 32x32 RGBA image. frame: blink, wink, smile, glint or brows."""
+def image(look, style='arcade', blink=False, frame=None, pose=None, beat=0):
+    """The character as a 32x32 RGBA image. frame: blink, wink, smile, glint or brows; pose: one of POSES."""
     look = sanitize(look) or dict(DEFAULT_LOOK)
     frame = 'blink' if blink and not frame else frame
     if frame not in frames_for(look):
         frame = None
-    return _image(tuple(sorted(look.items())), 'gameboy' if style == 'gameboy' else 'arcade', frame).copy()
+    pose = pose if pose in POSES and pose != 'ferma' else None
+    beat = 1 if beat and pose in MOVING_POSES else 0
+    return _image(tuple(sorted(look.items())), 'gameboy' if style == 'gameboy' else 'arcade', frame, pose, beat).copy()
 
 
 def style_for(preset_id):
@@ -480,12 +549,12 @@ def gameboy_image(img):
     return Image.fromarray(arr, 'RGBA')
 
 
-def picture(member, preset_id='crt', blink=False, frame=None):
+def picture(member, preset_id='crt', blink=False, frame=None, pose=None, beat=0):
     """The sprite for a squad member: their look, an older photo avatar, or a silhouette."""
     import avatars
     style = style_for(preset_id)
     if member.get('look'):
-        return image(member['look'], style, blink, frame)
+        return image(member['look'], style, blink, frame, pose, beat)
     picture = avatars.decode(member.get('avatar')) or avatars.placeholder(size=SIZE)
     return gameboy_image(picture) if style == 'gameboy' else picture
 
@@ -514,3 +583,74 @@ def idle_gif(look, style='arcade', size=256):
     out = io.BytesIO()
     frames[0].save(out, 'GIF', save_all=True, append_images=frames[1:], duration=120, loop=0, disposal=2)
     return out.getvalue()
+
+
+# --- Pixel scenes behind the sprites -------------------------------------------
+
+SCENES = ('sfumato', 'stadio', 'notte', 'pioggia', 'neve')
+
+
+def _vgrad(top, bottom, n=SIZE):
+    k = np.linspace(0, 1, n)[:, None, None]
+    return np.repeat(np.array(top, np.float32)*(1-k)+np.array(bottom, np.float32)*k, n, axis=1)
+
+
+@lru_cache(maxsize=16)
+def _scene(name, style):
+    rng = np.random.default_rng({'stadio': 1, 'notte': 2, 'pioggia': 3, 'neve': 4}.get(name, 0))
+    n = SIZE
+    if name == 'stadio':
+        img = _vgrad((10, 14, 40), (40, 30, 80))
+        img[13:20] = (34, 28, 52)                       # the stands
+        crowd = rng.random((7, n)) < .45
+        colors = np.array([(242, 104, 168), (121, 220, 247), (246, 244, 252), (255, 201, 99)], np.float32)
+        picks = colors[rng.integers(0, 4, (7, n))]
+        img[13:20][crowd] = picks[crowd]*.75
+        img[20:] = (40, 120, 60)
+        img[20::4] = (52, 140, 72)                     # mowing stripes
+        img[21::4] = (52, 140, 72)
+        img[24, :] = (220, 230, 220)                    # a pitch line
+        for x in (2, 29):                               # floodlights
+            img[3:13, x] = (90, 90, 110)
+            img[1:4, x-2:x+3] = (255, 250, 210)
+            img[4:9, x-3:x+4] = img[4:9, x-3:x+4]*.7+np.array((255, 250, 210))*.3
+    elif name == 'notte':
+        img = _vgrad((6, 8, 30), (30, 24, 70))
+        stars = rng.random((n, n)) < .05
+        stars[18:] = False
+        img[stars] = (246, 244, 252)
+        yy, xx = np.mgrid[0:n, 0:n]
+        moon = (xx-25)**2+(yy-5)**2 <= 9
+        img[moon] = (250, 238, 190)
+        img[(xx-26)**2+(yy-4)**2 <= 1] = (220, 206, 160)
+        hills = yy > 25+2*np.sin(xx/4)
+        img[hills] = (16, 14, 36)
+    elif name == 'pioggia':
+        img = _vgrad((40, 48, 70), (70, 80, 104))
+        yy, xx = np.mgrid[0:n, 0:n]
+        for _ in range(26):   # short diagonal streaks
+            x, y = int(rng.integers(0, n)), int(rng.integers(0, 27))
+            for k in range(3):
+                if 0 <= x-k < n and y+k < 29:
+                    img[y+k, x-k] = (170, 200, 230) if k else (210, 228, 245)
+        img[29:] = (50, 58, 80)
+        img[30, 3:12] = (120, 150, 190); img[31, 18:27] = (120, 150, 190)   # puddles
+    elif name == 'neve':
+        img = _vgrad((20, 22, 60), (60, 56, 110))
+        flakes = rng.random((n, n)) < .07
+        img[flakes] = (240, 244, 255)
+        img[28:] = (230, 236, 250)
+        img[28, ::3] = (180, 196, 230)
+    else:   # sfumato: the Flamingos colours, as a soft gradient
+        img = _vgrad((40, 40, 90), (110, 50, 110))
+    img = np.clip(img, 0, 255).astype(np.uint8)
+    if style == 'gameboy':
+        lum = img.astype(np.float32) @ np.array([.3, .59, .11])
+        tones = np.digitize(lum, (55, 110, 170))
+        img = GAMEBOY[tones].astype(np.uint8)
+    return Image.fromarray(img, 'RGB')
+
+
+def scene(name, style='arcade'):
+    """A 32x32 pixel background for a sprite tile."""
+    return _scene(name if name in SCENES else 'sfumato', 'gameboy' if style == 'gameboy' else 'arcade').copy()

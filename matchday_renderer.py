@@ -131,7 +131,13 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
         asset = _decorate_text(text_image(value,style,size,color,width,font_bytes,s,height),s)
         if asset: layers.append(Layer(id_,LAYER_NAMES[id_],asset))
     for side,data in [('home',home_logo),('away',away_logo)]:
-        image = clean_logo(data,config.get(f'{side}_logo_size',103),config.get(f'{side}_clear_white',True),s) if data else _unknown_shield(s)
+        size = config.get(f'{side}_logo_size',103)
+        if data:
+            image = clean_logo(data,size,config.get(f'{side}_clear_white',True),s)
+        else:
+            image = _unknown_shield(s)
+            if size < 100:   # smaller crests in the alternative layouts
+                image.thumbnail((round(size*s),round(size*1.42*s)),Image.Resampling.LANCZOS)
         layers.append(Layer(f'{side}_logo',LAYER_NAMES[f'{side}_logo'],image))
     layers.append(Layer('vs','VS',_vs_sprite(yellow,style,font_bytes,config.get('vs_size',43),s)))
     # Flamingos always pink, home or away; the opponents take the second colour.
@@ -153,7 +159,8 @@ def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     import animations, themes
     from crt_presets import background as preset_background
     config = themes.effective(config)
-    prepared = preset_background(config,'matchday',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
+    import layouts
+    prepared = preset_background(config,layouts.panel_key('matchday','Matchday Screen',config),s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
     from crt_common import finish
     return finish(prepared,config,'matchday')
 

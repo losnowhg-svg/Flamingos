@@ -494,7 +494,7 @@ def _background(preset_id, pink_hex, cyan_hex, yellow_hex, layout, intensity, s,
     builder = BUILDERS.get(preset_id)
     im = builder(pink, cyan, yellow, s) if builder else _bg_legacy(preset_id, pink, cyan, yellow, s)
     im = _lift(im, brightness/100)
-    veil_alpha = style['veil'] if (layout != 'matchday' or preset_id != 'crt') else 0
+    veil_alpha = style['veil'] if (not layout.startswith('matchday') or preset_id != 'crt') else 0
     if veil_alpha:
         veil = Image.new('RGBA', im.size)
         ScaledDraw(veil, s).rectangle((78, 316, 462, 674), fill=(*style['panel'], veil_alpha))
@@ -508,6 +508,14 @@ def _background(preset_id, pink_hex, cyan_hex, yellow_hex, layout, intensity, s,
     d = ScaledDraw(im, s)
     border = style['border'] or cyan
     for i, rect in enumerate(PANEL_LAYOUTS.get(layout, PANEL_LAYOUTS['convocati'])):
+        if len(rect) == 5:   # alternative layouts (layouts.py) carry their own flags
+            flags = rect[4]
+            if 'line' in flags:
+                d.line(rect[:4], fill=(*border, 90), width=.5)
+                continue
+            _box(d, rect[:4], (*style['panel'], 255), (*border, 190 if 'soft' in flags else 255),
+                 1.4 if layout.startswith('matchday') else 1.2, 5)
+            continue
         soft = (layout == 'fulltime' and i == 3) or (layout in ('convocati', 'classifica') and i == 1)
         _box(d, rect, (*style['panel'], 255), (*border, 190 if soft else 255), 1.2 if layout != 'matchday' else 1.4, 5)
     if layout == 'fulltime':

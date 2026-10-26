@@ -186,7 +186,8 @@ def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     from crt_common import finish
     s=checked_scale(render_scale)
     config=themes.effective(config)
-    return finish((background(config, 'classifica', s), get_layers(config, home_logo, away_logo, font_bytes, s), normalized_positions(config)),config,'classifica')
+    import layouts
+    return finish((background(config, layouts.panel_key('classifica', 'Classifica', config), s), get_layers(config, home_logo, away_logo, font_bytes, s), normalized_positions(config)),config,'classifica')
 
 
 def png_bytes(config, home_logo, away_logo=None, font_bytes=None, format='Story 9:16', scale=2, supersample=2):

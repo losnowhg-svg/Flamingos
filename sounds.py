@@ -118,8 +118,44 @@ def cut(seconds):
     return out
 
 
+def pixelate(seconds):
+    """Bit-crushed down-and-up sweep."""
+    t = _t(seconds)
+    f = 300+900*np.abs(np.linspace(-1, 1, len(t)))
+    tone = np.sign(np.sin(2*np.pi*np.cumsum(f)/SR))
+    crushed = np.round(tone*np.abs(np.sin(2*np.pi*14*t))*3)/3
+    return crushed*.16*np.sin(np.linspace(0, np.pi, len(t)))
+
+
+def iris(seconds):
+    """Descending then rising sweep, like a level ending and a new one starting."""
+    half = seconds/2
+    t = _t(half)
+    down = np.sin(2*np.pi*np.cumsum(np.linspace(900, 200, len(t)))/SR)*_env(len(t), .01, half*.5)*.22
+    up = np.sign(np.sin(2*np.pi*np.cumsum(np.linspace(200, 1000, len(t)))/SR))*_env(len(t), .01, half*.5)*.12
+    return np.concatenate([down, up])
+
+
+def blocks(seconds):
+    """Thuds as the rows land."""
+    n = int(seconds*SR)
+    out = np.zeros(n)
+    for k in range(7):
+        at = int((.12+k*.11)*seconds*SR/1.0) if seconds < 1.5 else int((.12+k*.11)*SR)
+        t = _t(.07)
+        thud = np.sin(2*np.pi*(180-k*12)*t)*np.exp(-t*45)*.3+_noise(len(t), 40+k)*np.exp(-t*80)*.08
+        out[at:at+len(thud)] += thud[:max(0, n-at)]
+    return out
+
+
+def wipe(seconds):
+    t = _t(seconds)
+    return _lowpass(_noise(len(t), 9), .15)*2.2*np.sin(np.linspace(0, np.pi, len(t)))**2*.35
+
+
 TRANSITION_SOUNDS = {'channel': channel_change, 'poweroff': power_cycle, 'glitch': glitch,
-                     'rewind': rewind, 'roll': roll, 'cut': cut}
+                     'rewind': rewind, 'roll': roll, 'cut': cut, 'pixel': pixelate, 'iris': iris,
+                     'blocks': blocks, 'wipe': wipe}
 
 
 def hum(seconds):
@@ -227,8 +263,92 @@ def power_down():
     return sweep+_noise(len(t), 14)*np.exp(-(.6-t)*30)*.2
 
 
-def chiptune(seconds, seed=0, bpm=120):
-    """An original 8-bit loop: bass, arpeggio, kick and hi-hat. Quiet, under the effects."""
+def _midi(n):
+    return 440.0*2**((n-69)/12)
+
+
+def _add(out, sound, at):
+    i = int(at*SR)
+    if 0 <= i < len(out):
+        out[i:i+len(sound)] += sound[:len(out)-i]
+
+
+def _kick(volume=.25):
+    t = _t(.12)
+    return np.sin(2*np.pi*(120-80*t/.12)*t)*np.exp(-t*30)*volume
+
+
+def _snare(volume=.14, seed=3):
+    n = int(.11*SR)
+    return _lowpass(_noise(n, seed), .5)*np.exp(-np.arange(n)/SR*28)*volume
+
+
+def _hat(volume=.05, seed=20):
+    n = int(.03*SR)
+    return _noise(n, seed)*np.linspace(volume, 0, n)
+
+
+# Original 8-bit tracks, all at 120 bpm so the entrances stay on the beat.
+# chords: midi notes per bar (4 bars, looped); lead: midi per quarter note (0 = rest).
+TRACKS = {
+    'epica': dict(chords=((57, 60, 64), (53, 57, 60), (48, 52, 55), (55, 59, 62)),
+                  lead=(69, 72, 76, 74, 72, 69, 65, 69, 67, 72, 76, 79, 77, 76, 74, 71)),
+    'tensione': dict(chords=((45, 48, 52), (45, 48, 52), (46, 50, 53), (44, 47, 52)),
+                     lead=(76, 0, 0, 77, 76, 0, 0, 0, 76, 0, 0, 77, 79, 0, 77, 0)),
+    'festa': dict(chords=((48, 52, 55), (55, 59, 62), (57, 60, 64), (53, 57, 60)),
+                  lead=(72, 76, 79, 76, 74, 79, 83, 79, 76, 72, 76, 81, 77, 81, 84, 81)),
+}
+
+
+def _track(name, seconds):
+    spec = TRACKS[name]
+    beat = .5
+    n = int(seconds*SR)+1
+    out = np.zeros(n)
+    bar = 4*beat
+    for b in range(int(seconds/bar)+1):
+        chord = spec['chords'][b % 4]
+        t0 = b*bar
+        lead = spec['lead'][(b % 4)*4:(b % 4)*4+4]
+        if name == 'epica':
+            for k in range(8):   # driving bass in eighths, octave jumps
+                _add(out, _note(_midi(chord[0]-12+(12 if k % 2 else 0)), beat/2*.9, .5, .11), t0+k*beat/2)
+            for k, m in enumerate(lead):
+                if m:
+                    _add(out, _note(_midi(m), beat*.85, .125, .07, .1), t0+k*beat)
+            for k in range(4):
+                _add(out, _kick() if k % 2 == 0 else _snare(), t0+k*beat)
+                _add(out, _hat(.04, 20+k), t0+k*beat+beat/2)
+        elif name == 'tensione':
+            pattern = (0, 0, 1, 0, 0, 0, -1, 0)   # chromatic ostinato
+            for k, step in enumerate(pattern):
+                _add(out, _lowpass(_note(_midi(chord[0]+step), beat/2*.8, .5, .14), .25), t0+k*beat/2)
+            for k, m in enumerate(lead):
+                if m:
+                    _add(out, _note(_midi(m), beat*.35, .25, .05, .05), t0+k*beat)
+            _add(out, _kick(.3), t0)
+            for k in range(16):
+                _add(out, _hat(.025 if k % 2 else .04, 30+k), t0+k*beat/4)
+        else:   # festa
+            for k in range(16):   # sixteenth arpeggio
+                _add(out, _note(_midi(chord[k % 3]+12+(12 if k % 8 >= 4 else 0)), beat/4*.9, .25, .055), t0+k*beat/4)
+            for k in range(4):
+                _add(out, _note(_midi(chord[0]-12+(12 if k % 2 else 0)), beat*.8, .5, .1), t0+k*beat)
+                _add(out, _kick(.22), t0+k*beat)
+                if k % 2:
+                    _add(out, _snare(.12, 7+k), t0+k*beat)
+            for k, m in enumerate(lead):
+                if m:
+                    _add(out, _note(_midi(m), beat*.45, .5, .05, .06), t0+k*beat)
+    fade = min(n, int(.4*SR))
+    out[-fade:] *= np.linspace(1, 0, fade)
+    return out
+
+
+def chiptune(seconds, seed=0, bpm=120, track='arcade'):
+    """An original 8-bit loop. track: arcade (bass, arpeggio, kick, hi-hat) or one of TRACKS."""
+    if track in TRACKS:
+        return _track(track, seconds)
     beat = 60/bpm
     progressions = (((C4, E4, G4), (A4/2*2, C5, E5), (F4, A4, C5), (G4, B4, D4*2)),
                     ((A4/2*2, C5, E5), (F4, A4, C5), (C4, E4, G4), (G4, B4, D4*2)))
@@ -290,7 +410,8 @@ def scene_events(prepared, compose, start=0.0, speed=1.0, until=None, effects=Tr
         if not prepared[0].info.get('music'):
             return []
         length = (until-start) if until is not None else 12
-        return [(start, chiptune(max(1.0, length), len(prepared[1]))*.9)]
+        return [(start, chiptune(max(1.0, length), len(prepared[1]),
+                                 track=prepared[0].info.get('music_track', 'arcade'))*.9)]
     if animations.rich(prepared):
         out = []
         for t, kind, i in animations.events(prepared):
@@ -301,7 +422,8 @@ def scene_events(prepared, compose, start=0.0, speed=1.0, until=None, effects=Tr
             out.append((at, maker(i) if maker else blip(i if isinstance(i, int) else 0)))
         if prepared[0].info.get('music'):
             length = (until-start) if until is not None else 12
-            out.append((start, chiptune(max(1.0, length), len(prepared[1]))*.9))
+            out.append((start, chiptune(max(1.0, length), len(prepared[1]),
+                                        track=prepared[0].info.get('music_track', 'arcade'))*.9))
         return out
     events = []
     for i, t in enumerate(entrance_times(prepared, compose)):

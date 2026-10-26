@@ -83,7 +83,8 @@ def _background(w, h, c):
     return img
 
 
-def team_photo(squad, preset_id='crt', logo=None, title='FLAMINGOS', subtitle=None, size='Post 4:5'):
+def team_photo(squad, preset_id='crt', logo=None, title='FLAMINGOS', subtitle=None, size='Post 4:5',
+               pose_mode='ferma', scene_mode='sfumato'):
     """The poster as an RGB PIL image."""
     w, h = SIZES.get(size, SIZES['Post 4:5'])
     c = POCKET if pc.style_for(preset_id) == 'gameboy' else NEON
@@ -127,6 +128,10 @@ def team_photo(squad, preset_id='crt', logo=None, title='FLAMINGOS', subtitle=No
             break
     y = area_top+(area_bottom-area_top-row_h*len(rows))//2
     name_size = max(14, min(22, tile//7))
+    import variety
+    group_of = {'PORTIERI': 'P', 'DIFENSORI': 'D', 'CENTROCAMPISTI': 'C', 'ATTACCANTI': 'A', 'STAFF': 'STAFF'}
+    member_group = {id(p): group_of[label] for label, people in sections for p in people}
+    counter = 0
     for row in rows:
         x0 = (w-cell*len(row))//2
         for i, (label, person) in enumerate(row):
@@ -136,8 +141,14 @@ def team_photo(squad, preset_id='crt', logo=None, title='FLAMINGOS', subtitle=No
                 if lab:
                     img.paste(lab, (x, y+4), lab)
             ty = y+30
-            d.rectangle((x, ty, x+tile, ty+tile), fill=(*c['tile'], 230), outline=(*c['cyan'], 220), width=3)
-            sprite = pc.picture(person, preset_id)
+            scene_name = variety.scene_for(member_group.get(id(person), ''), scene_mode)
+            if scene_name == 'sfumato':
+                d.rectangle((x, ty, x+tile, ty+tile), fill=(*c['tile'], 230))
+            else:
+                img.paste(pc.scene(scene_name, pc.style_for(preset_id)).resize((tile, tile), Image.Resampling.NEAREST), (x, ty))
+            d.rectangle((x, ty, x+tile, ty+tile), outline=(*c['cyan'], 220), width=3)
+            sprite = pc.picture(person, preset_id, pose=variety.pose_for(person, counter, pose_mode))
+            counter += 1
             k = max(1, (tile-6)//sprite.width)
             big = sprite.resize((sprite.width*k, sprite.height*k), Image.Resampling.NEAREST)
             img.paste(big, (x+(tile-big.width)//2, ty+tile-big.height-3), big)
