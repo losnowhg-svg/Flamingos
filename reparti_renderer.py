@@ -65,7 +65,7 @@ def normalized_positions(config):
     return safe_positions({}, defaults)
 
 
-def _card(member, config, w, h, font_bytes, s, blink=False, bob=False, frame=None):
+def _card(member, config, w, h, font_bytes, s, blink=False, bob=False, frame=None, index=0, beat=0):
     style = config.get('text_style', config.get('font_choice', 'CRT Terminal'))
     pink = rgb(config.get('pink', '#F268A8')); cyan = rgb(config.get('cyan', '#79DCF7'))
     white = rgb(config.get('white', '#F6F4FC')); yellow = rgb(config.get('yellow', '#FFC963'))
@@ -81,13 +81,20 @@ def _card(member, config, w, h, font_bytes, s, blink=False, bob=False, frame=Non
     # Card and avatar tile.
     d.rectangle((0, 0, w-1, h-1), fill=(*[min(255, c+14) for c in panel], 235), outline=(*cyan, 170), width=1)
     tile = Image.new('RGBA', (round(side*s), round(side*s)))
-    td = ScaledDraw(tile, s)
-    for i in range(12):  # soft vertical gradient behind the face
-        t = i/11
-        col = tuple(round(c*(.18+.22*(1-t))+p*(1-(.18+.22*(1-t)))) for c, p in zip(cyan, panel))
-        td.rectangle((0, side*i/12, side, side*(i+1)/12+1), fill=(*col, 255))
     import pixel_character
-    picture = pixel_character.picture(member, config.get('preset_id', 'crt'), blink, frame)
+    import variety
+    scene_name = variety.scene_for(config.get('group', ''), config.get('sprite_scene', 'sfumato'))
+    if scene_name == 'sfumato':
+        td = ScaledDraw(tile, s)
+        for i in range(12):  # soft vertical gradient behind the face
+            t = i/11
+            col = tuple(round(c*(.18+.22*(1-t))+p*(1-(.18+.22*(1-t)))) for c, p in zip(cyan, panel))
+            td.rectangle((0, side*i/12, side, side*(i+1)/12+1), fill=(*col, 255))
+    else:
+        backdrop = pixel_character.scene(scene_name, pixel_character.style_for(config.get('preset_id', 'crt')))
+        tile.paste(backdrop.resize(tile.size, Image.Resampling.NEAREST), (0, 0))
+    pose = variety.pose_for(member, index, config.get('sprite_pose', 'ferma'))
+    picture = pixel_character.picture(member, config.get('preset_id', 'crt'), blink, frame, pose, beat)
     factor = max(1, int(side*s//picture.width))
     big = picture.resize((picture.width*factor, picture.height*factor), Image.Resampling.NEAREST)
     tile.alpha_composite(big, ((tile.width-big.width)//2, tile.height-big.height-(factor if bob else 0)))
@@ -133,14 +140,18 @@ def get_layers(config, home_logo, away_logo=None, font_bytes=None, render_scale=
     members = config.get('members', [])[:MAX_CARDS]
     _, w, h = card_boxes(len(members), any(m.get('role') in STAFF_ROLES for m in members))
     for i, member in enumerate(members):
-        layer = Layer(f'card_{i}', str(member.get('name', '')), _card(member, config, w, h, font_bytes, s), sequence=i)
+        layer = Layer(f'card_{i}', str(member.get('name', '')), _card(member, config, w, h, font_bytes, s, index=i), sequence=i)
         # Idle frames for the video: blink, wink, smile, raised brows, glint on the
         # glasses (whatever suits the sprite) and the avatar one sprite pixel up.
         import pixel_character
         look = pixel_character.sanitize(member.get('look')) if member.get('look') else None
         frames = pixel_character.frames_for(look) if look else ('blink',)
-        layer.alive = {f: _card(member, config, w, h, font_bytes, s, frame=f) for f in frames}
-        layer.alive['bob'] = _card(member, config, w, h, font_bytes, s, bob=True)
+        layer.alive = {f: _card(member, config, w, h, font_bytes, s, frame=f, index=i) for f in frames}
+        import variety
+        if look and variety.pose_for(member, i, config.get('sprite_pose', 'ferma')) in pixel_character.MOVING_POSES:
+            layer.alive['pose'] = _card(member, config, w, h, font_bytes, s, index=i, beat=1)
+        else:
+            layer.alive['bob'] = _card(member, config, w, h, font_bytes, s, bob=True, index=i)
         layer.group = config.get('group', '')
         layer.captain = bool(member.get('captain'))
         layers.append(layer)

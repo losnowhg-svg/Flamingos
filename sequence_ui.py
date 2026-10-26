@@ -119,7 +119,8 @@ def _still(root, template, library, preset_override, format):
 
 def show_sequence(root: Path, library):
     st.subheader('SEQUENZA VIDEO')
-    st.caption('Le grafiche una dopo l\'altra, unite da transizioni CRT: cambio canale, spegnimento, glitch, VHS. '
+    st.caption('Le grafiche una dopo l\'altra, unite da transizioni retrò: cambio canale, glitch, VHS, pixel, '
+               'cerchio, blocchi, tendina. '
                'Ogni grafica usa i dati e il preset che hai impostato nel suo editor.')
     state = st.session_state.setdefault('sequence', {
         'items': ['Matchday Screen', 'Convocati'], 'transitions': ['channel'], 'format': 'Story 9:16',
@@ -129,6 +130,14 @@ def show_sequence(root: Path, library):
     left, right = st.columns([1.1, 1], gap='large')
     with left:
         count = st.slider('Numero di grafiche', 2, 5, len(state['items']), key='seq_count')
+        if st.button('🎲 Transizioni tutte diverse', key='seq_shuffle', width='stretch',
+                     help='Sceglie a caso una transizione diversa per ogni passaggio.'):
+            import random
+            from transitions import VARIED
+            state['transitions'] = random.sample(VARIED, min(len(VARIED), max(1, count-1)))
+            for i in range(5):
+                st.session_state.pop(f'seq_trans_{i}', None)
+            st.rerun()
         items, transitions = [], []
         for i in range(count):
             current = state['items'][i] if i < len(state['items']) else CRT_TEMPLATES[i % len(CRT_TEMPLATES)]
@@ -149,6 +158,12 @@ def show_sequence(root: Path, library):
                 format_func=lambda x: '1080 px - Full HD' if x == 2 else '540 px - rapido', key='seq_scale')
             state['sound'] = st.checkbox('Suoni CRT (cambio canale, accensione, glitch, nastro, bip)', state['sound'], key='seq_sound')
             state['music'] = st.checkbox('Musica chiptune sotto tutta la sequenza', state.get('music', False), key='seq_music')
+            if state['music']:
+                import variety
+                tracks = list(variety.MUSIC_TRACKS)
+                state['music_track'] = st.selectbox('Brano', tracks, index=tracks.index(state.get('music_track', 'auto'))
+                                                    if state.get('music_track', 'auto') in tracks else 0,
+                                                    format_func=variety.MUSIC_TRACKS.get, key='seq_music_track')
             if state['sound'] or state['music']:
                 state['volume'] = st.slider('Volume', 0, 100, int(state['volume']), key='seq_volume')
             choices = ('own',)+PRESET_IDS
@@ -180,6 +195,8 @@ def show_sequence(root: Path, library):
                     transitions = list(transitions)+['channel']
                 for prepared, _ in scenes:
                     prepared[0].info['music'] = bool(state.get('music'))
+                    if state.get('music_track', 'auto') != 'auto':
+                        prepared[0].info['music_track'] = state['music_track']
                 with tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)/'sequenza.mp4'
                     render_sequence(scenes, transitions, path, state['fps'], state['hold'], state['transition_seconds'],

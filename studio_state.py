@@ -45,6 +45,7 @@ MATCH_DEFAULT = dict(
 CRT_DEFAULT = dict(preset_id='crt',rotation_mode='Manuale',season_round=1,scanlines=16,brightness=DEFAULT_BRIGHTNESS,
                    theme='auto',event_theme='',animation='Retro',power_on=True,mockup=False,
                    intro=False,details=True,music=False,ending='nessuno',
+                   layout='classica',layout_rotation=False,title_rotation=False,intro_style='press_start',music_track='auto',
                    sponsor_on=False,sponsor_logo_id='none',sponsor_name='')
 MATCH_DEFAULT.update(CRT_DEFAULT)
 MATCH_DEFAULT.update(font_choice='CRT Terminal',our_side='Casa')
@@ -72,6 +73,7 @@ CONVOCATI_DEFAULT = dict(
     roster=[{'number':i+1,'name':f'GIOCATORE {i+1:02d}',
              'role':'P' if i==0 else '-','captain':False} for i in range(convocati.MAX_PLAYERS)],
     positions={k:list(v) for k,v in convocati.DEFAULT_POSITIONS.items()},
+    sprite_pose='variate',sprite_scene='sfumato',
 )
 SAMPLE_STANDINGS = [
     ('SQUADRA A',19,8,6,1,1,31,12),('FLAMINGOS',17,8,5,2,1,28,15),('SQUADRA B',15,8,5,0,3,24,19),
@@ -135,6 +137,16 @@ MODULES = {'Starting 7':starting,'Matchday Screen':matchday,'Full Time':fulltime
 TEXT_LIMITS = dict(team_name=50,headline=60,footer=80,formation_text=80,title=36,date=24,home_name=42,away_name=42,kickoff=14,venue=72,kickoff_label=40,venue_label=22,competition=42,home_scorers=1200,away_scorers=1200,opponent=42,meeting_time=14,
                    group=48,round_label=36,our_team=34,source_url=300,
                    promo_label=20,playoff_label=20,month_label=30,sponsor_name=24,sponsor_logo_id=80)
+
+
+def _choice_fields():
+    import layouts, variety
+    return {'layout': layouts.options, 'intro_style': lambda t: tuple(variety.INTRO_STYLES),
+            'music_track': lambda t: tuple(variety.MUSIC_TRACKS), 'sprite_pose': lambda t: tuple(variety.POSE_MODES),
+            'sprite_scene': lambda t: tuple(variety.SCENE_MODES)}
+
+
+CHOICE_FIELDS = _choice_fields()
 
 
 def defaults(template):
@@ -211,6 +223,8 @@ def sanitize_config(template, raw):
             config[key] = value if value in ('Retro','Classica') else default
         elif key == 'ending':
             config[key] = value if value in ('nessuno','spegnimento','loop') else default
+        elif key in CHOICE_FIELDS:
+            config[key] = value if value in CHOICE_FIELDS[key](template) else default
         elif key in RANGES[template]:
             config[key] = _integer(value,default,*RANGES[template][key])
         elif key in ('fps','video_scale'):
@@ -463,4 +477,9 @@ def apply_match(template, config, raw_match, event_theme=None):
         output['event_theme'] = event_theme if event_theme is not None else themes.auto_event(match)
         if output.get('rotation_mode') == 'Per giornata':
             output = apply_preset(output, preset_for_round(match['round']))
+        import layouts, variety
+        if output.get('layout_rotation') and len(layouts.options(template)) > 1:
+            output = layouts.apply(template, output, layouts.for_round(template, match['round']))
+        if output.get('title_rotation'):
+            output['title'] = variety.title_for_round(template, match['round']) or output['title']
     return sanitize_config(template, output)

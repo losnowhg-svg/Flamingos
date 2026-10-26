@@ -156,7 +156,8 @@ def show_wrapped(root: Path, library):
                 scenes.append(closing)
             with tempfile.TemporaryDirectory() as folder:
                 path = Path(folder)/'wrapped.mp4'
-                render_sequence(scenes, ['channel']*(len(scenes)-1), path, table['fps'], 3.2, .8, fmt, scale,
+                from transitions import varied
+                render_sequence(scenes, varied(len(scenes)-1), path, table['fps'], 3.2, .8, fmt, scale,
                                 progress_with_eta(bar), sound=table['sound'], volume=table['volume']/100,
                                 mockup=table.get('mockup', False))
                 st.session_state['wrapped_mp4'] = {'signature': signature, 'data': path.read_bytes()}

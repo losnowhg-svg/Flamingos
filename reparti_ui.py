@@ -27,11 +27,20 @@ def _signature(config, squad, home, font_bytes, extra=''):
 def show_departments(config, squad, home, font_bytes, key):
     # The audio switches live further down the Esporta tab: read their current
     # widget state so a change made just now is already used here.
+    model = config
     config = dict(config, **{name: st.session_state[key(name)] for name in ('sound', 'music', 'volume')
                              if key(name) in st.session_state})
     st.markdown('**Presentazione per reparti**')
     st.caption('Dopo il riepilogo, una schermata per reparto con le facce pixel: portieri, difensori, '
                'centrocampisti, attaccanti, staff. Gli avatar si creano nella Settimana, nella card La rosa.')
+    import variety
+    a, b = st.columns(2)
+    for column, name, label, choices in ((a, 'sprite_pose', 'Pose degli sprite', variety.POSE_MODES),
+                                         (b, 'sprite_scene', 'Sfondo degli sprite', variety.SCENE_MODES)):
+        ids = list(choices)
+        value = column.selectbox(label, ids, index=ids.index(model.get(name)) if model.get(name) in ids else 0,
+                                 format_func=choices.get, key=key(name))
+        model[name] = config[name] = value
     slides = rr.slides(config, squad)
     missing = rr.unassigned(config, squad)
     if missing:
@@ -92,7 +101,8 @@ def show_departments(config, squad, home, font_bytes, key):
                 scenes.append(closing)
             with tempfile.TemporaryDirectory() as folder:
                 path = Path(folder)/'reparti.mp4'
-                render_sequence(scenes, ['channel']*(len(scenes)-1), path, config['fps'], 3.5, .9,
+                from transitions import varied
+                render_sequence(scenes, varied(len(scenes)-1), path, config['fps'], 3.5, .9,
                                 config['export_format'], scale,
                                 progress_with_eta(progress),
                                 sound=config['sound'], volume=config['volume']/100, mockup=config.get('mockup', False))

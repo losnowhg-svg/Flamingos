@@ -6,6 +6,7 @@ progress value p in [0, 1], so it renders the same in preview and in the MP4.
 from __future__ import annotations
 
 import math
+from functools import lru_cache
 
 import numpy as np
 from PIL import Image
@@ -17,7 +18,12 @@ TRANSITIONS = {
     'rewind': 'Riavvolgimento VHS',
     'roll': 'Rolling verticale',
     'cut': 'Taglio netto',
+    'pixel': 'Pixel che si sgranano',
+    'iris': 'Cerchio (fine livello)',
+    'blocks': 'Blocchi che cadono',
+    'wipe': 'Tendina a scalini',
 }
+VARIED = ('channel', 'pixel', 'blocks', 'iris', 'glitch', 'wipe', 'rewind', 'roll')
 TRANSITION_IDS = tuple(TRANSITIONS)
 OSD_GREEN = (120, 255, 140)
 
@@ -185,8 +191,91 @@ def _cut(a, b, p, channel=2):
     return a if p <= .45 else b
 
 
+def _pixel(a, b, p, channel=2):
+    """Mosaic: the picture breaks into bigger and bigger pixels, then rebuilds as the next one."""
+    src = a if p < .5 else b
+    k = 1-abs(p-.5)*2   # 0 at the ends, 1 in the middle
+    block = max(1, int(round(2+k*k*(src.width/14))))
+    if block <= 1:
+        return src
+    small = src.resize((max(1, src.width//block), max(1, src.height//block)), Image.Resampling.BILINEAR)
+    small = small.quantize(32, dither=Image.Dither.NONE).convert('RGB') if k > .4 else small
+    return small.resize(src.size, Image.Resampling.NEAREST)
+
+
+def _iris(a, b, p, channel=2):
+    """A circle closes on the centre (end of level), black, then opens on the next scene."""
+    w, h = a.size
+    src = a if p < .5 else b
+    q = 1-p/.5 if p < .5 else (p-.5)/.5
+    radius = _ease(max(0.0, min(1.0, q)))*math.hypot(w, h)/2
+    yy, xx = np.ogrid[:h, :w]
+    inside = (xx-w/2)**2+(yy-h*.48)**2 <= radius**2
+    out = np.asarray(src).copy()
+    out[~inside] = (6, 4, 12)
+    return Image.fromarray(out)
+
+
+def _blocks(a, b, p, channel=2):
+    """Tetris-like blocks fall row by row and stack into the next scene."""
+    A, B = np.asarray(a), np.asarray(b)
+    h, w = A.shape[:2]
+    cols, rows = 8, 14
+    bw, bh = math.ceil(w/cols), math.ceil(h/rows)
+    out = A.copy()
+    rng = np.random.default_rng(42)
+    delays = rng.uniform(0, .45, (rows, cols))
+    for r in range(rows):
+        for c in range(cols):
+            # bottom rows land first; each block falls for .35 of the transition
+            start = (rows-1-r)/rows*.5+delays[r, c]*.3
+            q = (p-start)/.35
+            if q <= 0:
+                continue
+            y1, x1 = r*bh, c*bw
+            if q >= 1:
+                out[y1:y1+bh, x1:x1+bw] = B[y1:y1+bh, x1:x1+bw]
+                continue
+            dy = int((1-q*q)*(y1+bh))   # accelerating fall from above
+            top = y1-dy
+            tile = B[y1:y1+bh, x1:x1+bw]
+            t0 = max(0, top)
+            if t0 < h and top+tile.shape[0] > 0:
+                part = tile[t0-top:min(tile.shape[0], h-top)]
+                out[t0:t0+part.shape[0], x1:x1+part.shape[1]] = part
+    return Image.fromarray(out)
+
+
+def _wipe(a, b, p, channel=2):
+    """A diagonal staircase of pixel steps sweeps the next scene in, with a bright edge."""
+    A, B = np.asarray(a), np.asarray(b)
+    h, w = A.shape[:2]
+    step = max(8, w//24)
+    stair = _stairs(h, w, step)
+    edge = _ease(p)*(w+h+step*2)-step
+    out = np.where((stair < edge)[..., None], B, A)
+    band = np.abs(stair-edge) < step*1.5   # only the pixels near the edge get the pink glow
+    if band.any():
+        glow = np.exp(-((stair[band]-edge)/(step*.9))**2)[:, None]*.6
+        out = out.copy()
+        out[band] = (out[band]*(1-glow)+np.array([255, 92, 190])*glow).astype(np.uint8)
+    return Image.fromarray(out)
+
+
+@lru_cache(maxsize=4)
+def _stairs(h, w, step):
+    yy, xx = np.mgrid[0:h, 0:w]
+    return ((xx//step)*step+(yy//step)*step).astype(np.int32)
+
+
 FUNCTIONS = {'channel': _channel, 'poweroff': _poweroff, 'glitch': _glitch,
-             'rewind': _rewind, 'roll': _roll, 'cut': _cut}
+             'rewind': _rewind, 'roll': _roll, 'cut': _cut, 'pixel': _pixel, 'iris': _iris,
+             'blocks': _blocks, 'wipe': _wipe}
+
+
+def varied(count, start=0):
+    """count transitions, all different in a row: for carousels and Wrapped."""
+    return [VARIED[(start+i) % len(VARIED)] for i in range(count)]
 
 
 def transition_frame(kind, a, b, p, channel=2):
@@ -234,6 +323,7 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
         prepared[0].info['ending'] = 'nessuno'
         prepared[0].info.pop('duration', None)
     music = any(p[0].info.get('music') for p, _ in scenes)
+    track = next((p[0].info.get('music_track') for p, _ in scenes if p[0].info.get('music')), 'arcade')
     for prepared, _ in scenes:
         prepared[0].info['music'] = False  # one soundtrack for the whole sequence, below
     speeds = [max(1.0, intro_length(p, c)/(hold*.65)) for p, c in scenes]
@@ -280,7 +370,7 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
     if sound or music:   # the chiptune plays even with the CRT effects off
         from sounds import mix, mux, chiptune
         if music:
-            events.append((0.0, chiptune(total/fps, len(scenes))*.9))
+            events.append((0.0, chiptune(total/fps, len(scenes), track=track or 'arcade')*.9))
         mux(path, mix(events, total/fps, volume, ambient=sound))
     return str(path)
 

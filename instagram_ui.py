@@ -33,13 +33,13 @@ def _cover(name, style, logo, label):
 
 
 @st.cache_data(show_spinner=False, max_entries=16)
-def _team_photo(squad_json, preset_id, logo, size):
-    return tp.png_bytes(json.loads(squad_json), preset_id, logo, size=size)
+def _team_photo(squad_json, preset_id, logo, size, pose_mode, scene_mode):
+    return tp.png_bytes(json.loads(squad_json), preset_id, logo, size=size, pose_mode=pose_mode, scene_mode=scene_mode)
 
 
-def team_photo_png(squad, preset_id='crt', logo=None, size='Post 4:5'):
+def team_photo_png(squad, preset_id='crt', logo=None, size='Post 4:5', pose_mode='ferma', scene_mode='sfumato'):
     keep = [{k: p.get(k) for k in ('name', 'number', 'role', 'look', 'avatar')} for p in squad or []]
-    return _team_photo(json.dumps(keep, sort_keys=True), preset_id, logo, size)
+    return _team_photo(json.dumps(keep, sort_keys=True), preset_id, logo, size, pose_mode, scene_mode)
 
 
 def show_instagram(root, library):
@@ -59,7 +59,11 @@ def show_instagram(root, library):
             look = a.radio('Stile', ['crt', 'gameboy'], horizontal=True, key='team_style',
                            format_func={'crt': 'Arcade neon', 'gameboy': 'Game Boy'}.get)
             size = b.radio('Formato', list(tp.SIZES), horizontal=True, key='team_size')
-            data = team_photo_png(squad, look, logo, size)
+            import variety
+            a, b = st.columns(2)
+            pose = a.selectbox('Pose', list(variety.POSE_MODES), format_func=variety.POSE_MODES.get, key='team_pose')
+            scene = b.selectbox('Sfondo', list(variety.SCENE_MODES), format_func=variety.SCENE_MODES.get, key='team_scene')
+            data = team_photo_png(squad, look, logo, size, pose, scene)
             st.image(data, width='stretch')
             st.download_button('⬇ Scarica foto di squadra', data, file_name=f'flamingos_squadra_{look}.png',
                                mime='image/png', type='primary', width='stretch', key='team_download')

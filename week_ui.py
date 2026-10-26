@@ -421,6 +421,12 @@ def show_avatar_maker(players):
         a.image(pc.idle_gif(look, 'arcade', 256), caption='Arcade luce neon (tutti i preset)', width='stretch')
         b.image(pc.idle_gif(look, 'gameboy', 256), caption='Game Boy (preset Pocket verde)', width='stretch')
         st.caption('Anteprima animata: così si muovono nei video (palpebre, occhiolino, sorriso, riflesso sugli occhiali).')
+        import variety
+        columns = st.columns(len(pc.POSES)-1)
+        for column, pose in zip(columns, [p for p in pc.POSES if p != 'ferma']):
+            column.image(avatars.enlarge(pc.image(look, 'arcade', pose=pose), 128), caption=variety.POSES[pose],
+                         width='stretch')
+        st.caption('Le pose compaiono nei reparti e nella foto di squadra (si scelgono lì).')
         a, b = st.columns(2)
         if a.button(f'Salva avatar di {who}', type='primary', width='stretch', key='look_save'):
             save_squad([dict(p, look=look) if p['name'] == who else dict(p) for p in players])

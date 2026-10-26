@@ -1,4 +1,29 @@
-# Flamingos Studio 2.5.1
+# Flamingos Studio 2.6
+
+## Novita della 2.6: varieta
+
+Parola d'ordine: niente piu post tutti uguali.
+
+- **Impaginazioni alternative** (editor > Stile > Impaginazione): Matchday *Classica / Duello / Locandina*,
+  Full Time *Classica / Tabellone / Esito in alto*, Convocati *Classica / Logistica in alto*, Classifica
+  *Classica / Titolo in fondo*. Scegliendone una le posizioni ripartono da quelle dell'impaginazione (poi si
+  possono spostare a mano). Con *Cambia impaginazione da sola a ogni giornata* ruotano quando applichi la partita.
+- **Titoli a rotazione** (Contenuti, vicino al Titolo): 🎲 *Altro titolo* (GAME DAY, PLAYER SELECT, HIGH SCORES,
+  LEVEL 7...) oppure *Titolo diverso a ogni giornata*.
+- **Intro nuove** (Esporta > Video MP4 > Intro): PRESS START, *Cartuccia* che entra nella console, *Caricamento* con
+  barra e suggerimenti, *VS da picchiaduro* (Matchday e Full Time), *Mappa dei livelli* con la giornata, oppure
+  *A rotazione*. Ognuna ha i suoi suoni.
+- **Quattro musiche chiptune**: Arcade, Epica, Tensione, Festa, tutte originali e a 120 bpm (gli ingressi restano a
+  tempo). In *Automatica* la Full Time vinta suona Festa, la sconfitta Tensione, il derby Tensione, Convocati Epica.
+  Anche nella Sequenza video si sceglie il brano.
+- **Nuove transizioni**: *Pixel che si sgranano*, *Cerchio (fine livello)*, *Blocchi che cadono*, *Tendina a scalini*.
+  Nella Sequenza c'e 🎲 *Transizioni tutte diverse*; i video dei reparti e Wrapped cambiano transizione a ogni
+  schermata.
+- **Pose degli sprite**: esultanza, braccia conserte, pollice su, palleggio, saluto, guanti da portiere, ognuna con
+  il suo movimento nei video. *Variate* le sceglie in base al ruolo (portieri con i guanti, attaccanti che esultano...).
+- **Sfondi pixel dietro gli sprite**: stadio, notte, pioggia, neve, oppure uno diverso per reparto. Pose e sfondi si
+  scelgono nella presentazione per reparti (Convocati > Esporta) e nella Foto di squadra.
+
 
 ## Correzioni della 2.5.1
 

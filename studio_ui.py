@@ -41,7 +41,8 @@ HEADERS = {
     'Calendario': ('CALENDARIO', 'Le partite del mese, risultati colorati e prossima gara in evidenza.'),
 }
 LOGO_LABELS = {'default': 'Flamingos - incluso', 'none': 'Scudo con ?'}
-VIDEO_ONLY = ('duration', 'fps', 'video_scale', 'sound', 'volume', 'intro', 'music', 'ending', 'details', 'power_on', 'animation')
+VIDEO_ONLY = ('duration', 'fps', 'video_scale', 'sound', 'volume', 'intro', 'music', 'ending', 'details', 'power_on', 'animation',
+              'intro_style', 'music_track')
 
 
 def _open_captions(template):
@@ -87,6 +88,24 @@ def show_studio(root: Path, template: str, library: dict):
     def text(name, label, limit, **kw):
         config[name] = st.text_input(label, value=str(config[name]), max_chars=limit, key=key(name), **kw)
         return config[name]
+
+    def title_field():
+        """Title with a 🎲 for a different one and the per-round rotation."""
+        import variety
+        per_round = bool(config.get('title_rotation'))
+        text('title', 'Titolo', 36, disabled=per_round,
+             help='In rotazione cambia da solo quando applichi la partita della settimana.' if per_round else None)
+        a_, b_ = st.columns([1, 2])
+        if a_.button('🎲 Altro titolo', key=key('title_roll'), width='stretch', disabled=per_round):
+            updated = copy.deepcopy(config)
+            updated['title'] = variety.random_title(template, config['title'], config.get('season_round', 1))
+            restart(updated)
+        rotate = b_.toggle('Titolo diverso a ogni giornata', value=per_round, key=key('title_rotation'))
+        if rotate != per_round:
+            updated = copy.deepcopy(config); updated['title_rotation'] = rotate
+            if rotate:
+                updated['title'] = variety.title_for_round(template, config.get('season_round', 1)) or config['title']
+            restart(updated)
 
     def slider(name, label, lo, hi):
         config[name] = st.slider(label, lo, hi, int(config[name]), key=key(name))
@@ -169,7 +188,7 @@ def show_studio(root: Path, template: str, library: dict):
             with d: select('our_side', 'Noi siamo', ('Casa', 'Ospiti'))
             text('venue', 'Campo / indirizzo', 72)
             with st.expander('Titolo ed etichette'):
-                text('title', 'Titolo', 36)
+                title_field()
                 a, b = st.columns(2)
                 with a: text('kickoff_label', 'Etichetta orario', 40)
                 with b: text('venue_label', 'Etichetta luogo', 22)
@@ -228,7 +247,7 @@ def show_studio(root: Path, template: str, library: dict):
                 with a: text('date', 'Data', 24)
                 with b: select('our_side', 'Noi siamo', ('Casa', 'Ospiti'))
                 text('competition', 'Competizione / giornata', 42)
-                text('title', 'Titolo', 36)
+                title_field()
                 check('show_result', 'Mostra l\'esito (vittoria, pareggio, sconfitta)')
             logos_block()
 
@@ -284,9 +303,8 @@ def show_studio(root: Path, template: str, library: dict):
                 with a: text('meeting_time', 'Ritrovo', 14)
                 with b: text('kickoff', 'Calcio d\'inizio', 14)
                 text('venue', 'Campo / indirizzo', 72)
-                a, b = st.columns(2)
-                with a: text('title', 'Titolo', 36)
-                with b: text('team_name', 'Nome squadra', 50)
+                text('team_name', 'Nome squadra', 50)
+                title_field()
             logos_block()
 
         elif is_table:
@@ -354,7 +372,7 @@ def show_studio(root: Path, template: str, library: dict):
                 with a: number('promo_count', 'Posti promozione', 0, 8)
                 with b: number('playoff_count', 'Posti spareggio', 0, 8)
             with st.expander('Altri testi'):
-                text('title', 'Titolo', 36)
+                title_field()
                 text('group', 'Girone / campionato', 48)
                 select('table_detail', 'Colonne', k.DETAILS,
                        lambda x: 'Complete: G V N P GF GS PT' if x == 'Completa' else 'Compatte: G, DR, PT')
@@ -407,7 +425,7 @@ def show_studio(root: Path, template: str, library: dict):
                 config['fixtures'][i] = clean
             st.caption('C in casa, T in trasferta. Risultato come sul tabellone (casa-ospiti); la prima partita senza risultato e la NEXT.')
             with st.expander('Titolo e mese'):
-                text('title', 'Titolo', 36)
+                title_field()
                 text('month_label', 'Mese', 30)
                 text('our_team', 'La nostra squadra', 34)
             logos_block()
@@ -482,6 +500,27 @@ def show_studio(root: Path, template: str, library: dict):
             if catalog.exists():
                 with st.expander(f'Guarda tutti i {len(PRESET_IDS)} preset'):
                     st.image(str(catalog), width='stretch')
+            import layouts
+            if len(layouts.options(template)) > 1:
+                st.divider()
+                section('Impaginazione', 'Cambia la disposizione degli elementi sullo schermo. '
+                        'Le posizioni tornano quelle dell\'impaginazione scelta.')
+                ids = layouts.options(template)
+                per_round_layout = bool(config.get('layout_rotation'))
+                current_layout = layouts.current(template, config)
+                chosen_layout = st.radio('Impaginazione', ids, index=ids.index(current_layout), horizontal=True,
+                                         format_func=lambda x: layouts.label(template, x), key=key('layout'),
+                                         disabled=per_round_layout, label_visibility='collapsed')
+                if chosen_layout != current_layout:
+                    restart(layouts.apply(template, config, chosen_layout))
+                st.caption(layouts.LAYOUTS[template][current_layout]['description'])
+                rotate_layout = st.toggle('Cambia impaginazione da sola a ogni giornata', value=per_round_layout,
+                                          key=key('layout_rotation'))
+                if rotate_layout != per_round_layout:
+                    updated = copy.deepcopy(config); updated['layout_rotation'] = rotate_layout
+                    if rotate_layout:
+                        updated = layouts.apply(template, updated, layouts.for_round(template, updated['season_round']))
+                    restart(updated)
             st.divider()
             section('Tema per eventi e stagioni', 'Derby, big match, ultima giornata, Halloween, Natale, Capodanno: '
                     'cambiano accenti e dettagli, la grafica resta Flamingos.')
@@ -602,7 +641,12 @@ def show_studio(root: Path, template: str, library: dict):
                     if st.form_submit_button('Applica'):
                         config['positions'][selected] = [x, y]; st.rerun()
                 if st.button('Rimetti tutto al posto iniziale', key=key('reset')):
-                    config['positions'] = {k_: list(v) for k_, v in module.DEFAULT_POSITIONS.items()}; st.rerun()
+                    import layouts
+                    if template in layouts.LAYOUTS:
+                        positions = layouts.default_positions(template, layouts.current(template, config))
+                    else:
+                        positions = module.DEFAULT_POSITIONS
+                    config['positions'] = {k_: list(v) for k_, v in positions.items()}; st.rerun()
 
         # ------------------------------------------------------- EXPORT
         with t_export:
@@ -660,8 +704,11 @@ def show_studio(root: Path, template: str, library: dict):
                                              'Nei reparti gli avatar sbattono le palpebre.'}.get(template, ''))
                     a, b = st.columns(2)
                     with a:
-                        check('intro', 'Intro PRESS START')
-                        check('music', 'Musica chiptune')
+                        import variety
+                        if check('intro', 'Intro'):
+                            select('intro_style', 'Che intro', variety.INTRO_STYLES, variety.INTRO_STYLES.get)
+                        if check('music', 'Musica chiptune'):
+                            select('music_track', 'Brano', variety.MUSIC_TRACKS, variety.MUSIC_TRACKS.get)
                     with b:
                         check('details', 'Dettagli VHS: REC, contatore, disturbi')
                         select('ending', 'Finale', animations.ENDINGS,

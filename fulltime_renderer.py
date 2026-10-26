@@ -113,7 +113,8 @@ def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     from crt_common import finish
     s=checked_scale(render_scale)
     config=themes.effective(config)
-    prepared=(background(config,'fulltime' if config.get('show_scorers',True) else 'fulltime_clean',s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config))
+    import layouts
+    prepared=(background(config,layouts.panel_key('fulltime' if config.get('show_scorers',True) else 'fulltime_clean','Full Time',config),s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config))
     prepared[0].info['outcome'],prepared[0].info['our_goals']=outcome(config)
     return finish(prepared,config,'fulltime')
 
