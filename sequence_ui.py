@@ -80,7 +80,8 @@ def match_event(match):
 
 def apply_match_everywhere(match):
     """Store the shared match and copy it into every editor."""
-    match = sanitize_match(match)
+    import crests
+    match = crests.auto_opponent_logo(sanitize_match(match))   # known opponent: its crest, automatically
     st.session_state['shared_match'] = match
     models = st.session_state.setdefault('studio_models', {})
     revisions = st.session_state.setdefault('studio_revisions', {})

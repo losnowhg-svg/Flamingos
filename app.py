@@ -21,7 +21,7 @@ h4{margin-bottom:.2rem!important}
 @media (max-width:640px){.block-container{padding-left:.8rem;padding-right:.8rem}h1{font-size:1.6rem!important}}
 </style>''',unsafe_allow_html=True)
 st.title('FLAMINGOS STUDIO')
-st.caption('2.7 / la settimana in ordine: aggiorna dal CSI, controlla, scarica')
+st.caption('2.8 / la settimana in ordine: aggiorna dal CSI, controlla, scarica')
 
 from library import show_library
 from studio_ui import show_studio
@@ -63,6 +63,8 @@ library = show_library()
 if library is None:
     st.info('Caricamento dell\'archivio font e stemmi dal browser. Se il browser lo blocca, usa Continua senza archivio nella barra laterale.')
     st.stop()
+import crests
+crests.register(library)        # the girone crests, next to the archive's own logos
 import sponsor
 sponsor.register(library['assets'])
 restore_week(library)
