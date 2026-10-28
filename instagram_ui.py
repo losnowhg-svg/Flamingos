@@ -14,7 +14,7 @@ import team_photo as tp
 
 
 def _logo(root, library, key):
-    logos = {id_: a for id_, a in library['assets'].items() if a['kind'] == 'logo'}
+    logos = {id_: a for id_, a in library['assets'].items() if a['kind'] == 'logo' and not a.get('builtin')}
     options = ['default']+list(logos)
     choice = st.selectbox('Stemma', options, key=key,
                           format_func=lambda x: 'Flamingos - incluso' if x == 'default' else logos[x]['name'])

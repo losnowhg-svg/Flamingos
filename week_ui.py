@@ -273,7 +273,8 @@ def show_match_form(library):
             a, b, c_ = st.columns([2, 1, 2])
             options = ['none', 'default']+logos
             values['opponent_logo_id'] = a.selectbox('Stemma avversari', options, format_func=label,
-                index=options.index(match['opponent_logo_id']) if match['opponent_logo_id'] in options else 0)
+                index=options.index(match['opponent_logo_id']) if match['opponent_logo_id'] in options else 0,
+                help='Per le squadre del girone lo stemma si mette da solo quando arriva la partita dal CSI.')
             values['round'] = b.number_input('Giornata', 1, 80, match['round'], step=1)
             values['our_name'] = c_.text_input('La nostra squadra', match['our_name'], max_chars=42)
             values['event'] = st.selectbox('Che partita è?', themes.MATCH_EVENTS, format_func=themes.event_label,
@@ -288,6 +289,14 @@ def show_match_form(library):
                 st.rerun()
         if st.session_state.pop('match_applied', False):
             st.success('Fatto: partita copiata in tutte le grafiche e salvata nel browser.')
+        import crests
+        with st.expander(f'🛡️ Stemmi del girone ({len(crests.builtin_assets())})'):
+            st.caption('Già pronti nell\'app, su qualsiasi dispositivo: quando l\'avversario è una di queste squadre '
+                       'lo stemma va da solo in Matchday, Full Time e nelle altre grafiche.')
+            items = list(crests.builtin_assets().items())
+            for row in range(0, len(items), 4):
+                for column, (_, asset) in zip(st.columns(4), items[row:row+4]):
+                    column.image(asset['bytes'], caption=asset['name'].replace(' (girone)', ''), width='stretch')
 
 
 def show_sponsor(library):
@@ -295,7 +304,7 @@ def show_sponsor(library):
     from studio_state import sanitize_sponsor
     with st.expander('🤝 Sponsor', expanded=False):
         settings = sanitize_sponsor(st.session_state.get('sponsor'))
-        logos = {id_: a['name'] for id_, a in library['assets'].items() if a['kind'] == 'logo'}
+        logos = {id_: a['name'] for id_, a in library['assets'].items() if a['kind'] == 'logo' and not a.get('builtin')}
         st.caption('Il logo dello sponsor va in un piccolo adesivo sotto lo schermo di tutte le grafiche, sul televisore '
                    'del mockup e, se vuoi, in una slide finale dei video.')
         if not logos:

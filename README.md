@@ -1,4 +1,16 @@
-# Flamingos Studio 2.7
+# Flamingos Studio 2.8
+
+## Novita della 2.8: gli stemmi del girone
+
+- **12 stemmi gia nell'app** (`assets/stemmi/`): UMC, Sporting Leno, United Flero, Pirati, Caste United, GSO Poncarale,
+  FC Mustangs, AS Ardens 2002, Castel Mella, GSO Verolan, Lions 25, Galba FC. Ritagliati dagli screenshot, sfondo tolto,
+  colori ripuliti e risoluzione aumentata. Sono disponibili su ogni dispositivo, senza caricarli nell'archivio.
+- **Stemma avversario automatico:** quando la partita della settimana arriva dal CSI (o la scrivi a mano) e l'avversario
+  e una squadra del girone, il suo stemma va da solo in Matchday, Full Time e nelle altre grafiche. I nomi si
+  riconoscono anche scritti diversi (G.S.O. PONCARALE, ORATORIO CASTELMELLA CALCIO, LIONS25...). Uno stemma scelto a mano
+  dall'archivio resta.
+- Nella Settimana, card *Partita della settimana*, c'e la galleria *Stemmi del girone*.
+
 
 ## Novita della 2.7: dodici preset nuovi (23 in tutto)
 
