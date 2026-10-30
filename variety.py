@@ -11,8 +11,19 @@ import random
 INTRO_STYLES = {'press_start': 'PRESS START', 'cartuccia': 'Cartuccia', 'caricamento': 'Caricamento',
                 'versus': 'VS da picchiaduro', 'mappa': 'Mappa dei livelli', 'logo': 'Logo che si compone',
                 'rotazione': 'A rotazione (cambia ogni giornata)'}
-MUSIC_TRACKS = {'auto': 'Automatica (in base a grafica e risultato)', 'arcade': 'Arcade, allegra', 'epica': 'Epica',
-                'tensione': 'Tensione', 'festa': 'Festa'}
+MUSIC_TRACKS = {'auto': 'Automatica (cambia con grafica, risultato e giornata)',
+                'synthwave': 'Synthwave - notte al neon', 'house': 'House - pre-partita', 'trap': 'Trap - cupa e decisa',
+                'disco': 'Disco funk - si balla', 'carica': 'Carica - rock da stadio', 'lofi': 'Lo-fi - tranquilla',
+                'arcade': '8-bit arcade, allegra', 'epica': '8-bit epica', 'tensione': '8-bit tensione', 'festa': '8-bit festa'}
+# The automatic choice rotates by round; the first entry of each list is the one of the earlier versions.
+AUTO_TRACKS = {'matchday': ('epica', 'synthwave', 'carica', 'house', 'trap'),
+               'big': ('tensione', 'trap', 'carica'),
+               'win': ('festa', 'disco', 'house', 'carica'),
+               'draw': ('arcade', 'synthwave', 'lofi'),
+               'loss': ('tensione', 'lofi', 'trap'),
+               'convocati': ('epica', 'trap', 'carica', 'synthwave', 'house'),
+               'wrapped': ('festa', 'disco', 'synthwave'),
+               'other': ('arcade', 'lofi', 'house', 'synthwave')}
 POSES = {'ferma': 'Ferma', 'esultanza': 'Esultanza', 'conserte': 'Braccia conserte', 'pollice': 'Pollice su',
          'palleggio': 'Palleggio', 'saluto': 'Saluto', 'guanti': 'Guanti da portiere'}
 POSE_MODES = {'variate': 'Variate (in base al ruolo)', **POSES}
@@ -81,14 +92,16 @@ def music_track(config, kind='', outcome=None, theme=''):
     if track in MUSIC_TRACKS and track != 'auto':
         return track
     if kind == 'fulltime':
-        return {'win': 'festa', 'loss': 'tensione'}.get(outcome, 'arcade')
-    if kind == 'matchday':
-        return 'tensione' if theme in ('derby', 'bigmatch', 'ultima') else 'epica'
-    if kind in ('convocati', 'reparto'):
-        return 'epica'
-    if kind == 'wrapped':
-        return 'festa'
-    return 'arcade'
+        pool = AUTO_TRACKS[outcome if outcome in ('win', 'loss') else 'draw']
+    elif kind == 'matchday':
+        pool = AUTO_TRACKS['big' if theme in ('derby', 'bigmatch', 'ultima') else 'matchday']
+    elif kind in ('convocati', 'reparto'):
+        pool = AUTO_TRACKS['convocati']
+    elif kind == 'wrapped':
+        pool = AUTO_TRACKS['wrapped']
+    else:
+        pool = AUTO_TRACKS['other']
+    return pool[(_round(config.get('season_round', 1))-1) % len(pool)]
 
 
 def pose_for(member, index, mode='variate'):

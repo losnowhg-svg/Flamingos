@@ -1,4 +1,21 @@
-# Flamingos Studio 3.0
+# Flamingos Studio 3.1
+
+## Novita della 3.1: le musiche
+
+Sei brani nuovi, originali e generati dall'app (niente diritti), con un suono pieno e non piu solo 8-bit:
+
+| Brano | Com'e |
+|-------|-------|
+| Synthwave | notte al neon: basso che pompa, arpeggio, pad larghi, melodia col delay |
+| House | pre-partita: cassa dritta, accordi d'organo sincopati, filtro che si apre |
+| Trap | cupa e decisa: 808 che scivola, rullate di charleston, campanelle scure |
+| Disco funk | basso a ottave, chitarra funky, archi e fiati |
+| Carica | rock da stadio: power chord, battiti di mani, coro di testa |
+| Lo-fi | tranquilla: piano elettrico, beat morbido, fruscio del vinile |
+
+Tutti a 120 bpm come i vecchi (gli ingressi restano a tempo), con due battute di intro, salita e *drop* a 4 secondi.
+I quattro 8-bit di prima restano. **Automatica** ora cambia brano a ogni giornata in base a grafica e risultato.
+In Video MP4 > Musica c'e **▶ Ascolta il brano**: lo senti subito, senza generare il video.
 
 ## Novita della 3.0: varieta pro
 

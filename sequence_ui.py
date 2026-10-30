@@ -159,13 +159,16 @@ def show_sequence(root: Path, library):
             state['scale'] = st.selectbox('Risoluzione', (2, 1), index=(2, 1).index(state['scale']),
                 format_func=lambda x: '1080 px - Full HD' if x == 2 else '540 px - rapido', key='seq_scale')
             state['sound'] = st.checkbox('Suoni CRT (cambio canale, accensione, glitch, nastro, bip)', state['sound'], key='seq_sound')
-            state['music'] = st.checkbox('Musica chiptune sotto tutta la sequenza', state.get('music', False), key='seq_music')
+            state['music'] = st.checkbox('Musica sotto tutta la sequenza', state.get('music', False), key='seq_music')
             if state['music']:
                 import variety
                 tracks = list(variety.MUSIC_TRACKS)
                 state['music_track'] = st.selectbox('Brano', tracks, index=tracks.index(state.get('music_track', 'auto'))
                                                     if state.get('music_track', 'auto') in tracks else 0,
                                                     format_func=variety.MUSIC_TRACKS.get, key='seq_music_track')
+                if state['music_track'] != 'auto' and st.toggle('▶ Ascolta il brano', key='seq_listen'):
+                    import music
+                    st.audio(music.preview_wav(state['music_track']), format='audio/wav')
             if state['sound'] or state['music']:
                 state['volume'] = st.slider('Volume', 0, 100, int(state['volume']), key='seq_volume')
             choices = ('own',)+PRESET_IDS

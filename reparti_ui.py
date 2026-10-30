@@ -68,9 +68,9 @@ def show_departments(config, squad, home, font_bytes, key):
     for i, (group, image) in enumerate(thumbs):
         columns[i % 3].image(image, caption=TITLES[group].title(), width='stretch')
 
-    audio = {(True, True): 'musica chiptune + suoni CRT', (False, True): 'solo musica chiptune',
+    audio = {(True, True): 'musica + suoni CRT', (False, True): 'solo musica',
              (True, False): 'solo suoni CRT', (False, False): 'muto'}[(bool(config.get('sound')), bool(config.get('music')))]
-    st.caption(f'Audio del video: **{audio}**. Si cambia più sotto, in Video MP4: Musica chiptune e, in '
+    st.caption(f'Audio del video: **{audio}**. Si cambia più sotto, in Video MP4: Musica e, in '
                'Impostazioni video, Suoni CRT.')
     a, b = st.columns(2)
     if a.button('Crea carosello ZIP', key=key('reparti_zip'), width='stretch'):

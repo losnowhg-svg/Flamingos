@@ -51,6 +51,23 @@ STYLE_MIX = {'atmosphere': atmospheres.ATMOSPHERES, 'decor': atmospheres.DETAILS
              'title_fx': title_fx.EFFECTS, 'frame_style': frames.FRAMES, 'texture_fx': frames.TEXTURES}
 
 
+KINDS = {'Matchday Screen': 'matchday', 'Full Time': 'fulltime', 'Convocati': 'convocati', 'Classifica': 'classifica',
+         'Calendario': 'calendario'}
+
+
+def listen_track(config, template=None, key_name='listen'):
+    """▶ Ascolta: the chosen track (or the one 'Automatica' picks now), without rendering a video."""
+    import music
+    import variety
+    template = template or st.session_state.get('studio_template')
+    outcome = f.outcome(config)[0] if template == 'Full Time' else None
+    track = variety.music_track(config, KINDS.get(template, ''), outcome, themes.resolve(config) or '')
+    if st.toggle('▶ Ascolta il brano', key=f'{key_name}_{template}'):
+        if config.get('music_track', 'auto') == 'auto':
+            st.caption(f'Automatica, questa settimana: {variety.MUSIC_TRACKS.get(track, track)}')
+        st.audio(music.preview_wav(track), format='audio/wav')
+
+
 def shuffled_style(config, seed=None):
     """🎲 A new combination of atmosphere, details, panels, title, frame and texture."""
     import random
@@ -751,8 +768,9 @@ def show_studio(root: Path, template: str, library: dict):
                         import variety
                         if check('intro', 'Intro'):
                             select('intro_style', 'Che intro', variety.INTRO_STYLES, variety.INTRO_STYLES.get)
-                        if check('music', 'Musica chiptune'):
+                        if check('music', 'Musica'):
                             select('music_track', 'Brano', variety.MUSIC_TRACKS, variety.MUSIC_TRACKS.get)
+                            listen_track(config)
                     with b:
                         check('details', 'Dettagli VHS: REC, contatore, disturbi')
                         select('ending', 'Finale', animations.ENDINGS, motion.ENDING_NAMES.get)
