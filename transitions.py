@@ -322,6 +322,8 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
     for prepared, _ in scenes:
         prepared[0].info['ending'] = 'nessuno'
         prepared[0].info.pop('duration', None)
+        prepared[0].info['format'] = format     # frames and textures follow the sequence's format
+        prepared[0].info['mockup'] = mockup
     music = any(p[0].info.get('music') for p, _ in scenes)
     track = next((p[0].info.get('music_track') for p, _ in scenes if p[0].info.get('music')), 'arcade')
     for prepared, _ in scenes:

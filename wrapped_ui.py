@@ -124,7 +124,9 @@ def show_wrapped(root: Path, library):
     if cache.get('signature') != signature:
         thumbs = []
         for key, cfg in slides:
-            image = output_image(wr.compose(wr.scene(cfg, home, None, font_bytes, 1), 999, False), fmt, 1)
+            prepared = wr.scene(cfg, home, None, font_bytes, 1)
+            prepared[0].info['format'] = fmt
+            image = output_image(wr.compose(prepared, 999, False), fmt, 1)
             image.thumbnail((300, 540))
             thumbs.append((key, image))
         cache.clear()

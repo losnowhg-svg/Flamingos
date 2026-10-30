@@ -8,10 +8,12 @@ function of the time, so preview, PNG and video match:
 - caricamento  LOADING bar with a percentage and a tip
 - versus       fighting-game split screen: us against them, VS, FIGHT!
 - mappa        a world map of levels: the marker hops to this round's level
+- logo         our crest assembles from flying pixels, flash, FLAMINGOS (3.0)
 """
 from __future__ import annotations
 
 import math
+import random
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -200,8 +202,78 @@ def _press_start(out, t, info, s):
         _put(out, _label('READY', YELLOW, 26, s), (270, 494))
 
 
+def _crest(info, s):
+    crest = info.get('crest')
+    if crest is None:   # no crest in the scene: the team's own logo
+        from pathlib import Path
+        from renderer import clean_logo
+        data = (Path(__file__).resolve().parent/'assets'/'flamingos_logo.jpg').read_bytes()
+        crest = clean_logo(data, 200, True, s)
+    return crest
+
+
+def _logo_parts(info, s):
+    """The crest at intro size and one particle per 6-unit cell of it (cached on the scene)."""
+    cached = info.get('_logo_parts')
+    if cached and cached[0] == s:
+        return cached[1]
+    crest = _crest(info, s)
+    k = 210*s/max(crest.size)
+    img = crest.resize((max(1, round(crest.width*k)), max(1, round(crest.height*k))), Image.Resampling.LANCZOS)
+    cell = 6
+    small = np.asarray(img.resize((max(1, img.width//(cell*s)), max(1, img.height//(cell*s))), Image.Resampling.BOX))
+    h, w = small.shape[:2]
+    x0, y0 = 270-w*cell/2, 440-h*cell/2
+    rnd = random.Random(7)
+    parts = []
+    for j in range(h):
+        for i in range(w):
+            r, g, b, a = (int(v) for v in small[j, i])
+            if a < 110:
+                continue
+            ang = rnd.uniform(0, math.tau)
+            dist = rnd.uniform(330, 560)
+            parts.append((270+math.cos(ang)*dist, 440+math.sin(ang)*dist*1.3, x0+i*cell, y0+j*cell, (r, g, b),
+                          rnd.uniform(0, .3)))
+    result = (img, parts)
+    info['_logo_parts'] = (s, result)
+    return result
+
+
+def _logo(out, t, info, s):
+    img, parts = _logo_parts(info, s)
+    d = _Draw(out)
+    for k in range(6):   # a soft glow that grows behind the crest
+        r = (60+k*34)*min(1, .3+t)
+        d.d.ellipse([round(v*d.s) for v in (270-r, 440-r, 270+r, 440+r)], fill=(*PINK, 7))
+    if t < 1.05:
+        for sx, sy, tx, ty, col, delay in parts:
+            a = max(0.0, min(1.0, (t-delay)/.62))
+            if a <= 0:
+                continue
+            e = 1-(1-a)**3
+            vx, vy = sx-tx, sy-ty
+            rot = (1-e)*1.4                      # they spiral in
+            cr, sr = math.cos(rot), math.sin(rot)
+            px, py = tx+(vx*cr-vy*sr)*(1-e), ty+(vx*sr+vy*cr)*(1-e)
+            size = 6*(.45+.55*e)
+            d.rect(px, py, px+size, py+size, (*col, round(255*min(1, a*3))))
+    if t >= .95:
+        _put(out, img, (270, 440), min(1, (t-.95)/.1))
+    if .95 <= t < 1.3:
+        k = (1-(t-.95)/.35)*.85
+        arr = np.asarray(out, np.float32)
+        out.paste(Image.fromarray((arr+(255-arr)*k).astype(np.uint8)))
+    if t >= 1.1:
+        word = 'FLAMINGOS'
+        shown = word[:max(1, math.ceil(len(word)*min(1, (t-1.1)/.25)))]
+        _put(out, _label(shown, PINK, 30, s), (270-(len(word)-len(shown))*9, 600))
+    if t >= 1.35:
+        _put(out, _label('CALCIO A 7', CYAN, 12, s), (270, 636))
+
+
 DRAW = {'press_start': _press_start, 'cartuccia': _cartuccia, 'caricamento': _caricamento,
-        'versus': _versus, 'mappa': _mappa}
+        'versus': _versus, 'mappa': _mappa, 'logo': _logo}
 
 
 def frame(base, t, info):
@@ -221,4 +293,6 @@ def sound_events(style, level=1):
         return [(0.0, 'whoosh', 0), (.3, 'whoosh', 1), (.62, 'impact', 1), (1.05, 'start', 0), (1.3, 'ready', 0)]
     if style == 'mappa':
         return [(.3, 'blip', 0), (.65, 'blip', 2), (1.0, 'ding', 2), (1.3, 'start', 1)]
+    if style == 'logo':
+        return [(0.0, 'whoosh', 0), (.4, 'whoosh', 1), (.95, 'impact', 1), (1.0, 'shine', 0), (1.15, 'start', 2)]
     return [(k*.5, 'start', k) for k in range(3)]+[(1.0, 'ready', 0)]

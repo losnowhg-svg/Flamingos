@@ -197,8 +197,9 @@ def thumbnail(root, template, library):
         if template == 'Starting 7':
             image = r.compose(r.scene(config, home, font_bytes, 1), animated=False)
         else:
-            image = output_image(module.compose(module.scene(config, home, away, font_bytes, 1), animated=False),
-                                 'Post 4:5', 1)
+            prepared = module.scene(config, home, away, font_bytes, 1)
+            prepared[0].info['format'] = 'Post 4:5'   # frames sit on the edges of this thumbnail
+            image = output_image(module.compose(prepared, animated=False), 'Post 4:5', 1)
         image.thumbnail((300, 380))
         cache[template] = {'signature': signature, 'image': image}
     return cache[template]['image']

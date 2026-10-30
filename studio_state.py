@@ -46,7 +46,10 @@ CRT_DEFAULT = dict(preset_id='crt',rotation_mode='Manuale',season_round=1,scanli
                    theme='auto',event_theme='',animation='Retro',power_on=True,mockup=False,
                    intro=False,details=True,music=False,ending='nessuno',
                    layout='classica',layout_rotation=False,title_rotation=False,intro_style='press_start',music_track='auto',
-                   sponsor_on=False,sponsor_logo_id='none',sponsor_name='')
+                   sponsor_on=False,sponsor_logo_id='none',sponsor_name='',
+                   atmosphere='standard',decor='nessuno',panel_style='smussato',title_fx='ombra',
+                   frame_style='nessuna',texture_fx='nessuna',entrance='misto',camera='fermo',
+                   fx_pulse=False,fx_flicker=False,fx_particles=False,fx_sweep=False)
 MATCH_DEFAULT.update(CRT_DEFAULT)
 MATCH_DEFAULT.update(font_choice='CRT Terminal',our_side='Casa')
 FULLTIME_DEFAULT = dict(
@@ -140,10 +143,16 @@ TEXT_LIMITS = dict(team_name=50,headline=60,footer=80,formation_text=80,title=36
 
 
 def _choice_fields():
-    import layouts, variety
+    import atmospheres, frames, layouts, motion, title_fx, variety
+    from crt_presets import PANEL_STYLES
     return {'layout': layouts.options, 'intro_style': lambda t: tuple(variety.INTRO_STYLES),
             'music_track': lambda t: tuple(variety.MUSIC_TRACKS), 'sprite_pose': lambda t: tuple(variety.POSE_MODES),
-            'sprite_scene': lambda t: tuple(variety.SCENE_MODES)}
+            'sprite_scene': lambda t: tuple(variety.SCENE_MODES),
+            'atmosphere': lambda t: tuple(atmospheres.ATMOSPHERES), 'decor': lambda t: tuple(atmospheres.DETAILS),
+            'panel_style': lambda t: tuple(PANEL_STYLES), 'title_fx': lambda t: tuple(title_fx.EFFECTS),
+            'frame_style': lambda t: tuple(frames.FRAMES), 'texture_fx': lambda t: tuple(frames.TEXTURES),
+            'entrance': lambda t: tuple(motion.ENTRANCES), 'camera': lambda t: tuple(motion.CAMERAS),
+            'ending': lambda t: tuple(motion.ENDING_NAMES)}
 
 
 CHOICE_FIELDS = _choice_fields()
@@ -221,8 +230,6 @@ def sanitize_config(template, raw):
             config[key] = value if value in themes.EVENTS else ''
         elif key == 'animation':
             config[key] = value if value in ('Retro','Classica') else default
-        elif key == 'ending':
-            config[key] = value if value in ('nessuno','spegnimento','loop') else default
         elif key in CHOICE_FIELDS:
             config[key] = value if value in CHOICE_FIELDS[key](template) else default
         elif key in RANGES[template]:

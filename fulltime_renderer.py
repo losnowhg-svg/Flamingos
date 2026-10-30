@@ -4,6 +4,7 @@ from PIL import Image
 from render_utils import checked_scale, safe_positions
 from renderer import Layer, clean_logo, text_image, rgb
 from matchday_renderer import _decorate_text, _name_text, _unknown_shield
+import title_fx
 from crt_presets import background, output_image
 from crt_common import compose, export_png, export_video
 
@@ -60,7 +61,8 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
     yellow=rgb(config.get('yellow','#FFC963'));white=rgb(config.get('white','#F6F4FC'))
     layers=[]
     def text(id_,value,size,color,width,height):
-        im=_decorate_text(text_image(value,style,size,color,width,font_bytes,s,height),s)
+        raw=text_image(value,style,size,color,width,font_bytes,s,height)
+        im=title_fx.title(raw,config,s) if id_=='title' else _decorate_text(raw,s)
         if im:layers.append(Layer(id_,LAYER_NAMES[id_],im))
     text('title',config.get('title','FULL TIME'),config.get('title_size',30),white,306,30)
     details=' / '.join(str(config.get(key,'')) for key in ('competition','date') if str(config.get(key,'')).strip())

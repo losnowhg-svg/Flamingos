@@ -9,7 +9,8 @@ from __future__ import annotations
 import random
 
 INTRO_STYLES = {'press_start': 'PRESS START', 'cartuccia': 'Cartuccia', 'caricamento': 'Caricamento',
-                'versus': 'VS da picchiaduro', 'mappa': 'Mappa dei livelli', 'rotazione': 'A rotazione (cambia ogni giornata)'}
+                'versus': 'VS da picchiaduro', 'mappa': 'Mappa dei livelli', 'logo': 'Logo che si compone',
+                'rotazione': 'A rotazione (cambia ogni giornata)'}
 MUSIC_TRACKS = {'auto': 'Automatica (in base a grafica e risultato)', 'arcade': 'Arcade, allegra', 'epica': 'Epica',
                 'tensione': 'Tensione', 'festa': 'Festa'}
 POSES = {'ferma': 'Ferma', 'esultanza': 'Esultanza', 'conserte': 'Braccia conserte', 'pollice': 'Pollice su',

@@ -11,6 +11,7 @@ from render_utils import ScaledDraw, checked_scale, safe_positions
 from renderer import (W, H, Layer, DEFAULT_PINK, DEFAULT_WHITE, clean_logo,
                       composite_layer, text_image, text_runs, rgb, progress,
                       encode_png, video_writer, video_settings)
+import title_fx
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_POSITIONS = {
@@ -128,7 +129,8 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
         ('title',config.get('title','MATCHDAY SCREEN'),config.get('title_size',27),white,294,29),
         ('date',config.get('date','GG/MM/AAAA'),config.get('title_size',27)-1,pink,260,23),
     ]:
-        asset = _decorate_text(text_image(value,style,size,color,width,font_bytes,s,height),s)
+        raw = text_image(value,style,size,color,width,font_bytes,s,height)
+        asset = title_fx.title(raw,config,s) if id_ == 'title' else _decorate_text(raw,s)
         if asset: layers.append(Layer(id_,LAYER_NAMES[id_],asset))
     for side,data in [('home',home_logo),('away',away_logo)]:
         size = config.get(f'{side}_logo_size',103)
@@ -184,7 +186,8 @@ def compose(prepared,t=999,animated=True):
         overlay = Image.new('RGBA',canvas.size)
         ScaledDraw(overlay,s).line((71,y,469,y),fill=(90,225,245,14),width=1)
         canvas.alpha_composite(overlay)
-    return canvas.convert('RGB')
+    import frames
+    return frames.apply(canvas.convert('RGB'),base.info,t,animated)
 
 
 def output_image(image,format='Story 9:16',scale=2):
