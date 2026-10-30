@@ -346,7 +346,11 @@ def _track(name, seconds):
 
 
 def chiptune(seconds, seed=0, bpm=120, track='arcade'):
-    """An original 8-bit loop. track: arcade (bass, arpeggio, kick, hi-hat) or one of TRACKS."""
+    """An original loop. track: arcade (bass, arpeggio, kick, hi-hat), one of TRACKS (8-bit)
+    or one of the full-sounding tracks in music.py."""
+    import music
+    if track in music.TRACKS:
+        return music.render(track, seconds)
     if track in TRACKS:
         return _track(track, seconds)
     beat = 60/bpm
