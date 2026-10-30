@@ -23,10 +23,11 @@ from functools import lru_cache
 import numpy as np
 from PIL import Image
 
+import motion
 import themes
 
 STYLES = ('Retro', 'Classica')
-ENDINGS = ('nessuno', 'spegnimento', 'loop')
+ENDINGS = ('nessuno', 'spegnimento', 'loop')+motion.NEW_ENDINGS
 POWER_ON = .55
 INTRO = 1.6
 BEAT = .25            # an eighth note at 120 bpm: the chiptune grid
@@ -84,6 +85,8 @@ def _duration(layer, kind):
         return .45
     if kind == 'count':
         return len(layer.variants)*.12+.1
+    if kind in ('pixelate', 'bounce', 'wipe', 'zoom'):
+        return {'pixelate': .55, 'bounce': .75, 'wipe': .5, 'zoom': .5}[kind]
     if kind == 'rows':
         return len(layer.image.info['row_edges'])*ROW_STEP+.25
     return .46
@@ -108,12 +111,18 @@ def prepare(prepared, config, kind):
     info['ending'] = config.get('ending') if config.get('ending') in ENDINGS else 'nessuno'
     info['kind'] = kind
     info.setdefault('theme', '')
+    import frames
+    frames.store(info, config)
+    info['camera'] = motion.camera(config)
+    info['fx'] = motion.ambient(config)
+    info['crest'] = _crest(layers, config, kind)
+    family = motion.entrance(config)
     info['music_track'] = variety.music_track(config, kind, info.get('outcome'), info.get('theme', ''))
     timeline = TIMELINES.get(kind, {})
     last = max(timeline.values(), default=0)
     players = [l for l in layers if l.id.startswith('player_')]
     for layer in layers:
-        layer.anim = _kind(layer, kind)
+        layer.anim = motion.override(layer, _kind(layer, kind), family)
         if layer.id in timeline:
             layer.start = timeline[layer.id]
         elif layer.id.startswith('player_'):
@@ -129,6 +138,18 @@ def prepare(prepared, config, kind):
             layer.start = round(layer.start/BEAT)*BEAT
         layer.dur = _duration(layer, layer.anim)
     return prepared
+
+
+def _crest(layers, config, kind):
+    """Our crest, for the logo intro (the opponents' never)."""
+    by_id = {l.id: l for l in layers}
+    if kind in ('matchday', 'fulltime'):
+        layer = by_id.get('away_logo' if config.get('our_side', 'Casa') == 'Ospiti' else 'home_logo')
+    elif kind == 'sponsor':
+        layer = None
+    else:
+        layer = by_id.get('logo')
+    return layer.image if layer is not None else None
 
 
 def rich(prepared):
@@ -211,8 +232,10 @@ def events(prepared):
             out.append((t, 'glitch', i))
         elif layer.anim in ('slide_left', 'slide_right', 'dash', 'dive'):
             out.append((t, 'whoosh', i))
-        elif layer.anim == 'drop':
+        elif layer.anim in ('drop', 'bounce', 'wipe'):
             out.append((t, 'whoosh', i))
+        elif layer.anim == 'pixelate':
+            out.append((t, 'glitch', i))
         elif layer.anim == 'count':
             for k in range(len(layer.variants)):
                 out.append((t+k*.12, 'tick', k))
@@ -238,6 +261,9 @@ def events(prepared):
             out.append((t, kind, 0))
     if info.get('ending') == 'spegnimento' and info.get('duration'):
         out.append((info['duration']-.65, 'power_off', 0))
+    if info.get('ending') in motion.NEW_ENDINGS and info.get('duration'):
+        sound = {'pixel': 'pixelate', 'glitch': 'glitch', 'zoom': 'whoosh', 'tendina': 'wipe'}[info['ending']]
+        out.append((info['duration']-.8, sound, 0))
     return out
 
 
@@ -248,13 +274,14 @@ def particles(canvas, prepared, t, animated):
 
 
 def still_base(prepared):
-    """Background with the theme particles frozen, for the drag editor."""
+    """Background with the theme particles frozen (and the frame and texture), for the drag editor."""
+    import frames
     base = prepared[0]
-    if not base.info.get('theme'):
+    if not base.info.get('theme') and not frames.active(base.info):
         return base
     image = base.copy()
     particles(image, prepared, 0, False)
-    return image
+    return frames.apply(image, base.info, 0, False)
 
 
 # --- Drawing helpers --------------------------------------------------------
@@ -483,6 +510,14 @@ def _draw(canvas, layer, pos, local, frame_index, t, info):
         _put(canvas, layer.image, layer, pos, min(1, a*3), 0, -(1-e)*190)
     elif kind == 'rows':
         _put(canvas, _rows(layer.image, layer.image.info['row_edges'], local, s), layer, pos)
+    elif kind == 'pixelate':
+        _put(canvas, motion.pixelated(layer.image, a, s), layer, pos, min(1, a*2.2))
+    elif kind == 'bounce':
+        _put(canvas, layer.image, layer, pos, min(1, a*4), 0, -(1-motion.bounce(a))*130)
+    elif kind == 'wipe':
+        _put(canvas, motion.wiped(layer.image, a, s), layer, pos)
+    elif kind == 'zoom':
+        _put(canvas, _scaled(layer.image, motion.zoom_scale(a)), layer, pos, min(1, a*3))
     else:
         e = _ease(a)
         _put(canvas, layer.image, layer, pos, e, 0, (1-e)*12)
@@ -735,6 +770,11 @@ def _intro(frame, t):
 
 
 def compose(prepared, t=999, animated=True):
+    import frames
+    return frames.apply(_compose(prepared, t, animated), prepared[0].info, t, animated)
+
+
+def _compose(prepared, t=999, animated=True):
     base, layers, positions = prepared
     info = base.info
     if animated and info.get('intro') and t < INTRO:
@@ -742,7 +782,8 @@ def compose(prepared, t=999, animated=True):
         return intros.frame(base, t, info)
     # The whole frame is built on an opaque RGB canvas: overlays blend in place,
     # no full-frame transparent layers to allocate and merge on every frame.
-    canvas = base.convert('RGB')
+    parallax = animated and info.get('camera') == 'parallasse'
+    canvas = motion.parallax_base(base, t, info) if parallax else base.convert('RGB')
     particles(canvas, prepared, t, animated)
     if not animated:
         for layer in layers:
@@ -751,8 +792,12 @@ def compose(prepared, t=999, animated=True):
     offset = _offset(prepared)
     frame_index = int(t*24)
     all_moments = moments(prepared)
+    placed = positions
+    if parallax:   # the text floats a little above the panels
+        _, (lx, ly), _ = motion.parallax_offsets(t)
+        placed = {k: (x+lx, y+ly) for k, (x, y) in positions.items()}
     for layer in layers:
-        _draw(canvas, layer, positions[layer.id], t-offset-layer.start, frame_index, t, info)
+        _draw(canvas, layer, placed[layer.id], t-offset-layer.start, frame_index, t, info)
     for at, kind, data in all_moments:
         if t >= at:
             _moment_overlay(canvas, prepared, t, t-at, kind, data)
@@ -761,12 +806,18 @@ def compose(prepared, t=999, animated=True):
     from render_utils import ScaledDraw
     y = 318+((t*.6) % 1)*354
     ScaledDraw(canvas, s, 'RGBA').rectangle((78, y, 462, y+6), fill=(255, 255, 255, 10))
+    motion.ambient_effects(canvas, t, info)
+    if parallax:
+        motion.foreground(canvas, t, info)
     if info.get('details', True):
         _details(canvas, t)
     frame = canvas
     if info.get('details', True):
         frame = _tracking(frame, t)
     frame = _shake(frame, t, [(at, d) for at, k, d in all_moments if k == 'impact'], s)
+    frame = motion.camera_frame(frame, t, info)
+    if 'fx_flicker' in info.get('fx', ()):
+        frame = motion.flicker(frame, t)
     start = _power_start(prepared)
     if info.get('power_on') and t < start+POWER_ON*1.6:
         frame = power_on(frame, (t-start)/POWER_ON)
@@ -776,6 +827,8 @@ def compose(prepared, t=999, animated=True):
     ending = info.get('ending', 'nessuno')
     if duration and ending == 'spegnimento' and t > duration-.65:
         frame = power_off(frame, min(1, (t-(duration-.65))/.62))
+    elif duration and ending in motion.NEW_ENDINGS and t > duration-.8:
+        frame = motion.ending_frame(frame, ending, min(1, (t-(duration-.8))/.78))
     elif duration and ending == 'loop':
         fade = 1.0
         if t > duration-.45:

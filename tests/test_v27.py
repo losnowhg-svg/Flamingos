@@ -21,7 +21,7 @@ NEW = tuple(pw.PRESETS)
 class NewPresets(unittest.TestCase):
     def test_registered_in_order_after_the_originals(self):
         self.assertEqual(len(NEW), 12)
-        self.assertEqual(PRESET_IDS[11:], NEW)
+        self.assertEqual(PRESET_IDS[11:23], NEW)
         names = [PRESETS[p]['name'] for p in PRESET_IDS]
         self.assertEqual(len(names), len(set(names)))
         for i, preset in enumerate(PRESET_IDS):

@@ -6,6 +6,7 @@ from PIL import Image
 from render_utils import ScaledDraw, checked_scale, safe_positions
 from renderer import Layer, clean_logo, text_image, rgb
 from matchday_renderer import _decorate_text
+import title_fx
 from crt_presets import background
 from crt_common import compose, export_png, export_video
 
@@ -106,7 +107,7 @@ def get_layers(config, home_logo, away_logo=None, font_bytes=None, render_scale=
     style = config.get('text_style', config.get('font_choice', 'CRT Terminal'))
     pink = rgb(config.get('pink', '#F268A8')); white = rgb(config.get('white', '#F6F4FC'))
     layers = [Layer('logo', LAYER_NAMES['logo'], clean_logo(home_logo, config.get('logo_size', 40), config.get('remove_white', True), s))]
-    title = _decorate_text(text_image(config.get('title', 'CALENDARIO'), style, config.get('title_size', 24), white, 280, font_bytes, s, 24), s)
+    title = title_fx.title(text_image(config.get('title', 'CALENDARIO'), style, config.get('title_size', 24), white, 280, font_bytes, s, 24), config, s)
     if title:
         layers.append(Layer('title', LAYER_NAMES['title'], title))
     sub = _decorate_text(text_image(config.get('month_label', ''), style, config.get('info_size', 10), pink, 280, font_bytes, s, 13), s)

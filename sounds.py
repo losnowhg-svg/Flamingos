@@ -384,7 +384,8 @@ SOUNDS = {'power': lambda i: power_on(), 'glitch': lambda i: glitch(.22)*.6, 'ti
           'win': lambda i: fanfare(), 'draw': lambda i: draw_jingle(), 'loss': lambda i: game_over(),
           'ding': lambda i: ding(i), 'climb': lambda i: climb(), 'crown': lambda i: crown(),
           'shine': lambda i: shine(), 'start': lambda i: press_start(i), 'ready': lambda i: ready(),
-          'power_off': lambda i: power_down()}
+          'power_off': lambda i: power_down(), 'pixelate': lambda i: pixelate(.7)*.7,
+          'wipe': lambda i: wipe(.6)*.7}
 
 
 def entrance_times(prepared, compose):

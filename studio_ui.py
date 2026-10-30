@@ -19,12 +19,16 @@ import calendario_renderer as cal
 import captions as cap
 import sounds
 import animations
+import atmospheres
+import frames
+import motion
 import themes
+import title_fx
 from classifica_data import MAX_TEAMS, empty_row, parse_standings, sort_rows, with_rows
 from library import save_project
 from render_utils import layout_warnings
 from studio_state import BUILTIN_FONTS, MODULES, defaults, sanitize_config
-from crt_presets import PRESETS, PRESET_IDS, FORMATS, CROPS, apply_preset, preset_for_round
+from crt_presets import PANEL_STYLES, PRESETS, PRESET_IDS, FORMATS, CROPS, apply_preset, preset_for_round
 from ui_utils import file_stem, progress_with_eta
 from week_ui import CSI_GIRONE, data_status, go, player_label, save_week, squad
 
@@ -42,7 +46,22 @@ HEADERS = {
 }
 LOGO_LABELS = {'default': 'Flamingos - incluso', 'none': 'Scudo con ?'}
 VIDEO_ONLY = ('duration', 'fps', 'video_scale', 'sound', 'volume', 'intro', 'music', 'ending', 'details', 'power_on', 'animation',
-              'intro_style', 'music_track')
+              'intro_style', 'music_track', 'entrance', 'camera', 'fx_pulse', 'fx_flicker', 'fx_particles', 'fx_sweep')
+STYLE_MIX = {'atmosphere': atmospheres.ATMOSPHERES, 'decor': atmospheres.DETAILS, 'panel_style': PANEL_STYLES,
+             'title_fx': title_fx.EFFECTS, 'frame_style': frames.FRAMES, 'texture_fx': frames.TEXTURES}
+
+
+def shuffled_style(config, seed=None):
+    """🎲 A new combination of atmosphere, details, panels, title, frame and texture."""
+    import random
+    rnd = random.Random(seed)
+    updated = copy.deepcopy(config)
+    for name, options in STYLE_MIX.items():
+        choices = [o for o in options if o not in ('rotazione', updated.get(name))]
+        if name in ('frame_style', 'texture_fx', 'decor'):   # often none: one accent at a time looks better
+            choices += ['nessuna' if name != 'decor' else 'nessuno']*2
+        updated[name] = rnd.choice(choices)
+    return updated
 
 
 def _open_captions(template):
@@ -522,6 +541,26 @@ def show_studio(root: Path, template: str, library: dict):
                         updated = layouts.apply(template, updated, layouts.for_round(template, updated['season_round']))
                     restart(updated)
             st.divider()
+            section('Atmosfera e dettagli', 'Lo stesso preset di giorno, al tramonto, di notte o sotto i neon, '
+                    'con stelle, coriandoli, adesivi o scritte intorno allo schermo (mai sopra i testi).')
+            a, b = st.columns(2)
+            with a: select('atmosphere', 'Atmosfera', atmospheres.ATMOSPHERES, atmospheres.ATMOSPHERES.get)
+            with b: select('decor', 'Dettagli', atmospheres.DETAILS, atmospheres.DETAILS.get)
+            section('Design', 'Riquadri, effetto del titolo, cornice e texture. "A rotazione" cambia da solo a ogni giornata.')
+            a, b = st.columns(2)
+            with a:
+                select('panel_style', 'Riquadri', PANEL_STYLES, PANEL_STYLES.get)
+                select('frame_style', 'Cornice', frames.FRAMES, frames.FRAMES.get)
+            with b:
+                select('title_fx', 'Effetto del titolo', title_fx.EFFECTS, title_fx.EFFECTS.get)
+                select('texture_fx', 'Texture', frames.TEXTURES, frames.TEXTURES.get)
+            if config.get('mockup') and config['frame_style'] != 'nessuna':
+                st.caption('Con il televisore attivo cornice e texture non si vedono: la cornice e il televisore.')
+            if st.button('🎲 Mischia lo stile', key=key('shuffle_style'), width='stretch',
+                         help='Una combinazione nuova di atmosfera, dettagli, riquadri, titolo, cornice e texture. '
+                              'Il preset e i colori restano.'):
+                restart(shuffled_style(config, uuid.uuid4().int))
+            st.divider()
             section('Tema per eventi e stagioni', 'Derby, big match, ultima giornata, Halloween, Natale, Capodanno: '
                     'cambiano accenti e dettagli, la grafica resta Flamingos.')
             chosen_theme = select('theme', 'Tema', themes.CHOICES, themes.label)
@@ -686,6 +725,11 @@ def show_studio(root: Path, template: str, library: dict):
                 st.divider()
             section('Video MP4')
             if is_crt:
+                if st.button('⚡ Modalità Reel', key=key('reel_mode'), width='stretch',
+                             help='Un clic per un Reel: intro col logo che si compone, parallasse 3D, particelle, bagliore '
+                                  'a ritmo, musica, finale in loop, Story 9:16, 10 secondi.'):
+                    updated = copy.deepcopy(config); updated.update(motion.REEL)
+                    restart(updated)
                 a, b = st.columns(2)
                 with a:
                     select('animation', 'Animazione', animations.STYLES,
@@ -711,9 +755,14 @@ def show_studio(root: Path, template: str, library: dict):
                             select('music_track', 'Brano', variety.MUSIC_TRACKS, variety.MUSIC_TRACKS.get)
                     with b:
                         check('details', 'Dettagli VHS: REC, contatore, disturbi')
-                        select('ending', 'Finale', animations.ENDINGS,
-                               lambda x: {'nessuno': 'Nessuno', 'spegnimento': 'TV che si spegne',
-                                          'loop': 'Loop per Reel (dissolvenza al nero)'}[x])
+                        select('ending', 'Finale', animations.ENDINGS, motion.ENDING_NAMES.get)
+                    a, b = st.columns(2)
+                    with a: select('entrance', 'Ingresso degli elementi', motion.ENTRANCES, motion.ENTRANCES.get)
+                    with b: select('camera', 'Movimento di camera', motion.CAMERAS, motion.CAMERAS.get)
+                    st.caption('Effetti continui')
+                    cols = st.columns(2)
+                    for i, (name, label) in enumerate(motion.AMBIENT.items()):
+                        with cols[i % 2]: check(name, label)
             with st.expander('Impostazioni video'):
                 slider('duration', 'Durata (secondi)', 5 if is_crt else 7, 18)
                 if is_crt and config['animation'] == 'Retro':

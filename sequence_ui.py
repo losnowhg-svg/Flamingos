@@ -115,6 +115,7 @@ def sponsor_scene(base_config, scale, font_bytes=None):
 
 def _still(root, template, library, preset_override, format):
     prepared, compose = _scene(root, template, library, preset_override, 1)
+    prepared[0].info['format'] = format     # frames and textures follow the sequence's format
     return output_image(compose(prepared, animated=False), format, 1)
 
 

@@ -1,4 +1,5 @@
-"""Seasonal CRT art direction: twenty-three distinct, code-drawn retro worlds (12-23 in preset_worlds.py).
+"""Seasonal CRT art direction: thirty-one distinct, code-drawn retro worlds
+(12-23 in preset_worlds.py, 24-31 in preset_worlds2.py), each in five atmospheres.
 
 Every preset only changes the art direction (frame, background, panels and
 palette). Match data, assets, fonts and positions always stay the user's.
@@ -15,6 +16,7 @@ from functools import lru_cache
 import numpy as np
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter
 
+import atmospheres
 from render_utils import ScaledDraw, checked_scale
 
 PRESETS = {
@@ -53,7 +55,9 @@ PRESETS = {
                 pink='#FF82B5', cyan='#88DBFF', yellow='#FFDA55', white='#FFF7E8', font='CRT Terminal'),
 }
 import preset_worlds as _worlds
+import preset_worlds2 as _worlds2
 PRESETS.update(_worlds.PRESETS)
+PRESETS.update(_worlds2.PRESETS)
 PRESET_IDS = tuple(PRESETS)
 FORMATS = ('Post 1:1', 'Post 4:5', 'Story 9:16')
 CROPS = {'Post 1:1': (0, 210, 540, 750), 'Post 4:5': (0, 142.5, 540, 817.5), 'Story 9:16': None}
@@ -73,6 +77,7 @@ STYLE = {
     'stadium': dict(panel=(10, 9, 8), border=(255, 181, 36), scan=(255, 181, 36), veil=0),
     'poster': dict(panel=(22, 28, 66), border=(255, 130, 181), scan=(136, 219, 255), veil=0),
     **_worlds.STYLE,
+    **_worlds2.STYLE,
 }
 
 PANEL_LAYOUTS = {
@@ -121,6 +126,65 @@ def _box(d, xy, fill, border, thickness=2, bevel=5):
     inner=[(x1+bevel,y1+n),(x2-bevel,y1+n),(x2-n,y1+bevel),(x2-n,y2-bevel),
            (x2-bevel,y2-n),(x1+bevel,y2-n),(x1+n,y2-bevel),(x1+n,y1+bevel)]
     d.polygon(inner, fill=fill)
+
+
+PANEL_STYLES = {'smussato': 'Smussati (classici)', 'pixel': 'A gradini pixel', 'arrotondato': 'Arrotondati',
+                'doppio': 'Doppio bordo', 'neon': 'Neon luminoso', 'angoli': 'Angoli HUD', 'ombra': 'Ombra piena',
+                'rotazione': 'A rotazione (cambia ogni giornata)'}
+PANEL_CYCLE = ('smussato', 'pixel', 'neon', 'doppio', 'arrotondato', 'angoli', 'ombra')
+
+
+def panel_style(config):
+    mode = config.get('panel_style', 'smussato')
+    if mode == 'rotazione':
+        try:
+            n = max(1, int(config.get('season_round', 1) or 1))
+        except (TypeError, ValueError):
+            n = 1
+        return PANEL_CYCLE[(n-1) % len(PANEL_CYCLE)]
+    return mode if mode in PANEL_STYLES else 'smussato'
+
+
+def _stairs(x1, y1, x2, y2, step):
+    """A rectangle with two pixel steps on every corner."""
+    a, b = step, 2*step
+    return [(x1+b, y1), (x2-b, y1), (x2-b, y1+a), (x2-a, y1+a), (x2-a, y1+b), (x2, y1+b),
+            (x2, y2-b), (x2-a, y2-b), (x2-a, y2-a), (x2-b, y2-a), (x2-b, y2),
+            (x1+b, y2), (x1+b, y2-a), (x1+a, y2-a), (x1+a, y2-b), (x1, y2-b),
+            (x1, y1+b), (x1+a, y1+b), (x1+a, y1+a), (x1+b, y1+a)]
+
+
+def _panel(d, rect, fill, border, thickness, style, soft):
+    """One text panel of the background in the chosen style (the fill never changes)."""
+    x1, y1, x2, y2 = rect
+    if style not in PANEL_STYLES or style in ('smussato', 'rotazione'):
+        _box(d, rect, (*fill, 255), (*border, 190 if soft else 255), thickness, 5)
+        return
+    edge = _mix(border, fill, .3) if soft else tuple(border)
+    f, e = (*fill, 255), (*edge, 255)
+    t = thickness
+    if style == 'pixel':
+        d.polygon(_stairs(x1, y1, x2, y2, 3), fill=e)
+        d.polygon(_stairs(x1+t+.4, y1+t+.4, x2-t-.4, y2-t-.4, 2.4), fill=f)
+    elif style == 'arrotondato':
+        d.rounded_rectangle(rect, radius=11, fill=e)
+        d.rounded_rectangle((x1+t, y1+t, x2-t, y2-t), radius=max(1, 11-t), fill=f)
+    elif style == 'doppio':
+        _box(d, rect, f, e, 1, 6)
+        _box(d, (x1+3.2, y1+3.2, x2-3.2, y2-3.2), f, e, 1, 4)
+    elif style == 'neon':
+        core = _mix(edge, (255, 255, 255), .55)
+        d.rounded_rectangle(rect, radius=7, fill=(*core, 255))
+        d.rounded_rectangle((x1+1.6, y1+1.6, x2-1.6, y2-1.6), radius=6, fill=f)
+    elif style == 'angoli':
+        _box(d, rect, f, (*_mix(edge, fill, .55), 255), 1, 3)
+        k = min(16, (x2-x1)/4, (y2-y1)/2.5)
+        for cx, cy, kx, ky in ((x1, y1, 1, 1), (x2, y1, -1, 1), (x1, y2, 1, -1), (x2, y2, -1, -1)):
+            d.line([(cx, cy+ky*k), (cx, cy), (cx+kx*k, cy)], fill=e, width=2.4)
+    elif style == 'ombra':
+        d.rectangle((x1+4, y1+4, x2+4, y2+4), fill=(*_mix(edge, (0, 0, 0), .45), 255))
+        d.rectangle(rect, fill=e)
+        d.rectangle((x1+t, y1+t, x2-t, y2-t), fill=f)
 
 
 def _label(im, value, x, y, width, color, size=11, scale=1, style='CRT Terminal'):
@@ -487,15 +551,18 @@ def _bg_poster(pink, cyan, yellow, s):
 
 
 BUILDERS = {'crt': _bg_crt, 'vhs': _bg_vhs, 'teletext': _bg_teletext,
-            'gameboy': _bg_gameboy, 'stadium': _bg_stadium, 'poster': _bg_poster, **_worlds.BUILDERS}
+            'gameboy': _bg_gameboy, 'stadium': _bg_stadium, 'poster': _bg_poster, **_worlds.BUILDERS,
+            **_worlds2.BUILDERS}
 
 
 @lru_cache(maxsize=4)
-def _background(preset_id, pink_hex, cyan_hex, yellow_hex, layout, intensity, s, brightness=DEFAULT_BRIGHTNESS):
+def _background(preset_id, pink_hex, cyan_hex, yellow_hex, layout, intensity, s, brightness=DEFAULT_BRIGHTNESS,
+                atmosphere='standard', panel_style='smussato'):
     pink, cyan, yellow = _rgb(pink_hex), _rgb(cyan_hex), _rgb(yellow_hex)
     style = STYLE[preset_id]
     builder = BUILDERS.get(preset_id)
     im = builder(pink, cyan, yellow, s) if builder else _bg_legacy(preset_id, pink, cyan, yellow, s)
+    im = atmospheres.grade(im, atmosphere, s)
     im = _lift(im, brightness/100)
     veil_alpha = style['veil'] if (not layout.startswith('matchday') or preset_id != 'crt') else 0
     if veil_alpha:
@@ -510,17 +577,25 @@ def _background(preset_id, pink_hex, cyan_hex, yellow_hex, layout, intensity, s,
     im.alpha_composite(scan)
     d = ScaledDraw(im, s)
     border = style['border'] or cyan
+    panels = []
     for i, rect in enumerate(PANEL_LAYOUTS.get(layout, PANEL_LAYOUTS['convocati'])):
         if len(rect) == 5:   # alternative layouts (layouts.py) carry their own flags
             flags = rect[4]
             if 'line' in flags:
                 d.line(rect[:4], fill=(*border, 90), width=.5)
                 continue
-            _box(d, rect[:4], (*style['panel'], 255), (*border, 190 if 'soft' in flags else 255),
-                 1.4 if layout.startswith('matchday') else 1.2, 5)
+            panels.append((rect[:4], 'soft' in flags, 1.4 if layout.startswith('matchday') else 1.2))
             continue
         soft = (layout == 'fulltime' and i == 3) or (layout in ('convocati', 'classifica') and i == 1)
-        _box(d, rect, (*style['panel'], 255), (*border, 190 if soft else 255), 1.2 if layout != 'matchday' else 1.4, 5)
+        panels.append((rect, soft, 1.2 if layout != 'matchday' else 1.4))
+    if panel_style == 'neon':   # the glow goes under every panel first
+        glow = Image.new('RGBA', im.size)
+        g = ScaledDraw(glow, s)
+        for rect, soft, thickness in panels:
+            g.rounded_rectangle(rect, radius=7, outline=(*border, 150 if soft else 230), width=5)
+        im.alpha_composite(glow.filter(ImageFilter.GaussianBlur(4*s)))
+    for rect, soft, thickness in panels:
+        _panel(d, rect, style['panel'], border, thickness, panel_style, soft)
     if layout == 'fulltime':
         d.line((270, 590, 270, 660), fill=(*border, 90), width=.5)
     return im
@@ -546,12 +621,20 @@ def background(config, layout='matchday', render_scale=2):
     except (TypeError, ValueError):
         brightness = DEFAULT_BRIGHTNESS
     intensity = max(0, min(60, int(config.get('scanlines', 16))))
-    image = _background(preset, *colors, layout, intensity, s, brightness).copy()
+    atmosphere = atmospheres.resolve_atmosphere(config)
+    image = _background(preset, *colors, layout, intensity, s, brightness, atmosphere, panel_style(config)).copy()
+    try:
+        white = _rgb(config.get('white', palette['white']))
+    except (ValueError, TypeError, AttributeError):
+        white = _rgb(palette['white'])
+    decor = atmospheres.resolve_details(config)
+    atmospheres.draw_details(image, decor, (*[_rgb(c) for c in colors], white), s, atmospheres.seed(config))
     import themes
     theme = themes.resolve(config)
     if theme:
         themes.decorate_background(image, theme)
     image.info['theme'] = theme or ''
+    image.info['atmosphere'], image.info['decor'] = atmosphere, decor
     return image
 
 

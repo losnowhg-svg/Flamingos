@@ -25,7 +25,8 @@ def compose(prepared, t=999, animated=True):
         y=317+(t*.35 % 1)*353
         ScaledDraw(effect,s).line((80,y,460,y),fill=(160,229,255,16),width=1)
         image.alpha_composite(effect)
-    return image.convert('RGB')
+    import frames
+    return frames.apply(image.convert('RGB'),base.info,t,animated)
 
 
 def video_length(prepared, duration):
@@ -34,8 +35,8 @@ def video_length(prepared, duration):
     if not animations.rich(prepared) or duration < 3:  # very short test clips stay as asked
         return duration
     needed=(animations.intro_length(prepared) or 0)+1.6
-    if prepared[0].info.get('ending')=='spegnimento':
-        needed+=.6
+    import motion
+    needed+=motion.ENDING_LENGTH.get(prepared[0].info.get('ending'),0)
     return round(min(30,max(duration,needed)),2)
 
 
@@ -69,6 +70,7 @@ def export_png(scene_function, config, home_logo, away_logo=None, font_bytes=Non
     scale=checked_scale(scale)
     ss=checked_scale(supersample,2)
     prepared=scene_function(config,home_logo,away_logo,font_bytes,min(4,scale*ss))
+    prepared[0].info['format']=format
     return encode_png(_frame(compose_fn,prepared,999,False,format,scale,config.get('mockup',False)))
 
 
@@ -77,6 +79,7 @@ def export_video(scene_function, config, home_logo, away_logo, path, font_bytes=
     compose_fn=compose_fn or compose
     fps,duration=video_settings(fps,duration,scale)
     prepared=scene_function(config,home_logo,away_logo,font_bytes,scale)
+    prepared[0].info['format']=format
     duration=video_length(prepared,duration)
     prepared[0].info['duration']=duration
     writer=video_writer(path,fps)

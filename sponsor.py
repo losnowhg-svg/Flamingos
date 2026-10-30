@@ -89,7 +89,9 @@ def get_layers(config, home_logo=None, away_logo=None, font_bytes=None, render_s
     layers = []
 
     def add(id_, value, size, color, width=340):
-        img = _decorate_text(text_image(value, style, size, color, width, font_bytes, s, size+2), s)
+        import title_fx
+        raw = text_image(value, style, size, color, width, font_bytes, s, size+2)
+        img = title_fx.title(raw, config, s) if id_ == 'title' else _decorate_text(raw, s)
         if img:
             layers.append(Layer(id_, id_, img))
     add('title', 'GRAZIE A', 24, white)

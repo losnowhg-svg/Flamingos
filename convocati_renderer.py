@@ -4,6 +4,7 @@ from PIL import Image
 from render_utils import ScaledDraw, checked_scale, safe_positions
 from renderer import Layer, clean_logo, text_image, text_runs, rgb
 from matchday_renderer import _decorate_text
+import title_fx
 from crt_presets import background, output_image
 from crt_common import compose, export_png, export_video
 
@@ -63,7 +64,8 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
         ('venue',config.get('venue','CAMPO / INDIRIZZO'),config.get('info_size',11),yellow,354,13),
     ]
     for id_,value,size,col,width,height in items:
-        im=_decorate_text(text_image(value,style,size,col,width,font_bytes,s,height),s)
+        raw=text_image(value,style,size,col,width,font_bytes,s,height)
+        im=title_fx.title(raw,config,s) if id_=='title' else _decorate_text(raw,s)
         if im:layers.append(Layer(id_,LAYER_NAMES[id_],im))
     parts=[('RITROVO ',white),(str(config.get('meeting_time','HH:MM')),yellow),(' / KICK OFF ',white),(str(config.get('kickoff','HH:MM')),yellow)]
     im=_decorate_text(text_runs(parts,style,config.get('info_size',11),354,font_bytes,s,13),s)

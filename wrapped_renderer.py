@@ -13,6 +13,7 @@ from PIL import Image
 from render_utils import ScaledDraw, checked_scale, safe_positions
 from renderer import Layer, clean_logo, text_image, rgb
 from matchday_renderer import _decorate_text
+import title_fx
 from crt_presets import background
 from crt_common import compose, export_png, export_video
 
@@ -97,7 +98,11 @@ def get_layers(config, home_logo, away_logo=None, font_bytes=None, render_scale=
     layers = [Layer('logo', 'Stemma', clean_logo(home_logo, 40, True, s))]
 
     def add(id_, value, size, color, width=300, height=None):
-        img = _txt(config, value, size, color, width, font_bytes, s, height)
+        if id_ == 'title':
+            img = title_fx.title(text_image(str(value), config.get('text_style', config.get('font_choice', 'CRT Terminal')),
+                                            size, color, width, font_bytes, s, height or size+2), config, s)
+        else:
+            img = _txt(config, value, size, color, width, font_bytes, s, height)
         if img:
             layers.append(Layer(id_, id_, img))
         return img

@@ -1,4 +1,54 @@
-# Flamingos Studio 2.8
+# Flamingos Studio 3.0
+
+## Novita della 3.0: varieta pro
+
+Tutto si sceglie nell'editor; ogni menu ha anche *A rotazione*, che cambia da solo a ogni giornata.
+Un progetto vecchio si apre con l'aspetto di sempre.
+
+**Preset (Stile > Preset e Atmosfera e dettagli)**
+
+- **8 preset nuovi, 31 in tutto:**
+
+  | N. | Preset | Il mondo intorno allo schermo |
+  |----|--------|-------------------------------|
+  | 24 | Acquario | acqua turchese, raggi di luce, pesci pixel, alghe, un pallone sulla sabbia |
+  | 25 | Spogliatoio | armadietti arancioni (il 7 e rosa), maglia appesa, panca, scarpini |
+  | 26 | Fumetto | vignette con i retini, SBAM e POW, linee cinetiche, didascalia |
+  | 27 | Distributore | macchinetta rosa con le lattine in vetrina, tastierino, gettoniera |
+  | 28 | Graffiti | muro di cemento, pezzo FLAMINGOS con le colature, tag, manifesto col nastro |
+  | 29 | Cartolina | montagne innevate, lago con la barca a vela, francobollo e timbro |
+  | 30 | Cruciverba | griglia con le caselle nere e le parole della squadra scritte a penna |
+  | 31 | Curva | coreografia di cartoncini rosa e bianchi, bandiere, fumogeni, striscione |
+
+- **Atmosfera:** lo stesso preset di giorno, al tramonto, di notte (luci sfocate e stelle) o sotto i neon. Cambia solo il
+  mondo intorno: lo schermo e i testi restano identici.
+- **Dettagli:** stelle, coriandoli, griglia in prospettiva, adesivi pixel o scritte che corrono sui bordi. Mai sopra
+  lo schermo; con *A rotazione* cambiano tipo e posizione ogni giornata.
+
+**Design (Stile > Design)**
+
+- **Riquadri:** smussati (i classici), a gradini pixel, arrotondati, doppio bordo, neon luminoso, angoli HUD, ombra piena.
+- **Effetto del titolo:** ombra (classico), contorno spesso, ombra lunga, rilievo 3D, sfumato tramonto, neon, cromato,
+  glitch RGB. Vale per il titolo di ogni grafica, reparti, Wrapped e sponsor compresi.
+- **Cornice:** Polaroid, pellicola, angoli arrotondati, tubo al neon, biglietto, pixel art. Si appoggia sui bordi del
+  formato scelto (Story, 4:5, 1:1). Con il televisore attivo non c'e: la cornice e il televisore.
+- **Texture:** grana da pellicola, retino da stampa, carta, nastro VHS, polvere e graffi. Nei video grana, VHS e
+  polvere si muovono.
+- **🎲 Mischia lo stile** prova una combinazione nuova di tutto questo; preset e colori restano.
+
+**Video (Esporta > Video MP4, animazione Retro)**
+
+- **Ingresso degli elementi:** misto (come prima) oppure tutti in glitch, pixel che si compongono, macchina da
+  scrivere, caduta con rimbalzo, tendina, zoom. Lo scontro degli stemmi, il punteggio a slot machine e la tabella riga
+  per riga restano.
+- **Movimento di camera:** zoom lento, oscillazione, carrellata, parallasse 3D (sfondo, testi e luci in primo piano si
+  muovono a velocita diverse) e *A ritmo di musica* (un colpo di zoom a ogni battuta, uno stacco a ogni battuta di 4).
+- **Effetti continui:** bagliore che pulsa a tempo, sfarfallio CRT, particelle, riflesso di luce che attraversa lo schermo.
+- **Finali nuovi:** si sgretola in pixel, glitch finale, zoom nello schermo, tendina che si chiude (con il loro suono).
+- **Intro *Logo che si compone*:** il nostro stemma arriva in pixel a spirale, lampo, poi FLAMINGOS.
+- **⚡ Modalita Reel:** un clic e il video e pronto per i Reel: intro col logo, parallasse 3D, particelle, bagliore a
+  tempo, riflesso, musica, finale in loop, Story 9:16, 10 secondi.
+
 
 ## Novita della 2.8: gli stemmi del girone
 
@@ -361,7 +411,7 @@ Starting 7 mantiene l'impaginazione sul campo, i sette giocatori e l'export Stor
 Ha accesso ai nuovi font; i preset degli oggetti CRT si applicano invece a
 Matchday, Full Time e Convocati, non sostituiscono il campo di Starting 7.
 
-## I preset da alternare nella stagione (11 originali + 12 della 2.7)
+## I preset da alternare nella stagione (11 originali + 12 della 2.7 + 8 della 3.0)
 
 La sezione **Preset CRT e rotazione di stagione** offre:
 
