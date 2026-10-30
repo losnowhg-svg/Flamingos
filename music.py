@@ -1,7 +1,8 @@
 """Original background music for the videos (3.1): six full-sounding tracks.
 
 Synthwave, lo-fi, house, trap, disco and a stadium rock anthem, all written
-here and synthesised in NumPy/SciPy (no samples, no licences). Everything runs
+here and synthesised in pure NumPy (no samples, no licences, no SciPy: the cloud app
+does not install it). Everything runs
 at 120 bpm on a 16-step grid, like the original chiptunes, so the entrances of
 the graphics keep landing on the beat.
 
@@ -14,7 +15,6 @@ from __future__ import annotations
 from functools import lru_cache
 
 import numpy as np
-from scipy.signal import butter, fftconvolve, sosfilt
 
 SR = 44100
 BEAT = .5
@@ -53,13 +53,35 @@ def _env(n, a=.005, d=.1, s=.75, r=.06):
     return env
 
 
+def _size(n):
+    """A fast FFT length with room for the filter tails."""
+    return 1 << int(n+4096-1).bit_length()
+
+
+def _gain(freqs, kind, hz, order):
+    """Butterworth magnitude response (zero phase)."""
+    hz = max(1.0, min(hz, SR*.45))
+    ratio = np.maximum(freqs, 1e-6)/hz
+    if kind == 'low':
+        return 1/np.sqrt(1+ratio**(2*order))
+    return 1/np.sqrt(1+ratio**(-2*order))
+
+
 def _filter(x, kind, hz, order=2):
+    x = np.asarray(x, float)
+    size = _size(len(x))
+    freqs = np.fft.rfftfreq(size, 1/SR)
     if kind == 'band':
         lo, hi = hz
-        sos = butter(order, (lo/(SR/2), min(hi, SR*.45)/(SR/2)), 'band', output='sos')
+        gain = _gain(freqs, 'high', lo, order)*_gain(freqs, 'low', hi, order)
     else:
-        sos = butter(order, min(hz, SR*.45)/(SR/2), kind, output='sos')
-    return sosfilt(sos, x)
+        gain = _gain(freqs, kind, hz, order)
+    return np.fft.irfft(np.fft.rfft(x, size)*gain, size)[:len(x)]
+
+
+def _convolve(x, ir):
+    size = 1 << int(len(x)+len(ir)-2).bit_length()
+    return np.fft.irfft(np.fft.rfft(x, size)*np.fft.rfft(ir, size), size)[:len(x)]
 
 
 def lp(x, hz, order=2):
@@ -259,7 +281,7 @@ def _impulse(seconds, seed):
 
 
 def reverb(x, seconds=1.6, wet=.3, seed=7):
-    tail = fftconvolve(x, _impulse(seconds, seed))[:len(x)]
+    tail = _convolve(x, _impulse(seconds, seed))
     return x+tail*wet*3
 
 
@@ -291,12 +313,16 @@ def sweep_open(x, start_hz, end_hz, until):
     n = min(len(x), int(until*SR))
     if n <= 0:
         return x
+    steps = 6
+    cutoffs = [start_hz*(end_hz/start_hz)**(k/(steps-1)) for k in range(steps)]
+    versions = [lp(x[:n+int(.5*SR)], hz)[:n] for hz in cutoffs]
+    position = (np.linspace(0, 1, n)**2)*(steps-1)
+    low = np.minimum(position.astype(int), steps-2)
+    frac = position-low
+    stack = np.stack(versions)
+    head = stack[low, np.arange(n)]*(1-frac)+stack[low+1, np.arange(n)]*frac
     out = x.copy()
-    chunk = int(.05*SR)
-    for i in range(0, n, chunk):
-        k = i/n
-        hz = start_hz*(end_hz/start_hz)**(k*k)
-        out[i:i+chunk] = lp(x[max(0, i-2048):i+chunk], hz)[-len(x[i:i+chunk]):]
+    out[:n] = head
     return out
 
 

@@ -65,7 +65,10 @@ def listen_track(config, template=None, key_name='listen'):
     if st.toggle('▶ Ascolta il brano', key=f'{key_name}_{template}'):
         if config.get('music_track', 'auto') == 'auto':
             st.caption(f'Automatica, questa settimana: {variety.MUSIC_TRACKS.get(track, track)}')
-        st.audio(music.preview_wav(track), format='audio/wav')
+        try:
+            st.audio(music.preview_wav(track), format='audio/wav')
+        except Exception as exc:
+            st.caption(f'Anteprima non disponibile: {exc}')
 
 
 def shuffled_style(config, seed=None):

@@ -67,6 +67,24 @@ class Tracks(unittest.TestCase):
         self.assertEqual(len(music.render('carica', 2)), int(2*SR)+1)
 
 
+class CloudDependencies(unittest.TestCase):
+    def test_music_and_videos_work_without_scipy(self):
+        # Streamlit Cloud installs only requirements.txt: no SciPy there.
+        import subprocess
+        code = ("import sys; sys.modules['scipy'] = None; sys.path.insert(0, %r)\n"
+                "import music, sounds\n"
+                "for t in music.TRACKS: assert len(sounds.chiptune(3, 0, track=t)) > 0\n"
+                "assert len(music.preview_wav('house')) > 1000\n") % str(ROOT)
+        result = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True, timeout=300)
+        self.assertEqual(result.returncode, 0, result.stderr[-800:])
+
+    def test_requirements_cover_the_imports(self):
+        requirements = (ROOT/'requirements.txt').read_text().lower()
+        self.assertNotIn('scipy', (ROOT/'music.py').read_text().split('\n\n', 1)[1].split('def ')[0])
+        for module in ('numpy', 'pillow', 'imageio'):
+            self.assertIn(module, requirements)
+
+
 class Choice(unittest.TestCase):
     def test_every_track_can_be_chosen_and_saved(self):
         for track in variety.MUSIC_TRACKS:

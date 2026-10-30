@@ -1,5 +1,11 @@
 # Flamingos Studio 3.1
 
+## Correzione 3.1.1
+
+- Su Streamlit Cloud le musiche nuove davano *No module named 'scipy'* e bloccavano la grafica: ora sono generate
+  solo con NumPy (gia installato). Se un brano avesse comunque un problema, il video usa la musica 8-bit invece di
+  fermarsi.
+
 ## Novita della 3.1: le musiche
 
 Sei brani nuovi, originali e generati dall'app (niente diritti), con un suono pieno e non piu solo 8-bit:
