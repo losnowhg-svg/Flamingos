@@ -23,6 +23,7 @@ import atmospheres
 import frames
 import motion
 import themes
+import safezone
 import title_fx
 from classifica_data import MAX_TEAMS, empty_row, parse_standings, sort_rows, with_rows
 from library import save_project
@@ -46,7 +47,8 @@ HEADERS = {
 }
 LOGO_LABELS = {'default': 'Flamingos - incluso', 'none': 'Scudo con ?'}
 VIDEO_ONLY = ('duration', 'fps', 'video_scale', 'sound', 'volume', 'intro', 'music', 'ending', 'details', 'power_on', 'animation',
-              'intro_style', 'music_track', 'entrance', 'camera', 'fx_pulse', 'fx_flicker', 'fx_particles', 'fx_sweep')
+              'intro_style', 'music_track', 'entrance', 'camera', 'fx_pulse', 'fx_flicker', 'fx_particles', 'fx_sweep',
+              'highlight')
 STYLE_MIX = {'atmosphere': atmospheres.ATMOSPHERES, 'decor': atmospheres.DETAILS, 'panel_style': PANEL_STYLES,
              'title_fx': title_fx.EFFECTS, 'frame_style': frames.FRAMES, 'texture_fx': frames.TEXTURES}
 
@@ -680,15 +682,22 @@ def show_studio(root: Path, template: str, library: dict):
         crop = CROPS[config['export_format']] if is_crt else None
         # ------------------------------------------------------ PREVIEW
         with preview_column:
-            changed = EDITOR(**editor_payload, crop=crop, key=key('canvas'), default=None)
+            zones = safezone.editor_zones(config['export_format']) if is_crt else None
+            changed = EDITOR(**editor_payload, crop=crop, zones=zones, key=key('canvas'), default=None)
             if isinstance(changed, dict) and changed.get('event_id') != st.session_state.get('editor_event_'+template):
                 st.session_state['editor_event_'+template] = changed.get('event_id')
                 if isinstance(changed.get('positions'), dict):
                     updated = {k_: list(v) for k_, v in module.normalized_positions({'positions': changed['positions']}).items()}
                     if updated != config['positions']:
                         config['positions'] = updated; st.rerun()
-            st.caption('Trascina testi e stemmi. Le linee gialle mostrano il ritaglio del formato scelto.')
+            st.caption('Trascina testi e stemmi. Le linee gialle mostrano il ritaglio del formato scelto'
+                       + ('; le fasce a righe sono coperte dall\'interfaccia di Instagram nei Reel e nelle Storie.' if zones else '.'))
             for warning in layout_warnings(prepared, crop): st.warning(warning)
+            hidden = safezone.covered(prepared, config['export_format']) if is_crt else []
+            if hidden:
+                st.warning('Nei Reel e nelle Storie l\'interfaccia di Instagram copre: '+', '.join(hidden)+'.')
+                if st.button('📲 Sposta dentro la zona sicura', key=key('safe_fit'), width='stretch'):
+                    config['positions'] = safezone.fit(prepared, config['positions']); st.rerun()
             with st.expander('Posizioni precise e ripristino'):
                 names = {layer.id: layer.label for layer in prepared[1]}
                 selected = st.selectbox('Elemento', list(names), format_func=lambda x: names[x], key=key('selected'))
@@ -726,7 +735,13 @@ def show_studio(root: Path, template: str, library: dict):
                 st.image(png, width='stretch')
             else:
                 with st.expander('Guarda il PNG finale'):
-                    st.image(png, width='stretch')
+                    if is_crt and safezone.applies(config['export_format']) and st.toggle(
+                            'Mostra l\'interfaccia di un Reel sopra (solo per controllare)', key=key('ig_mock')):
+                        from PIL import Image as _Image
+                        import io as _io
+                        st.image(safezone.mock(_Image.open(_io.BytesIO(png))), width='stretch')
+                    else:
+                        st.image(png, width='stretch')
             st.divider()
             if is_squad:
                 from reparti_ui import show_departments
@@ -780,6 +795,10 @@ def show_studio(root: Path, template: str, library: dict):
                     a, b = st.columns(2)
                     with a: select('entrance', 'Ingresso degli elementi', motion.ENTRANCES, motion.ENTRANCES.get)
                     with b: select('camera', 'Movimento di camera', motion.CAMERAS, motion.CAMERAS.get)
+                    if template in ('Full Time', 'Calendario', 'Convocati'):
+                        import focus
+                        select('highlight', 'Messa in evidenza (punteggio, ultimo risultato, capitano)', focus.HIGHLIGHTS,
+                               focus.HIGHLIGHTS.get)
                     st.caption('Effetti continui')
                     cols = st.columns(2)
                     for i, (name, label) in enumerate(motion.AMBIENT.items()):
@@ -789,7 +808,8 @@ def show_studio(root: Path, template: str, library: dict):
                 if is_crt and config['animation'] == 'Retro':
                     st.caption('Se intro, animazioni e finale non ci stanno, il video si allunga da solo.')
                 a, b = st.columns(2)
-                with a: select('fps', 'Fotogrammi al secondo', (12, 15, 24, 30))
+                with a: select('fps', 'Fotogrammi al secondo', (12, 15, 24, 30, 60),
+                               lambda x: {24: '24 (cinema)', 30: '30 (consigliato per i Reel)', 60: '60 (fluidissimo, file piu pesante)'}.get(x, str(x)))
                 with b: select('video_scale', 'Risoluzione', (2, 1), lambda x: '1080 px' if x == 2 else '540 px (rapido)')
                 check('sound', 'Suoni CRT')
                 if config['sound'] or config.get('music'): slider('volume', 'Volume', 0, 100)

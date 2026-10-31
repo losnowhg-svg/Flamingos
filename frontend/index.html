@@ -1,16 +1,16 @@
 <!doctype html>
 <html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:transparent;color:#eee5ed;font:13px system-ui,-apple-system,sans-serif;overflow:hidden}.toolbar{display:flex;justify-content:center;align-items:center;gap:7px;padding:6px 0 10px;flex-wrap:wrap}button,select{font:inherit;color:inherit;background:#221a2b;border:1px solid #53435c;border-radius:7px;padding:6px 9px;cursor:pointer}button:disabled{opacity:.4;cursor:default}label{display:inline-flex;align-items:center;gap:4px;font-size:12px}#viewport{width:100%;overflow:auto;padding:6px 8px;max-height:840px}#stage{width:min(100%,420px);aspect-ratio:540/960;position:relative;margin:auto;border-radius:6px;overflow:hidden;background:#120e16;box-shadow:0 0 0 1px #625066,0 12px 30px #0005;touch-action:none}#background{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;user-select:none;image-rendering:auto}.piece{position:absolute;transform:translate(-50%,-50%);cursor:grab;touch-action:none;user-select:none;-webkit-user-drag:none;object-fit:fill;image-rendering:auto;outline:none}.piece:hover{outline:1px dashed #fff;outline-offset:3px}.piece.selected{outline:2px solid #ffc875;outline-offset:3px}.piece:active{cursor:grabbing}.guide{position:absolute;pointer-events:none;z-index:99;display:none}.v{left:50%;top:0;bottom:0;border-left:1px dashed #8be9ff99}.h{top:50%;left:0;right:0;border-top:1px dashed #8be9ff99}#safe{inset:8% 6%;border:1px dashed #fff6}#crop{left:0;right:0;border-top:2px dashed #ffc875;border-bottom:2px dashed #ffc875}#status{min-height:36px;padding:9px 8px 4px;text-align:center;color:#e3c8d9;font-size:12px;line-height:1.5}#help{font-size:11px;color:#b4a5ba;text-align:center;line-height:1.5;padding:2px 12px 8px}button:focus-visible,select:focus-visible{outline:2px solid #8be9ff;outline-offset:2px}
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:transparent;color:#eee5ed;font:13px system-ui,-apple-system,sans-serif;overflow:hidden}.toolbar{display:flex;justify-content:center;align-items:center;gap:7px;padding:6px 0 10px;flex-wrap:wrap}button,select{font:inherit;color:inherit;background:#221a2b;border:1px solid #53435c;border-radius:7px;padding:6px 9px;cursor:pointer}button:disabled{opacity:.4;cursor:default}label{display:inline-flex;align-items:center;gap:4px;font-size:12px}#viewport{width:100%;overflow:auto;padding:6px 8px;max-height:840px}#stage{width:min(100%,420px);aspect-ratio:540/960;position:relative;margin:auto;border-radius:6px;overflow:hidden;background:#120e16;box-shadow:0 0 0 1px #625066,0 12px 30px #0005;touch-action:none}#background{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;user-select:none;image-rendering:auto}.piece{position:absolute;transform:translate(-50%,-50%);cursor:grab;touch-action:none;user-select:none;-webkit-user-drag:none;object-fit:fill;image-rendering:auto;outline:none}.piece:hover{outline:1px dashed #fff;outline-offset:3px}.piece.selected{outline:2px solid #ffc875;outline-offset:3px}.piece:active{cursor:grabbing}.guide{position:absolute;pointer-events:none;z-index:99;display:none}.v{left:50%;top:0;bottom:0;border-left:1px dashed #8be9ff99}.h{top:50%;left:0;right:0;border-top:1px dashed #8be9ff99}#safe{inset:8% 6%;border:1px dashed #fff6}.zone{position:absolute;pointer-events:none;z-index:98;display:none;background:repeating-linear-gradient(45deg,#ff4f7a40 0 6px,#ff4f7a14 6px 12px);border:1px dashed #ff8fabaa}#crop{left:0;right:0;border-top:2px dashed #ffc875;border-bottom:2px dashed #ffc875}#status{min-height:36px;padding:9px 8px 4px;text-align:center;color:#e3c8d9;font-size:12px;line-height:1.5}#help{font-size:11px;color:#b4a5ba;text-align:center;line-height:1.5;padding:2px 12px 8px}button:focus-visible,select:focus-visible{outline:2px solid #8be9ff;outline-offset:2px}
 </style></head><body>
-<div class="toolbar"><button id="undo" disabled title="Ctrl / Cmd + Z">Annulla</button><button id="redo" disabled title="Ctrl / Cmd + Shift + Z">Ripeti</button><label><input id="guides" type="checkbox" checked>Guide</label><label><input id="snap" type="checkbox" checked>Aggancia</label><select id="zoom" aria-label="Zoom editor"><option value="fit">Adatta</option><option value="540">100%</option><option value="810">150%</option></select></div>
+<div class="toolbar"><button id="undo" disabled title="Ctrl / Cmd + Z">Annulla</button><button id="redo" disabled title="Ctrl / Cmd + Shift + Z">Ripeti</button><label><input id="guides" type="checkbox" checked>Guide</label><label><input id="snap" type="checkbox" checked>Aggancia</label><label id="zonelabel" style="display:none" title="Le parti coperte dall'interfaccia di Instagram nei Reel e nelle Storie"><input id="zones" type="checkbox" checked>Zona Instagram</label><select id="zoom" aria-label="Zoom editor"><option value="fit">Adatta</option><option value="540">100%</option><option value="810">150%</option></select></div>
 <div id="viewport"><div id="stage" tabindex="0" aria-label="Editor grafico. Seleziona un elemento e usa le frecce per spostarlo."><img id="background" alt="Sfondo del modello" draggable="false"><div class="guide v"></div><div class="guide h"></div><div id="safe" class="guide"></div><div id="crop" class="guide"></div></div></div>
 <div id="status" aria-live="polite">Seleziona un elemento o trascinalo.</div>
 <div id="help">Frecce: 1 unita / Maiusc + frecce: 10. Guide non esportate.<br>Coordinate logiche 540 x 960; anteprima in alta risoluzione. Margini indicativi.</div>
 <script>
 'use strict';
 const $=id=>document.getElementById(id),stage=$('stage'),status=$('status');
-let positions={},layers=[],active=null,selected=null,history=[],future=[],crop=null;
+let positions={},layers=[],active=null,selected=null,history=[],future=[],crop=null,zones=null;
 const copy=x=>JSON.parse(JSON.stringify(x));
 const pair=x=>Array.isArray(x)&&x.length===2&&x.every(n=>Number.isFinite(Number(n)));
 function send(type,data={}){window.parent.postMessage({isStreamlitMessage:true,type,...data},'*')}
@@ -35,6 +35,8 @@ function showGuides(){
  stage.querySelectorAll('.guide').forEach(el=>el.style.display=$('guides').checked?'block':'none');
  $('crop').style.display=$('guides').checked&&crop?'block':'none';
  if(crop){$('crop').style.top=(crop[1]/960*100)+'%';$('crop').style.height=((crop[3]-crop[1])/960*100)+'%'}
+ $('zonelabel').style.display=zones?'inline-flex':'none';
+ stage.querySelectorAll('.zone').forEach(el=>el.style.display=zones&&$('zones').checked?'block':'none');
 }
 function makeElement(item,index){
  const el=document.createElement('img');el.className='piece';el.dataset.id=item.id;el.dataset.dx=item.dx||0;el.dataset.dy=item.dy||0;
@@ -64,7 +66,7 @@ function makeElement(item,index){
 }
 $('undo').onclick=()=>{if(!history.length)return;future.push(copy(positions));positions=history.pop();paint();emit()};
 $('redo').onclick=()=>{if(!future.length)return;history.push(copy(positions));positions=future.pop();paint();emit()};
-$('guides').onchange=showGuides;
+$('guides').onchange=showGuides;$('zones').onchange=showGuides;
 $('zoom').onchange=()=>{stage.style.width=$('zoom').value==='fit'?'min(100%,420px)':$('zoom').value+'px';height()};
 document.addEventListener('keydown',ev=>{
  const tag=ev.target.tagName;if(['INPUT','SELECT','TEXTAREA'].includes(tag))return;
@@ -82,7 +84,9 @@ window.addEventListener('message',ev=>{
   if(Object.keys(positions).join('|')===Object.keys(incoming).join('|')){history.push(copy(positions));if(history.length>60)history.shift();future=[]}
   else{history=[];future=[];selected=null}
  }
- positions=incoming;layers=Array.isArray(args.layers)?args.layers:[];crop=Array.isArray(args.crop)?args.crop:null;
+ positions=incoming;layers=Array.isArray(args.layers)?args.layers:[];crop=Array.isArray(args.crop)?args.crop:null;zones=Array.isArray(args.zones)&&args.zones.length?args.zones:null;
+ stage.querySelectorAll('.zone').forEach(el=>el.remove());
+ (zones||[]).forEach(r=>{const z=document.createElement('div');z.className='zone';z.style.left=(r[0]/540*100)+'%';z.style.top=(r[1]/960*100)+'%';z.style.width=((r[2]-r[0])/540*100)+'%';z.style.height=((r[3]-r[1])/960*100)+'%';stage.appendChild(z)});
  $('background').src='data:'+(args.background_type||'image/png')+';base64,'+(args.background||'');
  const hadFocus=stage.contains(document.activeElement);
  stage.querySelectorAll('.piece').forEach(el=>el.remove());

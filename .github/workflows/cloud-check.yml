@@ -1,0 +1,27 @@
+name: Controllo Streamlit Cloud
+
+# Same packages as Streamlit Cloud (only requirements.txt): if this is green, the app works online.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  cloud:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Solo i pacchetti di requirements.txt
+        run: pip install -r requirements.txt
+      - name: Controllo cloud (import e rendering di tutto)
+        run: python tools/cloud_check.py
+      - name: Test
+        run: |
+          for f in tests/test_*.py; do
+            [ "$f" = tests/test_streamlit_app.py ] && continue
+            echo "== $f"; python -m unittest -q "$f" || exit 1
+          done

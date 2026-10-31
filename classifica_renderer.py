@@ -36,6 +36,28 @@ def active_rows(config):
     return rows
 
 
+def last_week(config):
+    """(config with our team back at last week's place, after->before row map), or None.
+
+    For the video: the table enters in last week's order, then our row moves.
+    Points and goals are this week's (only the order of last week is known)."""
+    rows = active_rows(config)
+    ours = config.get('our_team', 'FLAMINGOS')
+    index = next((i for i, r in enumerate(rows) if is_ours(r.get('team', ''), ours)), None)
+    try:
+        prev = int(config.get('prev_pos', 0) or 0)
+    except (TypeError, ValueError):
+        prev = 0
+    if index is None or not 1 <= prev <= len(rows) or prev == index+1:
+        return None
+    order = rows[:index]+rows[index+1:]
+    order.insert(prev-1, rows[index])
+    ids = [id(r) for r in order]
+    mapping = [ids.index(id(r)) for r in rows]
+    old = [dict(r, pos=i+1) for i, r in enumerate(order)]
+    return dict(config, standings=old, team_count=len(old), prev_pos=0), mapping
+
+
 def zone_of(position, config):
     """'promo' for direct promotion, 'playoff' for the play-off places, else None."""
     if not config.get('show_zones', True):
@@ -141,6 +163,12 @@ def table_image(config, font_bytes=None, s=1):
     prev = int(config.get('prev_pos', 0) or 0)
     if ours_index is not None and prev:
         now = int(rows[ours_index].get('pos', ours_index+1))
+        if prev == now:   # same place as last week: a small yellow =
+            top = header_h+ours_index*row_h
+            mid = top+row_h/2
+            ax = team_x+team_w-16
+            d.rectangle((ax-3, top+3, ax+14, top+row_h-3), fill=(9, 11, 22, 255))
+            cell('=', (255, 201, 99), ax-3, mid, 17)
         if prev != now:
             up = prev > now
             colour = (91, 230, 164) if up else (255, 107, 120)
@@ -179,7 +207,15 @@ def get_layers(config, home_logo, away_logo=None, font_bytes=None, render_scale=
     sub = _decorate_text(text_image(subtitle, style, config.get('info_size', 10), pink, 280, font_bytes, s, 13), s)
     if sub:
         layers.append(Layer('subtitle', LAYER_NAMES['subtitle'], sub))
-    layers.append(Layer('table', LAYER_NAMES['table'], table_image(config, font_bytes, s)))
+    table = Layer('table', LAYER_NAMES['table'], table_image(config, font_bytes, s))
+    previous = last_week(config)
+    if previous:
+        table.before = table_image(previous[0], font_bytes, s)
+        table.image.info['before_rows'] = previous[1]
+        # In the video the badge on the right tells the change: the row itself stays clean.
+        table.clean = table_image(dict(config, prev_pos=0), font_bytes, s)
+        table.clean.info.update(table.image.info)
+    layers.append(table)
     return layers
 
 

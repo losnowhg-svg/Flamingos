@@ -17,6 +17,7 @@ images (PNG, editor preview) are never affected.
 """
 from __future__ import annotations
 
+import copy
 import math
 from functools import lru_cache
 
@@ -113,6 +114,7 @@ def prepare(prepared, config, kind):
     info.setdefault('theme', '')
     import frames
     frames.store(info, config)
+    info['highlight'] = config.get('highlight', 'auto')
     info['camera'] = motion.camera(config)
     info['fx'] = motion.ambient(config)
     info['crest'] = _crest(layers, config, kind)
@@ -137,7 +139,77 @@ def prepare(prepared, config, kind):
         if info['music']:
             layer.start = round(layer.start/BEAT)*BEAT
         layer.dur = _duration(layer, layer.anim)
+    if info['music']:
+        sync_to_music(prepared)
     return prepared
+
+
+DROP = 4.0          # every track has two bars of intro, then the drop (music.py); a bar lasts 2 s
+MUSIC_BAR = 2.0
+
+
+def _anchor(prepared):
+    """(layer, seconds after its start) of the scene's strongest moment, or None."""
+    layers = prepared[1]
+    by_id = {l.id: l for l in layers}
+    offset = _offset(prepared)
+    owners = {'impact': None, 'goal': 'score', 'climb': 'table', 'crown': 'table'}
+    for at, kind, data in moments(prepared):
+        if kind not in owners:
+            continue
+        if kind == 'impact':
+            owner = 'home_logo' if prepared[0].info.get('kind') == 'matchday' and 'home_logo' in by_id else None
+            if owner is None and 'score' in by_id and getattr(by_id['score'], 'anim', '') == 'count':
+                owner = 'score'
+            if owner is None:
+                continue
+        else:
+            owner = owners[kind]
+        layer = by_id.get(owner)
+        if layer is not None:
+            return layer, at-offset-layer.start
+    for lid in ('table', 'big'):
+        if lid in by_id:
+            return by_id[lid], 0.0
+    firsts = [l for l in layers if l.id.startswith(('card_', 'player_'))]
+    if firsts:
+        return min(firsts, key=lambda l: l.start), 0.0
+    return None
+
+
+def sync_to_music(prepared):
+    """Move the timeline so the strongest moment lands on the drop (4 s) or on the next downbeat."""
+    found = _anchor(prepared)
+    if not found:
+        return
+    layer, extra = found
+    offset = _offset(prepared)
+    old = layer.start
+    moment = offset+old+extra
+    target = DROP
+    while target < moment-.3:
+        target += MUSIC_BAR
+
+    def valid(at):
+        start = at-offset-extra
+        return start >= 0 and ((old > 0 and .6 <= start/old <= 2.6) or (old == 0 and start <= 1.5))
+    if not valid(target):
+        target = MUSIC_BAR        # too early for the drop: the first downbeat of the intro
+        if target < moment-.3 or not valid(target):
+            return
+    new = target-offset-extra
+    factor = new/old if old > 0 else 1.0
+    for item in prepared[1]:
+        if item is layer:
+            continue
+        if item.start == old:            # starts together with the anchor (the other crest)
+            item.start = new
+        elif item.start < old:
+            item.start = round(item.start*factor/BEAT)*BEAT if old > 0 else item.start+new
+        else:
+            item.start = round((new+item.start-old)/BEAT)*BEAT
+    layer.start = new
+    prepared[0].info['drop_at'] = target
 
 
 def _crest(layers, config, kind):
@@ -150,6 +222,11 @@ def _crest(layers, config, kind):
     else:
         layer = by_id.get('logo')
     return layer.image if layer is not None else None
+
+
+def focus_treatment(info, kind):
+    import focus
+    return focus.treatment(info, kind)
 
 
 def rich(prepared):
@@ -184,10 +261,16 @@ def moments(prepared):
             out.append((offset+l.start+l.dur, 'impact', dict(strength=.45, flash=False)))
         if getattr(l, 'captain', False) and l.id.startswith('player_'):
             out.append((offset+l.start+l.dur+.1, 'shine', dict(layer=l.id)))
+            if info.get('kind') == 'convocati':
+                out.append((offset+l.start+l.dur+.15, 'captain', dict(layer=l.id)))
     score = by_id.get('score')
     if score is not None and getattr(score, 'anim', '') == 'count':
         end = offset+score.start+score.dur
         out.append((end, 'impact', dict(strength=1.0, flash=True)))
+        out.append((end, 'focus_score', {}))
+        if info.get('outcome') in ('win', 'draw', 'loss'):
+            import focus
+            out.append((end+2.4, 'points', dict(outcome=info['outcome'], style=focus.chip_style(info))))
         if info.get('our_goals', 0) > 0:
             out.append((end, 'goal', dict(layer='score')))
         if info.get('outcome'):
@@ -196,12 +279,22 @@ def moments(prepared):
     if table is not None and getattr(table, 'anim', '') == 'rows':
         end = offset+table.start+table.dur
         meta = table.image.info
+        landing = 0
         if info.get('kind') == 'classifica' and meta.get('ours') and meta.get('prev'):
-            out.append((end, 'climb', dict(ours=meta['ours'], prev=meta['prev'])))
+            import focus
+            mode = focus.mode_of(meta['prev'], meta['ours'])
+            landing = focus.lead(mode)          # the moment is the landing: that goes on the drop
+            out.append((end+landing, 'climb', dict(ours=meta['ours'], prev=meta['prev'], mode=mode, lead=landing)))
         if info.get('kind') == 'classifica' and meta.get('first'):
-            out.append((end+(.8 if meta.get('prev') else 0), 'crown', dict(ours=meta['ours'])))
-        if info.get('kind') == 'calendario' and meta.get('next_row') is not None:
-            out.append((end, 'next', dict(row=meta['next_row'])))
+            out.append((end+(landing+.35 if landing else 0), 'crown', dict(ours=meta['ours'])))
+        if info.get('kind') == 'calendario':
+            results = meta.get('row_results') or []
+            nxt = meta.get('next_row')
+            played = [i for i, r in enumerate(results) if r and (nxt is None or i < nxt)]
+            if played:   # the last result gets stamped, then the camera glides to the next match
+                out.append((end+.35, 'stamp', dict(row=played[-1], result=results[played[-1]], next=nxt)))
+            if nxt is not None:
+                out.append((end+(2.3 if played else 0), 'next', dict(row=nxt)))
     return sorted(out, key=lambda m: m[0])
 
 
@@ -212,7 +305,8 @@ def intro_length(prepared):
         return None
     end = _offset(prepared)+max(l.start+l.dur for l in layers)
     for t, kind, _ in moments(prepared):
-        end = max(end, t+{'banner': 1.3, 'climb': .8, 'crown': 1.0, 'goal': .8}.get(kind, .3))
+        end = max(end, t+{'banner': 1.3, 'climb': 1.3, 'crown': 1.0, 'goal': .8, 'points': .8, 'stamp': 2.6,
+                          'captain': 1.5, 'focus_score': 1.4}.get(kind, .3))
     return end
 
 
@@ -257,7 +351,22 @@ def events(prepared):
             out.append((t, 'goal', 0))
         elif kind == 'banner':
             out.append((t, data['outcome'], 0))
-        elif kind in ('climb', 'crown', 'shine'):
+        elif kind == 'points':
+            if data.get('style') == 'conta':
+                for k in range({'win': 3, 'draw': 1, 'loss': 0}[data['outcome']]):
+                    out.append((t+(k+1)*.18, 'tick', k))
+            out.append((t+(.6 if data.get('style') == 'vola' else .55 if data.get('style') == 'conta' else 0), 'ding',
+                        {'win': 2, 'draw': 1, 'loss': 0}[data['outcome']]))
+        elif kind == 'stamp':
+            out.append((t, 'impact' if focus_treatment(info, 'calendario') == 'timbro' else 'blip', 0))
+            if data.get('next') is not None:
+                out.append((t+.95, 'whoosh', 0))
+        elif kind == 'captain':
+            out.append((t, 'whoosh', 0))
+        elif kind == 'climb':
+            out.append((t-data['lead']+.75, 'whoosh', 0))
+            out.append((t, {'up': 'climb', 'same': 'ding', 'down': 'impact'}[data['mode']], 0))
+        elif kind in ('crown', 'shine'):
             out.append((t, kind, 0))
     if info.get('ending') == 'spegnimento' and info.get('duration'):
         out.append((info['duration']-.65, 'power_off', 0))
@@ -447,6 +556,26 @@ def _card_hop(layer, local, t):
     return dy
 
 
+def _motion_offsets(kind, a):
+    """(dx, dy, alpha) of the falling and diving entrances at progress a."""
+    if kind == 'dive':
+        return -(1-_back(a))*70, -(1-_ease(a))*150, min(1, a*3)
+    if kind == 'drop':
+        return 0.0, -(1-a*a)*190, min(1, a*3)
+    return 0.0, -(1-motion.bounce(a))*130, min(1, a*4)     # bounce
+
+
+def _blurred(canvas, layer, pos, kind, a):
+    """Fast moves with a short motion blur: two faint copies where the element was a moment ago."""
+    dx, dy, alpha = _motion_offsets(kind, a)
+    step = (1/72)/max(.1, layer.dur)
+    for k, ghost in ((2, .14), (1, .28)):
+        px, py, _ = _motion_offsets(kind, max(0.0, a-k*step))
+        if abs(px-dx)+abs(py-dy) > 2:
+            _put(canvas, layer.image, layer, pos, alpha*ghost, px, py)
+    _put(canvas, layer.image, layer, pos, alpha, dx, dy)
+
+
 def _draw(canvas, layer, pos, local, frame_index, t, info):
     if local <= 0:
         return
@@ -502,18 +631,12 @@ def _draw(canvas, layer, pos, local, frame_index, t, info):
         for k, alpha in ((3, .15), (2, .25), (1, .35)):
             _put(canvas, _tinted(layer.image, (80, 230, 255), alpha), layer, pos, 1, dx+k*22*(1-a))
         _put(canvas, layer.image, layer, pos, 1, dx)
-    elif kind == 'dive':
-        e = _back(a)
-        _put(canvas, layer.image, layer, pos, min(1, a*3), -(1-e)*70, -(1-_ease(a))*150)
-    elif kind == 'drop':
-        e = a*a
-        _put(canvas, layer.image, layer, pos, min(1, a*3), 0, -(1-e)*190)
+    elif kind in ('dive', 'drop', 'bounce'):
+        _blurred(canvas, layer, pos, kind, a)
     elif kind == 'rows':
         _put(canvas, _rows(layer.image, layer.image.info['row_edges'], local, s), layer, pos)
     elif kind == 'pixelate':
         _put(canvas, motion.pixelated(layer.image, a, s), layer, pos, min(1, a*2.2))
-    elif kind == 'bounce':
-        _put(canvas, layer.image, layer, pos, min(1, a*4), 0, -(1-motion.bounce(a))*130)
     elif kind == 'wipe':
         _put(canvas, motion.wiped(layer.image, a, s), layer, pos)
     elif kind == 'zoom':
@@ -573,21 +696,9 @@ def _moment_overlay(canvas, prepared, t, local, kind, data):
             small = _label(f'CONTINUE? {count}', (250, 248, 255), 9, max(1, round(s)))
             if int(local*6) % 2 == 0:
                 _put(canvas, small, None, (270+slide, y+13))
-    elif kind == 'climb' and local < .9:
-        table = by_id['table']
-        tx, ty = positions['table']
-        th = table.image.height/s
-        ours_y0, ours_y1 = _band(table, data['ours'])
-        prev_row = min(len(table.image.info['row_edges'])-1, max(1, data['prev']))
-        prev_y0, _ = _band(table, prev_row)
-        band = table.image.crop((0, round(ours_y0*s), table.image.width, round(ours_y1*s)))
-        k = _ease(min(1, local/.7))
-        for lag, alpha in ((.3, .2), (.15, .35), (0, .9)):
-            kk = max(0, k-lag)
-            y0 = prev_y0+(ours_y0-prev_y0)*kk
-            center_y = ty-th/2+y0+(ours_y1-ours_y0)/2
-            _put(canvas, _whiten(band, .25) if lag == 0 else _tinted(band, (255, 92, 190), 1), None,
-                 (tx, center_y), alpha*(1-max(0, (local-.7)/.2)))
+    elif kind == 'climb':
+        import focus
+        focus.draw(canvas, prepared, data, local+data['lead'], data.get('backdrop', canvas))
     elif kind == 'crown' and local < 1.2:
         table = by_id['table']
         tx, ty = positions['table']
@@ -796,13 +907,32 @@ def _compose(prepared, t=999, animated=True):
     if parallax:   # the text floats a little above the panels
         _, (lx, ly), _ = motion.parallax_offsets(t)
         placed = {k: (x+lx, y+ly) for k, (x, y) in positions.items()}
+    focus_moment = next(((at, d) for at, k, d in all_moments if k == 'climb'), None)
+    backdrop = canvas.copy() if focus_moment and t >= focus_moment[0]-focus_moment[1]['lead'] else None
+    stamping = any(k in ('stamp', 'focus_score', 'captain') and 0 <= t-at < .8 for at, k, _ in all_moments)
     for layer in layers:
-        _draw(canvas, layer, placed[layer.id], t-offset-layer.start, frame_index, t, info)
+        shown = layer
+        if focus_moment and getattr(layer, 'before', None) is not None:
+            shown = copy.copy(layer)       # last week's order until our row lands, then the clean table
+            shown.image = layer.before if t < focus_moment[0] else getattr(layer, 'clean', layer.image)
+        _draw(canvas, shown, placed[layer.id], t-offset-layer.start, frame_index, t, info)
+    if stamping and backdrop is None:
+        backdrop = None   # filled below, after the layers: the stamp lifts what is on screen
     for at, kind, data in all_moments:
-        if t >= at:
+        early = data.get('lead', 0) if isinstance(data, dict) else 0
+        if t >= at-early:
+            if kind == 'climb':
+                data = dict(data, backdrop=backdrop)
             _moment_overlay(canvas, prepared, t, t-at, kind, data)
     _sparkles(canvas, prepared, t)
     s = canvas.width/540
+    if stamping:
+        backdrop = canvas.copy()
+    import focus
+    focus.overlays(canvas, prepared, all_moments, t, backdrop)
+    z, cx, cy = focus.camera_at(prepared, all_moments, t)
+    if z > 1.0005:
+        canvas = motion._affine(canvas, z, 0, 0, 0, cx*s, cy*s)
     from render_utils import ScaledDraw
     y = 318+((t*.6) % 1)*354
     ScaledDraw(canvas, s, 'RGBA').rectangle((78, y, 462, y+6), fill=(255, 255, 255, 10))
@@ -814,7 +944,11 @@ def _compose(prepared, t=999, animated=True):
     frame = canvas
     if info.get('details', True):
         frame = _tracking(frame, t)
-    frame = _shake(frame, t, [(at, d) for at, k, d in all_moments if k == 'impact'], s)
+    impacts = [(at, d) for at, k, d in all_moments if k == 'impact']
+    drop = info.get('drop_at') if info.get('music') else None
+    if drop and not any(abs(at-drop) < .15 for at, _ in impacts):
+        impacts.append((drop, dict(strength=.35, flash=True)))   # the drop of the music is felt on screen too
+    frame = _shake(frame, t, impacts, s)
     frame = motion.camera_frame(frame, t, info)
     if 'fx_flicker' in info.get('fx', ()):
         frame = motion.flicker(frame, t)

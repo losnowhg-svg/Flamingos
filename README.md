@@ -1,4 +1,46 @@
-# Flamingos Studio 3.1
+# Flamingos Studio 3.4
+
+## Novita della 3.4: lo stesso dettaglio ovunque, con senso e con varieta
+
+Ogni messa in evidenza risponde a "cosa e cambiato?". Lo **zoom** si usa solo dove serve: su cio che e piccolo sullo
+schermo (una riga della lista) o che si muove (la classifica). Per le cose grandi ci sono altri modi:
+
+- **Riflettore:** tutto il resto si abbassa e resta acceso il soggetto; nel Calendario il riflettore scivola
+  dall'ultimo risultato alla prossima partita.
+- **Evidenziatore:** un tratto colorato sottolinea il soggetto (nel Full Time l'esito, nel Calendario prima l'ultimo
+  risultato e poi la partita NEXT).
+- **Timbro:** il soggetto si stacca, si ingrandisce e batte giu con un anello.
+
+Dove: **Full Time** (la partita e il suo esito, poi il chip punti verde +3 / giallo +1 / rosso +0, che a sua volta
+puo volare dal punteggio, contare da +0 o stamparsi), **Calendario** (ultimo risultato e prossima partita),
+**Convocati** (il capitano, con la fascia C gialla che resta; qui lo zoom ha senso perche la riga e piccola).
+
+**Varieta:** il modo cambia da solo a ogni giornata e non e lo stesso tra grafiche diverse della stessa settimana. In
+Video MP4 > *Messa in evidenza* si puo anche fissare.
+
+## Novita della 3.3: i dettagli delle animazioni
+
+- **Classifica che si riordina** (video, con *Posizione settimana scorsa* compilata): la tabella entra
+  nell'ordine della settimana prima, la camera si avvicina alla nostra riga, la riga sale (o scende) superando le altre
+  che le fanno spazio, atterra con un lampo e a destra compare l'indicatore: verde ▲ con i posti guadagnati, giallo = se
+  siamo rimasti li, rosso ▼ con i posti persi. Poi la camera torna indietro e l'indicatore resta. Con la musica
+  l'atterraggio cade sul drop o sulla battuta. Nel PNG resta la freccina accanto al nome (ora anche = in giallo).
+- **Movimenti piu morbidi:** le entrate che cadono, si tuffano o rimbalzano hanno una breve scia di movimento; la camera
+  di focus usa curve senza scatti all'inizio e alla fine.
+
+## Novita della 3.2: Reel pro
+
+- **Zona sicura di Instagram.** Con il formato Story 9:16 l'editor mostra a righe le parti che nei Reel e nelle Storie
+  restano sotto l'interfaccia (intestazione, nome e didascalia, colonna dei mi piace). Se trascini un testo o uno stemma
+  li sotto compare un avviso con **📲 Sposta dentro la zona sicura**. In *Guarda il PNG finale* puoi vedere la grafica
+  con sopra un'interfaccia di Reel finta, solo per controllare (non finisce nel file).
+- **Animazioni a tempo di musica.** Con la musica attiva il momento forte cade sul *drop* del brano (a 4 secondi) o sulla
+  battuta successiva: lo scontro degli stemmi nel Matchday, il punteggio nel Full Time, la tabella o la scalata in
+  classifica, la lista dei convocati. Sul drop lo schermo da un colpo e la camera *A ritmo* fa lo zoom piu forte.
+- **60 fotogrammi al secondo** tra le scelte (anche nella Sequenza). La Modalita Reel usa 30.
+- **Controllo Streamlit Cloud** (`python tools/cloud_check.py`, e in automatico su GitHub a ogni PR): installa solo
+  `requirements.txt`, come il cloud, e genera tutte le grafiche e i video. L'errore *No module named 'scipy'* della 3.1
+  non puo piu arrivare online.
 
 ## Correzione 3.1.1
 

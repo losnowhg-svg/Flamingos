@@ -155,7 +155,9 @@ def show_sequence(root: Path, library):
             state['format'] = st.selectbox('Formato', FORMATS, index=FORMATS.index(state['format']), key='seq_format')
             state['hold'] = st.slider('Secondi per grafica', 2.0, 8.0, float(state['hold']), .5, key='seq_hold')
             state['transition_seconds'] = st.slider('Durata transizione', .5, 2.0, float(state['transition_seconds']), .1, key='seq_tdur')
-            state['fps'] = st.selectbox('Fotogrammi al secondo', (24, 30), index=(24, 30).index(state['fps']), key='seq_fps')
+            fps_options = (24, 30, 60)
+            state['fps'] = st.selectbox('Fotogrammi al secondo', fps_options,
+                                        index=fps_options.index(state['fps']) if state['fps'] in fps_options else 0, key='seq_fps')
             state['scale'] = st.selectbox('Risoluzione', (2, 1), index=(2, 1).index(state['scale']),
                 format_func=lambda x: '1080 px - Full HD' if x == 2 else '540 px - rapido', key='seq_scale')
             state['sound'] = st.checkbox('Suoni CRT (cambio canale, accensione, glitch, nastro, bip)', state['sound'], key='seq_sound')
