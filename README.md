@@ -1,4 +1,17 @@
-# Flamingos Studio 3.5
+# Flamingos Studio 3.6
+
+## Novita della 3.6: dal telefono
+
+- **Menu in alto:** sul telefono le pagine si cambiano dal menu a tendina in cima, senza aprire la barra laterale.
+- **Anteprima sempre visibile:** negli editor una piccola anteprima resta ferma in alto mentre scorri i comandi
+  (Contenuti, Stile, Esporta): ogni modifica si vede subito.
+- **📲 Condividi:** sotto Scarica PNG e Scarica MP4 (e per caroselli, video dei reparti, Wrapped, sequenza e foto di
+  squadra) un pulsante apre il menu di condivisione del telefono: Instagram, WhatsApp, Foto. I caroselli si condividono
+  con tutte le slide insieme. Dove il browser non lo permette il pulsante non compare.
+- **Piu compatto:** intestazione ridotta, didascalie del post in un riquadro che si apre, pulsanti piu grandi da
+  toccare, nella Settimana prima CSI e partita, poi la rosa.
+- Per gli sviluppatori: `tools/mobile_audit.py` e il workflow *Schermate mobile* fotografano ogni pagina come su un
+  iPhone (rami `mobile-*`).
 
 ## Novita della 3.5: la posta in gioco
 

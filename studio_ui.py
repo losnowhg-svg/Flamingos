@@ -696,7 +696,10 @@ def show_studio(root: Path, template: str, library: dict):
                 still = module.compose(prepared, 999, False) if is_crt else r.compose(prepared, animated=False)
                 image = r_output(still, config) if is_crt else still
                 image.thumbnail((480, 480))
-                small = (preview_key, image)
+                from PIL import Image as _Image     # centred on a wide band: the phone shows it full width
+                band = _Image.new('RGB', (round(image.height*1.7), image.height), (16, 13, 22))
+                band.paste(image.convert('RGB'), ((band.width-image.width)//2, 0))
+                small = (preview_key, band)
                 st.session_state['mobile_png_'+template] = small
             st.image(small[1], width='stretch')
             st.caption('Anteprima · le modifiche si vedono qui')

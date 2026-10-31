@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.6 / su telefono: menu in alto, anteprima sempre visibile mentre modifichi')
+    st.caption('3.6 / dal telefono: menu in alto, anteprima sempre visibile, condividi su Instagram')
 
 from library import show_library
 from studio_ui import show_studio
