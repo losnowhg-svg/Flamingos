@@ -553,12 +553,16 @@ def gap_overlay(canvas, prepared, data, p):
 # --- 3.7: the match told goal by goal, the month in numbers -----------------------------------
 
 GOAL_GAP = .5
+GOAL_STEP = .6      # seconds between goals when the minutes are not known
 
 
 def _replay_keys(replay):
     """[(seconds, minute)] of the match clock: steady, but never two goals closer than GOAL_GAP."""
     events = replay['events']
     length = replay['length']
+    if not replay.get('timed', True):     # no minutes: one goal after the other, steady beat
+        keys = [(.3, 0)]+[(.45+GOAL_STEP*i, i+1) for i in range(len(events))]
+        return keys+[(keys[-1][0]+.7, len(events))]
     run = max(1.6, .45*len(events)+1.0)
     keys, last = [(.3, 0)], .3-GOAL_GAP
     for minute, _, _, _ in events:
@@ -614,6 +618,9 @@ def draw_replay(canvas, layer, pos, local, info):
     if fade <= 0:
         return
     d = ScaledDraw(canvas, s, 'RGBA')
+    if not replay.get('timed', True):
+        _goal_row(canvas, d, goals, local, fade, colour, s, x0, x1, y)
+        return
     length = replay['length']
     minute = _minute_at(keys, local)
     px = x0+(x1-x0)*minute/length
@@ -638,6 +645,29 @@ def draw_replay(canvas, layer, pos, local, info):
     d.ellipse((px-3.5, y-3.5, px+3.5, y+3.5), fill=(255, 255, 255, a))
     clock = _label(f"{int(minute)}'", (255, 255, 255), 10, max(1, round(s)))
     _put(canvas, clock, None, (px, y+26), fade)
+
+
+def _goal_row(canvas, d, goals, local, fade, colour, s, x0, x1, y):
+    """No minutes, no clock: each team's goals light up in its own half of the scorers panel, with the scorer."""
+    from animations import _label, _put
+    centre = {'home': 174, 'away': 366}           # the two scorer columns
+    count = {side: sum(1 for g in goals if g[1] == side) for side in centre}
+    seen = {side: 0 for side in centre}
+    a = round(255*fade)
+    for at, side, name in goals:
+        n, i = count[side], seen[side]
+        seen[side] += 1
+        gap = min(22.0, 150/max(1, n))
+        gx = centre[side]+gap*(i-(n-1)/2)
+        d.ellipse((gx-2.5, y-2.5, gx+2.5, y+2.5), outline=(255, 255, 255, round(90*fade)), width=1)
+        if local < at:
+            continue
+        k = _back(min(1.0, (local-at)/.25))
+        r = 5*k
+        d.ellipse((gx-r, y-r, gx+r, y+r), fill=(*colour[side], a), outline=(255, 255, 255, a), width=1)
+        if name and local-at < 1.0:
+            tag = _label(name, colour[side], 9, max(1, round(s)))
+            _put(canvas, tag, None, (min(max(gx, centre[side]-60), centre[side]+60), y-15), fade*min(1.0, (1.0-(local-at))/.25))
 
 
 def tally_overlay(canvas, prepared, data, p, backdrop):

@@ -282,11 +282,12 @@ def show_studio(root: Path, template: str, library: dict):
                                                      max_chars=1200, key=key(field), placeholder="ROSSI 12', 38'\nBIANCHI 44'")
                         if len(f.scorer_lines(config[field])) > 6:
                             st.warning('Massimo 6 righe: raggruppa i gol dello stesso giocatore.')
-                if f.replay_events(config):
+                events = f.replay_events(config)
+                if events and f.replay_timed(events):
                     st.caption('🎞 Nel video il risultato si racconta gol per gol, con il minuto e il marcatore.')
-                elif int(config['home_score'])+int(config['away_score']) > 0:
-                    st.caption('Scrivi il minuto di ogni gol (es. ROSSI 12\') e nel video il risultato si racconterà gol '
-                               'per gol. Ora parte il contatore.')
+                elif events:
+                    st.caption('🎞 Nel video il risultato sale gol per gol con i marcatori (CAVA x2 vale due gol). '
+                               'Senza minuti l\'ordine dei gol è indicativo; se un giorno li hai, compare anche l\'orologio.')
             if check('show_penalties', 'Decisa ai rigori'):
                 a, b = st.columns(2)
                 with a: number('home_penalties', 'Rigori segnati casa', 0, 99)

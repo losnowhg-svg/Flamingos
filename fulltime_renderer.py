@@ -67,15 +67,44 @@ def goal_minutes(value):
     return out
 
 
+def scorer_goals(value):
+    """[name, ...] one entry per goal from "TEU 12', 41'", "CAVA x2", "ROSSI (2)" or just "ROSSI"."""
+    import re
+    out=[]
+    for line in scorer_lines(value):
+        if line=='-':
+            continue
+        minutes=re.findall(r"\d{1,3}\s*'", line)
+        times=re.search(r'x\s*(\d)|\((\d)\)', line, re.I)
+        count=len(minutes) or (int(times.group(1) or times.group(2)) if times else 1)
+        name=re.split(r"\s+x\s*\d|\(|\d", line, maxsplit=1, flags=re.I)[0].strip(" ,.-'(").upper()
+        out+=[name]*max(1,count)
+    return out
+
+
+def _interleave(a,b):
+    """Without minutes the real order is unknown: spread the two sides' goals evenly (home first on a tie)."""
+    keys=[((i+.5)/a,0,i) for i in range(a)]+[((j+.5)/b,1,j) for j in range(b)]
+    return [('home' if side==0 else 'away',i) for _,side,i in sorted(keys)]
+
+
 def replay_events(config):
-    """Goals in time order [(minute, 'home'|'away', name)] when every goal has its minute, else None."""
+    """Goals in order [(minute or None, 'home'|'away', name)]; None when there is nothing to tell.
+
+    Every goal with its minute: real time order and a match clock. Otherwise the score still rises goal
+    by goal with the scorers' names, in an even order (minute None)."""
     a,b=int(config.get('home_score',0)),int(config.get('away_score',0))
     if not config.get('show_scorers',True) or a+b==0:
         return None
     home,away=goal_minutes(config.get('home_scorers','')),goal_minutes(config.get('away_scorers',''))
-    if home is None or away is None or len(home)!=a or len(away)!=b:
-        return None
-    return sorted([(m,'home',n) for m,n in home]+[(m,'away',n) for m,n in away])
+    if home is not None and away is not None and len(home)==a and len(away)==b:
+        return sorted([(m,'home',n) for m,n in home]+[(m,'away',n) for m,n in away])
+    names={'home':scorer_goals(config.get('home_scorers','')),'away':scorer_goals(config.get('away_scorers',''))}
+    return [(None,side,names[side][i] if i<len(names[side]) else '') for side,i in _interleave(a,b)]
+
+
+def replay_timed(events):
+    return bool(events) and all(m is not None for m,_,_ in events)
 
 
 def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
@@ -115,7 +144,8 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
                 im=_decorate_text(text_image(f'{score[0]}-{score[1]}',style,config.get('score_size',54),yellow,142,font_bytes,s,63),s)
                 steps.append((minute,side,name,im))
             zero=_decorate_text(text_image('0-0',style,config.get('score_size',54),yellow,142,font_bytes,s,63),s)
-            layers[-1].replay=dict(events=steps,zero=zero,length=max(50,events[-1][0]+2))
+            timed=replay_timed(events)
+            layers[-1].replay=dict(events=steps,zero=zero,timed=timed,length=max(50,events[-1][0]+2) if timed else len(steps))
     if config.get('show_penalties',False) and config.get('home_score',0)==config.get('away_score',0):
         text('penalties',f"{config.get('home_penalties',0)}-{config.get('away_penalties',0)} D.C.R.",10,white,142,12)
     ours='away' if config.get('our_side','Casa')=='Ospiti' else 'home'

@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import animations
+import focus
 import motion
 import safezone
 from crt_presets import apply_preset
@@ -296,7 +297,10 @@ class Replay(unittest.TestCase):
         self.assertIsNone(f.goal_minutes("TEU\nCOCCO 30'"))
         config = dict(defaults('Full Time'), home_score=2, away_score=1, home_scorers="TEU 12'\nCOCCO 30'", away_scorers="ROSSI 20'")
         self.assertEqual(f.replay_events(config), [(12, 'home', 'TEU'), (20, 'away', 'ROSSI'), (30, 'home', 'COCCO')])
-        self.assertIsNone(f.replay_events(dict(config, home_score=3)))          # a goal without its minute
+        loose = f.replay_events(dict(config, home_score=3))                     # a goal without its minute
+        self.assertFalse(f.replay_timed(loose))
+        self.assertEqual([(s, n) for _, s, n in loose], [('home', 'TEU'), ('home', 'COCCO'), ('away', 'ROSSI'), ('home', '')])
+        self.assertEqual(f.scorer_goals("CAVA x2\nROSSI (2)\nTEU 12', 40'\nBIANCHI"), ['CAVA']*2+['ROSSI']*2+['TEU']*2+['BIANCHI'])
         self.assertIsNone(f.replay_events(dict(config, show_scorers=False)))
 
     def test_score_goes_step_by_step(self):
@@ -311,8 +315,22 @@ class Replay(unittest.TestCase):
         self.assertGreater(scorers.start, score.start+score.dur-.2)          # the scorers wait for the replay
         frames = [np.asarray(animations.compose(prepared, g[0]+.35, True), np.int16) for g in goals]
         self.assertGreater(np.abs(frames[0]-frames[1])[420:480, 190:350].mean(), 2)
-        plain, _ = scene('Full Time', power_on=False, home_score=2, away_score=1)
+        plain, _ = scene('Full Time', power_on=False, home_score=2, away_score=1, show_scorers=False)
         self.assertEqual(next(l for l in plain[1] if l.id == 'score').anim, 'count')
+
+    def test_goal_by_goal_without_minutes(self):
+        """The minutes are rarely known: the score still rises goal by goal, with the names and no clock."""
+        prepared, _ = scene('Full Time', power_on=False, home_score=3, away_score=1,
+                            home_scorers='TEU x2\nCOCCO', away_scorers='ROSSI')
+        score = next(l for l in prepared[1] if l.id == 'score')
+        self.assertEqual(score.anim, 'replay')
+        self.assertFalse(score.replay['timed'])
+        goals = [m for m in animations.moments(prepared) if m[1] == 'replay_goal']
+        self.assertEqual([g[2]['side'] for g in goals], ['home', 'home', 'away', 'home'])
+        self.assertTrue(all(abs((b[0]-a[0])-focus.GOAL_STEP) < .01 for a, b in zip(goals, goals[1:])))
+        frames = [np.asarray(animations.compose(prepared, g[0]+.35, True), np.int16) for g in goals]
+        self.assertGreater(np.abs(frames[0]-frames[1])[420:480, 190:350].mean(), 2)
+        self.assertGreater(np.abs(frames[1]-frames[2])[600:630, 112:428].mean(), .5)   # the row of goals fills in
 
     def test_month_tally(self):
         prepared, _ = scene('Calendario', power_on=False)
