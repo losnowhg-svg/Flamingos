@@ -57,6 +57,11 @@ KINDS = {'Matchday Screen': 'matchday', 'Full Time': 'fulltime', 'Convocati': 'c
          'Calendario': 'calendario'}
 
 
+def r_output(image, config):
+    from crt_presets import output_image
+    return output_image(image, config.get('export_format', 'Story 9:16'), 1)
+
+
 def listen_track(config, template=None, key_name='listen'):
     """▶ Ascolta: the chosen track (or the one 'Automatica' picks now), without rendering a video."""
     import music
@@ -183,15 +188,18 @@ def show_studio(root: Path, template: str, library: dict):
 
     # ---------------------------------------------------------------- header
     title, subtitle = HEADERS[template]
-    head, back = st.columns([5, 1])
-    with head:
-        st.subheader(title)
-        st.caption(subtitle)
-    with back:
-        st.button('← Settimana', key=key('home'), on_click=go, args=('Settimana',), width='stretch')
+    with st.container(key='page_head'):
+        head, back = st.columns([5, 1])
+        with head:
+            st.subheader(title)
+            st.caption(subtitle)
+        with back:
+            st.button('← Settimana', key=key('home'), on_click=go, args=('Settimana',), width='stretch')
     todo = data_status(template, config)
     if todo:
         st.info('Ancora da completare: '+', '.join(todo)+'.', icon='✏️')
+    # Phone only (CSS): a small preview that stays at the top while the controls scroll under it.
+    mobile_slot = st.container(key='mobile_preview')
 
     controls, preview_column = st.columns([1, 1.1], gap='large')
     with controls:
@@ -682,6 +690,16 @@ def show_studio(root: Path, template: str, library: dict):
             editor_payload = r.editor_data(editor_scene)
             st.session_state['preview_'+template] = {'key': preview_key, 'prepared': prepared, 'payload': editor_payload}
         crop = CROPS[config['export_format']] if is_crt else None
+        with mobile_slot:
+            small = st.session_state.get('mobile_png_'+template)
+            if not small or small[0] != preview_key:
+                still = module.compose(prepared, 999, False) if is_crt else r.compose(prepared, animated=False)
+                image = r_output(still, config) if is_crt else still
+                image.thumbnail((480, 480))
+                small = (preview_key, image)
+                st.session_state['mobile_png_'+template] = small
+            st.image(small[1])
+            st.caption('Anteprima · le modifiche si vedono qui')
         # ------------------------------------------------------ PREVIEW
         with preview_column:
             zones = safezone.editor_zones(config['export_format']) if is_crt else None

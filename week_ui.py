@@ -500,13 +500,14 @@ def show_week(root: Path, library):
     if st.session_state.get('standings_import_error'):
         st.error('Il segnalibro ha inviato una pagina senza classifica leggibile: '+st.session_state.pop('standings_import_error'))
     left, right = st.columns(2, gap='large')
-    with left:
+    with left:      # on a phone the columns stack: CSI, match, then the squad (done once) and sponsor
         show_csi(library)
-        show_squad(library)
-    with right:
         show_match_form(library)
+    with right:
+        show_squad(library)
         show_sponsor(library)
     st.divider()
-    show_graphics(root, library)
+    with st.container(key='week_grid'):
+        show_graphics(root, library)
     st.divider()
     show_kit(root, library)

@@ -19,9 +19,29 @@ button[data-baseweb="tab"] p{font-size:1rem;font-weight:650}
 [data-testid="stSidebar"] [role="radiogroup"] label p{font-size:1rem}
 h4{margin-bottom:.2rem!important}
 @media (max-width:640px){.block-container{padding-left:.8rem;padding-right:.8rem}h1{font-size:1.6rem!important}}
+/* --- 3.6 phone layout ------------------------------------------------------------- */
+.st-key-mobile_nav,.st-key-mobile_preview{display:none}
+@media (max-width:640px){
+ .block-container{padding-top:1rem!important}
+ .st-key-app_head h1{font-size:1.15rem!important;margin:0!important;padding:.2rem 0!important}
+ .st-key-app_head [data-testid="stCaptionContainer"]{display:none}
+ .st-key-mobile_nav{display:block}
+ .st-key-mobile_nav label{display:none}
+ .st-key-page_head [data-testid="stCaptionContainer"]{display:none}
+ .st-key-page_head h3{font-size:1.25rem!important;padding:.1rem 0!important}
+ .st-key-mobile_preview{display:block;position:sticky;top:0;z-index:50;background:#100d16;
+   padding:.35rem 0 .45rem;border-bottom:1px solid #3c2d44;margin-bottom:.4rem}
+ .st-key-mobile_preview img{max-height:36vh;width:auto!important;margin:0 auto;display:block;border-radius:8px}
+ .st-key-mobile_preview [data-testid="stCaptionContainer"]{text-align:center;margin-top:.15rem}
+ .stButton button,.stDownloadButton button{min-height:44px}
+ [data-testid="stSidebar"] [role="radiogroup"] label{padding:9px 0}
+ .st-key-week_grid img{max-height:230px;object-fit:contain}
+ button[data-baseweb="tab"]{padding-left:.4rem!important;padding-right:.4rem!important}
+}
 </style>''',unsafe_allow_html=True)
-st.title('FLAMINGOS STUDIO')
-st.caption('3.5 / posta in gioco: posizione e punti nel Matchday, distanza in classifica')
+with st.container(key='app_head'):
+    st.title('FLAMINGOS STUDIO')
+    st.caption('3.6 / su telefono: menu in alto, anteprima sempre visibile mentre modifichi')
 
 from library import show_library
 from studio_ui import show_studio
@@ -53,11 +73,20 @@ if incoming:
     st.session_state['studio_template'] = 'Settimana'
     st.query_params.clear()
 
+def _from_phone_menu():
+    st.session_state['studio_template'] = st.session_state['mobile_nav_select']
+
+
 with st.sidebar:
     st.header('Il tuo studio')
     if st.session_state.get('studio_template') not in PAGES:
         st.session_state['studio_template'] = 'Settimana'
     template = st.radio('Vai a',list(PAGES),format_func=PAGES.get,key='studio_template')
+# On a phone the sidebar hides behind a button: the same menu, one tap away at the top (CSS shows it only there).
+if st.session_state.get('mobile_nav_select') != template:
+    st.session_state['mobile_nav_select'] = template
+with st.container(key='mobile_nav'):
+    st.selectbox('Vai a', list(PAGES), format_func=PAGES.get, key='mobile_nav_select', on_change=_from_phone_menu)
 
 library = show_library()
 if library is None:
