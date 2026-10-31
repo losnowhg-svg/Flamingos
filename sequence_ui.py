@@ -33,7 +33,8 @@ def current_config(template):
     models = st.session_state.setdefault('studio_models', {})
     if template not in models:
         models[template] = defaults(template)
-    return apply_sponsor(sanitize_config(template, models[template]))
+    import stakes
+    return stakes.attach(template, apply_sponsor(sanitize_config(template, models[template])), models)
 
 
 def resolve_assets(root: Path, template, config, assets):

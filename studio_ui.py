@@ -110,6 +110,8 @@ def show_studio(root: Path, template: str, library: dict):
     config = models[template]
     from sequence_ui import apply_sponsor
     apply_sponsor(config)
+    import stakes
+    stakes.attach(template, config, models)      # standings of both teams, for the Matchday video
     revisions = st.session_state.setdefault('studio_revisions', {})
     revision = revisions.setdefault(template, 0)
     namespace = SLUGS[template]+f'_{revision}'
@@ -781,6 +783,13 @@ def show_studio(root: Path, template: str, library: dict):
                                 'Calendario': 'Ogni risultato entra con un ding; la prossima partita lampeggia.',
                                 'Convocati': 'Lista scritta come su un terminale, luce dorata sul capitano. '
                                              'Nei reparti gli avatar sbattono le palpebre.'}.get(template, ''))
+                    if template == 'Matchday Screen':
+                        if config.get('stakes'):
+                            st.caption('Nel video i riquadri dei nomi mostrano posizione e punti delle due squadre, '
+                                       'con la distanza sotto il VS (dalla Classifica).')
+                        else:
+                            st.caption('Aggiorna la Classifica (con questo avversario dentro) e nel video compariranno '
+                                       'posizione e punti delle due squadre.')
                     a, b = st.columns(2)
                     with a:
                         import variety

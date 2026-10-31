@@ -1,4 +1,13 @@
-# Flamingos Studio 3.4
+# Flamingos Studio 3.5
+
+## Novita della 3.5: la posta in gioco
+
+- **Matchday (video):** dopo lo scontro degli stemmi i riquadri dei nomi si trasformano in **posizione e punti** delle
+  due squadre (es. 2° 17 PT contro 1° 19 PT) e sotto il VS compare la distanza, con la freccia verso chi sta davanti
+  (o PARI). Poi tornano i nomi. I dati arrivano da soli dalla Classifica: basta che l'avversario ci sia. Il cambio
+  avviene in tre modi diversi (si gira, scorre, glitch) che ruotano per giornata.
+- **Classifica (video):** dopo l'indicatore, una parentesi collega la nostra riga a quella sopra con i punti che
+  mancano (**-2 PT**); se siamo primi, il vantaggio sulla seconda (**+3 PT**, verde).
 
 ## Novita della 3.4: lo stesso dettaglio ovunque, con senso e con varieta
 

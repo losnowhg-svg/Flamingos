@@ -115,6 +115,9 @@ def prepare(prepared, config, kind):
     import frames
     frames.store(info, config)
     info['highlight'] = config.get('highlight', 'auto')
+    info['our_side'] = config.get('our_side', 'Casa')
+    stakes = config.get('stakes')
+    info['stakes'] = stakes if kind == 'matchday' and isinstance(stakes, dict) and {'home', 'away'} <= set(stakes) else None
     info['camera'] = motion.camera(config)
     info['fx'] = motion.ambient(config)
     info['crest'] = _crest(layers, config, kind)
@@ -256,6 +259,12 @@ def moments(prepared):
     if info.get('kind') == 'matchday' and by_id.get('home_logo') and getattr(by_id['home_logo'], 'anim', '') == 'slide_left':
         l = by_id['home_logo']
         out.append((offset+l.start+l.dur, 'impact', dict(strength=1.0, flash=True)))
+    names = [by_id[n] for n in ('home_name', 'away_name') if n in by_id]
+    if info.get('kind') == 'matchday' and info.get('stakes') and names:
+        import focus
+        ready = max(offset+n.start+n.dur for n in names)
+        crash = offset+by_id['home_logo'].start+by_id['home_logo'].dur if 'home_logo' in by_id else 0
+        out.append((max(ready, crash)+.6, 'stakes', dict(info['stakes'], style=focus.stake_style(info))))
     for l in layers:
         if getattr(l, 'anim', '') == 'drop':
             out.append((offset+l.start+l.dur, 'impact', dict(strength=.45, flash=False)))
@@ -287,6 +296,8 @@ def moments(prepared):
             out.append((end+landing, 'climb', dict(ours=meta['ours'], prev=meta['prev'], mode=mode, lead=landing)))
         if info.get('kind') == 'classifica' and meta.get('first'):
             out.append((end+(landing+.35 if landing else 0), 'crown', dict(ours=meta['ours'])))
+        if info.get('kind') == 'classifica' and meta.get('gap'):
+            out.append((end+(landing+1.0 if landing else .4), 'gap', dict(meta['gap'])))
         if info.get('kind') == 'calendario':
             results = meta.get('row_results') or []
             nxt = meta.get('next_row')
@@ -306,7 +317,7 @@ def intro_length(prepared):
     end = _offset(prepared)+max(l.start+l.dur for l in layers)
     for t, kind, _ in moments(prepared):
         end = max(end, t+{'banner': 1.3, 'climb': 1.3, 'crown': 1.0, 'goal': .8, 'points': .8, 'stamp': 2.6,
-                          'captain': 1.5, 'focus_score': 1.4}.get(kind, .3))
+                          'captain': 1.5, 'focus_score': 1.4, 'stakes': 3.2, 'gap': .9}.get(kind, .3))
     return end
 
 
@@ -363,6 +374,11 @@ def events(prepared):
                 out.append((t+.95, 'whoosh', 0))
         elif kind == 'captain':
             out.append((t, 'whoosh', 0))
+        elif kind == 'stakes':
+            out.append((t, 'glitch' if data['style'] == 'glitch' else 'blip', 3))
+            out.append((t+2.6, 'blip', 1))
+        elif kind == 'gap':
+            out.append((t+.45, 'tick', 2))
         elif kind == 'climb':
             out.append((t-data['lead']+.75, 'whoosh', 0))
             out.append((t, {'up': 'climb', 'same': 'ding', 'down': 'impact'}[data['mode']], 0))
@@ -910,6 +926,8 @@ def _compose(prepared, t=999, animated=True):
     focus_moment = next(((at, d) for at, k, d in all_moments if k == 'climb'), None)
     backdrop = canvas.copy() if focus_moment and t >= focus_moment[0]-focus_moment[1]['lead'] else None
     stamping = any(k in ('stamp', 'focus_score', 'captain') and 0 <= t-at < .8 for at, k, _ in all_moments)
+    stakes_moment = next(((at, d) for at, k, d in all_moments if k == 'stakes' and 0 <= t-at <= 3.2), None)
+    clean = canvas.copy() if stakes_moment else None      # the background, to lift the names off the panels
     for layer in layers:
         shown = layer
         if focus_moment and getattr(layer, 'before', None) is not None:
@@ -930,6 +948,11 @@ def _compose(prepared, t=999, animated=True):
         backdrop = canvas.copy()
     import focus
     focus.overlays(canvas, prepared, all_moments, t, backdrop)
+    if stakes_moment:
+        focus.stakes_overlay(canvas, prepared, stakes_moment[1], t-stakes_moment[0], clean)
+    for at, kind, data in all_moments:
+        if kind == 'gap':
+            focus.gap_overlay(canvas, prepared, data, t-at)
     z, cx, cy = focus.camera_at(prepared, all_moments, t)
     if z > 1.0005:
         canvas = motion._affine(canvas, z, 0, 0, 0, cx*s, cy*s)
