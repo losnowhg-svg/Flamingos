@@ -25,8 +25,18 @@ def settle(page, seconds=6):
     time.sleep(1.5)
 
 
-def shot(page, name):
-    page.screenshot(path=str(OUT/f'{name}.png'), full_page=True)
+def shot(page, name, tall=True):
+    """The whole page: the viewport is made very tall (Streamlit scrolls inside its own container)."""
+    page.screenshot(path=str(OUT/f'{name}_schermo.png'))
+    if tall:
+        height = page.evaluate("""() => {
+            const m = document.querySelector('[data-testid="stMain"]') || document.querySelector('section.main');
+            return m ? m.scrollHeight : document.body.scrollHeight }""")
+        page.set_viewport_size({'width': 390, 'height': min(16000, int(height)+60)})
+        time.sleep(2)
+        page.screenshot(path=str(OUT/f'{name}.png'))
+        page.set_viewport_size({'width': 390, 'height': 664})
+        time.sleep(1)
     print('shot', name, flush=True)
 
 
@@ -50,7 +60,7 @@ with sync_playwright() as p:
                 opener.first.click()
                 time.sleep(1)
             if i == 0:
-                shot(page, '01_menu_aperto')
+                shot(page, '01_menu_aperto', tall=False)
             page.locator('[data-testid="stSidebar"]').get_by_text(name, exact=False).first.click()
             settle(page, 25)
             closer = page.locator('[data-testid="stSidebarCollapseButton"] button, [data-testid="stSidebar"] button[kind="headerNoPadding"]')
