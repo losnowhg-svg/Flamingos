@@ -21,7 +21,7 @@ h4{margin-bottom:.2rem!important}
 @media (max-width:640px){.block-container{padding-left:.8rem;padding-right:.8rem}h1{font-size:1.6rem!important}}
 </style>''',unsafe_allow_html=True)
 st.title('FLAMINGOS STUDIO')
-st.caption('3.2 / Reel pro: zona sicura Instagram, animazioni a tempo di musica, 60 fps')
+st.caption('3.3 / dettagli: la classifica che si riordina, movimenti piu morbidi')
 
 from library import show_library
 from studio_ui import show_studio

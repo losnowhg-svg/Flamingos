@@ -1,4 +1,14 @@
-# Flamingos Studio 3.2
+# Flamingos Studio 3.3
+
+## Novita della 3.3: i dettagli delle animazioni
+
+- **Classifica che si riordina** (video, con *Posizione settimana scorsa* compilata): la tabella entra
+  nell'ordine della settimana prima, la camera si avvicina alla nostra riga, la riga sale (o scende) superando le altre
+  che le fanno spazio, atterra con un lampo e a destra compare l'indicatore: verde ▲ con i posti guadagnati, giallo = se
+  siamo rimasti li, rosso ▼ con i posti persi. Poi la camera torna indietro e l'indicatore resta. Con la musica
+  l'atterraggio cade sul drop o sulla battuta. Nel PNG resta la freccina accanto al nome (ora anche = in giallo).
+- **Movimenti piu morbidi:** le entrate che cadono, si tuffano o rimbalzano hanno una breve scia di movimento; la camera
+  di focus usa curve senza scatti all'inizio e alla fine.
 
 ## Novita della 3.2: Reel pro
 
