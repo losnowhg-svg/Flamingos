@@ -22,6 +22,7 @@ import animations
 import atmospheres
 import frames
 import motion
+import music_ui
 import themes
 import safezone
 import title_fx
@@ -69,7 +70,10 @@ def listen_track(config, template=None, key_name='listen'):
     template = template or st.session_state.get('studio_template')
     outcome = f.outcome(config)[0] if template == 'Full Time' else None
     track = variety.music_track(config, KINDS.get(template, ''), outcome, themes.resolve(config) or '')
-    if st.toggle('▶ Ascolta il brano', key=f'{key_name}_{template}'):
+    if config.get('music_track') == 'mio' and not config.get('music_custom'):
+        return
+    if st.toggle('▶ Ascolta il pezzo che suonerà nel video' if config.get('music_track') == 'mio' else '▶ Ascolta il brano',
+                 key=f'{key_name}_{template}'):
         if config.get('music_track', 'auto') == 'auto':
             st.caption(f'Automatica, questa settimana: {variety.MUSIC_TRACKS.get(track, track)}')
         try:
@@ -282,6 +286,12 @@ def show_studio(root: Path, template: str, library: dict):
                                                      max_chars=1200, key=key(field), placeholder="ROSSI 12', 38'\nBIANCHI 44'")
                         if len(f.scorer_lines(config[field])) > 6:
                             st.warning('Massimo 6 righe: raggruppa i gol dello stesso giocatore.')
+                events = f.replay_events(config)
+                if events and f.replay_timed(events):
+                    st.caption('🎞 Nel video il risultato si racconta gol per gol, con il minuto e il marcatore.')
+                elif events:
+                    st.caption('🎞 Nel video il risultato sale gol per gol con i marcatori (CAVA x2 vale due gol). '
+                               'Senza minuti l\'ordine dei gol è indicativo; se un giorno li hai, compare anche l\'orologio.')
             if check('show_penalties', 'Decisa ai rigori'):
                 a, b = st.columns(2)
                 with a: number('home_penalties', 'Rigori segnati casa', 0, 99)
@@ -417,7 +427,15 @@ def show_studio(root: Path, template: str, library: dict):
             a, b = st.columns(2)
             with a: text('round_label', 'Giornata', 36)
             with b: text('our_team', 'La nostra squadra', 34)
-            number('prev_pos', 'Nostra posizione la settimana scorsa (0 = non mostrare la freccia)', 0, 30)
+            number('prev_pos', 'Posizione della settimana scorsa (anima la classifica nel video)', 0, 30)
+            ours_now = next((int(x.get('pos', i+1)) for i, x in enumerate(active) if k.is_ours(x['team'], config['our_team'])), None)
+            if not config['prev_pos']:
+                st.caption('Con 0 non c\'e animazione. Si compila da sola quando aggiorni la classifica dal CSI '
+                           '(se quella vecchia era vera); altrimenti scrivila qui.')
+            elif ours_now:
+                change = config['prev_pos']-ours_now
+                st.caption(f"Nel video: dal {config['prev_pos']}° al {ours_now}° "
+                           + ('(▲ %d, verde)' % change if change > 0 else '(▼ %d, rosso)' % -change if change < 0 else '(=, giallo)'))
             if check('show_zones', 'Colora promozione e spareggio'):
                 a, b = st.columns(2)
                 with a: number('promo_count', 'Posti promozione', 0, 8)
@@ -821,6 +839,10 @@ def show_studio(root: Path, template: str, library: dict):
                             select('intro_style', 'Che intro', variety.INTRO_STYLES, variety.INTRO_STYLES.get)
                         if check('music', 'Musica'):
                             select('music_track', 'Brano', variety.MUSIC_TRACKS, variety.MUSIC_TRACKS.get)
+                            if config['music_track'] == 'mio':
+                                music_ui.uploader(config, key('my_music_file'))
+                            else:
+                                config.pop('music_custom', None)
                             listen_track(config)
                     with b:
                         check('details', 'Dettagli VHS: REC, contatore, disturbi')
@@ -847,7 +869,8 @@ def show_studio(root: Path, template: str, library: dict):
                 check('sound', 'Suoni CRT')
                 if config['sound'] or config.get('music'): slider('volume', 'Volume', 0, 100)
             video_signature = hashlib.sha256((signature+str(config['duration'])+str(config['fps'])+str(config['video_scale'])
-                                              + str(config['sound'])+str(config.get('music'))+str(config['volume'])).encode()).hexdigest()
+                                              + str(config['sound'])+str(config.get('music'))+str(config['volume'])
+                                              + (music_ui.signature(config) if config.get('music') else '')).encode()).hexdigest()
             a, b = st.columns(2)
             quick = a.button('⚡ Anteprima veloce', key=key('quick_video'), width='stretch',
                              help='540 px, 12 fotogrammi al secondo, senza audio: per controllare le animazioni in pochi secondi.')

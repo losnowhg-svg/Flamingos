@@ -111,12 +111,14 @@ for template in ('Matchday Screen', 'Full Time', 'Convocati', 'Classifica', 'Cal
     done.append(template+' PNG')
 renderer.png_bytes(defaults('Starting 7'), LOGO, None, 1, 1)
 done.append('Starting 7 PNG')
-tracks = [t for t in music.TRACKS]+['arcade', 'epica', 'tensione', 'festa']
+import tracks as real
+real_key, _ = real.register(Path(__ROOT__, 'assets', 'music', 'city_lights.m4a').read_bytes(), 'upload')
+tracks = [t for t in music.TRACKS]+list(real.LIBRARY)+[real_key, 'arcade', 'epica', 'tensione', 'festa']
 with tempfile.TemporaryDirectory() as folder:
     for i, template in enumerate(('Matchday Screen', 'Full Time', 'Convocati', 'Classifica', 'Calendario')):
         module = MODULES[template]
         config = dict(apply_preset(defaults(template), 'acquario'), **FANCY)
-        config.update(motion.REEL, music_track=tracks[i % len(tracks)], camera=('parallasse', 'ritmo', 'zoom')[i % 3],
+        config.update(motion.REEL, music_track=('cc0_robots', 'synthwave', 'cc0_funk', 'arcade', 'cc0_rush')[i], camera=('parallasse', 'ritmo', 'zoom')[i % 3],
                       ending=('pixel', 'glitch', 'zoom', 'tendina', 'loop')[i], duration=3)
         path = Path(folder, f'{i}.mp4')
         module.render_video(config, LOGO, CREST, path, None, 6, 3, 'Story 9:16', 1)
@@ -128,7 +130,7 @@ with tempfile.TemporaryDirectory() as folder:
         done.append(template+' video + audio')
     for track in tracks:
         assert len(sounds.chiptune(2, 0, track=track)) > 0
-        music.preview_wav(track) if track in music.TRACKS else None
+        music.preview_wav(track) if track in music.TRACKS or real.is_real(track) else None
     done.append('tutte le musiche')
     scenes = [(MODULES[t].scene(dict(apply_preset(defaults(t), 'crt'), theme='none', music=True), LOGO, None, None, 1),
                MODULES[t].compose) for t in ('Matchday Screen', 'Classifica')]

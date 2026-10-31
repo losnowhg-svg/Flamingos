@@ -169,9 +169,13 @@ def show_sequence(root: Path, library):
                 state['music_track'] = st.selectbox('Brano', tracks, index=tracks.index(state.get('music_track', 'auto'))
                                                     if state.get('music_track', 'auto') in tracks else 0,
                                                     format_func=variety.MUSIC_TRACKS.get, key='seq_music_track')
-                if state['music_track'] != 'auto' and st.toggle('▶ Ascolta il brano', key='seq_listen'):
+                import music_ui
+                if state['music_track'] == 'mio':
+                    music_ui.uploader({}, 'seq_my_music_file')
+                listen = music_ui.custom_key() if state['music_track'] == 'mio' else state['music_track']
+                if listen and state['music_track'] != 'auto' and st.toggle('▶ Ascolta il brano', key='seq_listen'):
                     import music
-                    st.audio(music.preview_wav(state['music_track']), format='audio/wav')
+                    st.audio(music.preview_wav(listen), format='audio/wav')
             if state['sound'] or state['music']:
                 state['volume'] = st.slider('Volume', 0, 100, int(state['volume']), key='seq_volume')
             choices = ('own',)+PRESET_IDS
@@ -203,7 +207,12 @@ def show_sequence(root: Path, library):
                     transitions = list(transitions)+['channel']
                 for prepared, _ in scenes:
                     prepared[0].info['music'] = bool(state.get('music'))
-                    if state.get('music_track', 'auto') != 'auto':
+                    if state.get('music_track', 'auto') == 'mio':
+                        import music_ui
+                        mine = music_ui.custom_key()
+                        if mine:
+                            prepared[0].info['music_track'] = mine
+                    elif state.get('music_track', 'auto') != 'auto':
                         prepared[0].info['music_track'] = state['music_track']
                 with tempfile.TemporaryDirectory() as directory:
                     path = Path(directory)/'sequenza.mp4'

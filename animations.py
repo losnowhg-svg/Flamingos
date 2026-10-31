@@ -61,6 +61,8 @@ def _kind(layer, kind):
     if layer.id == 'vs':
         return 'pop'
     if layer.id in ('score', 'big'):
+        if getattr(layer, 'replay', None):
+            return 'replay'
         return 'count' if getattr(layer, 'variants', None) else 'pop'
     if layer.id == 'result':
         return 'pop'
@@ -86,6 +88,9 @@ def _duration(layer, kind):
         return .45
     if kind == 'count':
         return len(layer.variants)*.12+.1
+    if kind == 'replay':
+        import focus
+        return focus.replay_length(layer.replay)
     if kind in ('pixelate', 'bounce', 'wipe', 'zoom'):
         return {'pixelate': .55, 'bounce': .75, 'wipe': .5, 'zoom': .5}[kind]
     if kind == 'rows':
@@ -123,6 +128,8 @@ def prepare(prepared, config, kind):
     info['crest'] = _crest(layers, config, kind)
     family = motion.entrance(config)
     info['music_track'] = variety.music_track(config, kind, info.get('outcome'), info.get('theme', ''))
+    import tracks
+    info['beat'] = tracks.beat(info['music_track']) if info['music'] else None
     timeline = TIMELINES.get(kind, {})
     last = max(timeline.values(), default=0)
     players = [l for l in layers if l.id.startswith('player_')]
@@ -142,6 +149,12 @@ def prepare(prepared, config, kind):
         if info['music']:
             layer.start = round(layer.start/BEAT)*BEAT
         layer.dur = _duration(layer, layer.anim)
+    score = next((l for l in layers if l.id == 'score' and l.anim == 'replay'), None)
+    if score is not None:   # the goal replay takes longer than the slot machine: what follows waits for it
+        extra = score.dur-(len(getattr(score, 'variants', [])) or 1)*.12-.1
+        for layer in layers:
+            if layer is not score and layer.start > score.start:
+                layer.start += max(0.0, extra)
     if info['music']:
         sync_to_music(prepared)
     return prepared
@@ -162,7 +175,7 @@ def _anchor(prepared):
             continue
         if kind == 'impact':
             owner = 'home_logo' if prepared[0].info.get('kind') == 'matchday' and 'home_logo' in by_id else None
-            if owner is None and 'score' in by_id and getattr(by_id['score'], 'anim', '') == 'count':
+            if owner is None and 'score' in by_id and getattr(by_id['score'], 'anim', '') in ('count', 'replay'):
                 owner = 'score'
             if owner is None:
                 continue
@@ -189,17 +202,25 @@ def sync_to_music(prepared):
     offset = _offset(prepared)
     old = layer.start
     moment = offset+old+extra
+    beat = prepared[0].info.get('beat')
+    bar = 4*beat[0] if beat else MUSIC_BAR       # a real track has its own tempo
     target = DROP
     while target < moment-.3:
-        target += MUSIC_BAR
+        target += bar
 
     def valid(at):
         start = at-offset-extra
         return start >= 0 and ((old > 0 and .6 <= start/old <= 2.6) or (old == 0 and start <= 1.5))
     if not valid(target):
-        target = MUSIC_BAR        # too early for the drop: the first downbeat of the intro
-        if target < moment-.3 or not valid(target):
-            return
+        if beat:      # too early for the drop: the closest beat of the intro that keeps the pace natural
+            options = sorted((DROP-n*beat[0] for n in range(1, 9)), key=lambda at: abs(at-moment))
+            target = next((at for at in options if at >= moment-.7 and valid(at)), None)
+            if target is None:
+                return
+        else:
+            target = MUSIC_BAR        # too early for the drop: the first downbeat of the intro
+            if target < moment-.3 or not valid(target):
+                return
     new = target-offset-extra
     factor = new/old if old > 0 else 1.0
     for item in prepared[1]:
@@ -273,14 +294,18 @@ def moments(prepared):
             if info.get('kind') == 'convocati':
                 out.append((offset+l.start+l.dur+.15, 'captain', dict(layer=l.id)))
     score = by_id.get('score')
-    if score is not None and getattr(score, 'anim', '') == 'count':
+    if score is not None and getattr(score, 'anim', '') == 'replay':
+        import focus
+        for at, side, name in focus.replay_goals(score.replay):
+            out.append((offset+score.start+at, 'replay_goal', dict(side=side)))
+    if score is not None and getattr(score, 'anim', '') in ('count', 'replay'):
         end = offset+score.start+score.dur
         out.append((end, 'impact', dict(strength=1.0, flash=True)))
         out.append((end, 'focus_score', {}))
         if info.get('outcome') in ('win', 'draw', 'loss'):
             import focus
             out.append((end+2.4, 'points', dict(outcome=info['outcome'], style=focus.chip_style(info))))
-        if info.get('our_goals', 0) > 0:
+        if info.get('our_goals', 0) > 0 and score.anim == 'count':   # the replay celebrates each goal itself
             out.append((end, 'goal', dict(layer='score')))
         if info.get('outcome'):
             out.append((end+1.0, 'banner', dict(outcome=info['outcome'])))
@@ -298,6 +323,8 @@ def moments(prepared):
             out.append((end+(landing+.35 if landing else 0), 'crown', dict(ours=meta['ours'])))
         if info.get('kind') == 'classifica' and meta.get('gap'):
             out.append((end+(landing+1.0 if landing else .4), 'gap', dict(meta['gap'])))
+        if info.get('kind') == 'calendario' and meta.get('tally') and 'subtitle' in by_id:
+            out.append((end+(4.4 if meta.get('next_row') is not None else 1.2), 'tally', dict(meta['tally'])))
         if info.get('kind') == 'calendario':
             results = meta.get('row_results') or []
             nxt = meta.get('next_row')
@@ -317,7 +344,7 @@ def intro_length(prepared):
     end = _offset(prepared)+max(l.start+l.dur for l in layers)
     for t, kind, _ in moments(prepared):
         end = max(end, t+{'banner': 1.3, 'climb': 1.3, 'crown': 1.0, 'goal': .8, 'points': .8, 'stamp': 2.6,
-                          'captain': 1.5, 'focus_score': 1.4, 'stakes': 3.2, 'gap': .9}.get(kind, .3))
+                          'captain': 1.5, 'focus_score': 1.4, 'stakes': 3.2, 'gap': .9, 'tally': 3.2}.get(kind, .3))
     return end
 
 
@@ -374,11 +401,16 @@ def events(prepared):
                 out.append((t+.95, 'whoosh', 0))
         elif kind == 'captain':
             out.append((t, 'whoosh', 0))
+        elif kind == 'replay_goal':
+            out.append((t, 'goal' if data['side'] == ('away' if info.get('our_side') == 'Ospiti' else 'home') else 'impact', 0))
         elif kind == 'stakes':
             out.append((t, 'glitch' if data['style'] == 'glitch' else 'blip', 3))
             out.append((t+2.6, 'blip', 1))
         elif kind == 'gap':
             out.append((t+.45, 'tick', 2))
+        elif kind == 'tally':
+            out.append((t, 'blip', 4))
+            out.append((t+2.6, 'blip', 1))
         elif kind == 'climb':
             out.append((t-data['lead']+.75, 'whoosh', 0))
             out.append((t, {'up': 'climb', 'same': 'ding', 'down': 'impact'}[data['mode']], 0))
@@ -598,6 +630,10 @@ def _draw(canvas, layer, pos, local, frame_index, t, info):
     a = min(1.0, local/layer.dur)
     s = canvas.width/540
     kind = layer.anim
+    if kind == 'replay':
+        import focus
+        focus.draw_replay(canvas, layer, pos, local, info)
+        return
     if kind == 'count':
         if a < 1:
             # Slot machine: the digits roll down between values.
@@ -926,7 +962,7 @@ def _compose(prepared, t=999, animated=True):
     focus_moment = next(((at, d) for at, k, d in all_moments if k == 'climb'), None)
     backdrop = canvas.copy() if focus_moment and t >= focus_moment[0]-focus_moment[1]['lead'] else None
     stamping = any(k in ('stamp', 'focus_score', 'captain') and 0 <= t-at < .8 for at, k, _ in all_moments)
-    stakes_moment = next(((at, d) for at, k, d in all_moments if k == 'stakes' and 0 <= t-at <= 3.2), None)
+    stakes_moment = next(((at, d) for at, k, d in all_moments if k in ('stakes', 'tally') and 0 <= t-at <= 3.2), None)
     clean = canvas.copy() if stakes_moment else None      # the background, to lift the names off the panels
     for layer in layers:
         shown = layer
@@ -948,7 +984,9 @@ def _compose(prepared, t=999, animated=True):
         backdrop = canvas.copy()
     import focus
     focus.overlays(canvas, prepared, all_moments, t, backdrop)
-    if stakes_moment:
+    if stakes_moment and 'pt' in stakes_moment[1]:
+        focus.tally_overlay(canvas, prepared, stakes_moment[1], t-stakes_moment[0], clean)
+    elif stakes_moment:
         focus.stakes_overlay(canvas, prepared, stakes_moment[1], t-stakes_moment[0], clean)
     for at, kind, data in all_moments:
         if kind == 'gap':

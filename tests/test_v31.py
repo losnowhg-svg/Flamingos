@@ -90,15 +90,16 @@ class Choice(unittest.TestCase):
         for track in variety.MUSIC_TRACKS:
             config = sanitize_config('Convocati', dict(defaults('Convocati'), music_track=track))
             self.assertEqual(config['music_track'], track)
-            if track != 'auto':
+            if track not in ('auto', 'mio'):      # 'mio' needs an uploaded file (test_v38)
                 self.assertEqual(variety.music_track(config, 'convocati'), track)
 
-    def test_automatic_rotates_by_round_and_starts_as_before(self):
-        self.assertEqual(variety.music_track({'season_round': 1}, 'fulltime', 'win'), 'festa')
-        self.assertEqual(variety.music_track({'season_round': 1}, 'matchday'), 'epica')
+    def test_automatic_rotates_by_round(self):
+        import tracks
+        self.assertEqual(variety.music_track({'season_round': 1}, 'fulltime', 'win'), 'cc0_funk')     # 3.8: real tracks
+        self.assertEqual(variety.music_track({'season_round': 1}, 'matchday'), 'cc0_robots')
         picked = {variety.music_track({'season_round': n}, 'matchday') for n in range(1, 11)}
         self.assertGreaterEqual(len(picked), 4)
-        self.assertTrue(picked & set(music.TRACKS))
+        self.assertTrue(picked <= set(tracks.LIBRARY))
         for pool in variety.AUTO_TRACKS.values():
             for track in pool:
                 self.assertIn(track, variety.MUSIC_TRACKS)

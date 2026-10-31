@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import animations
+import focus
 import motion
 import safezone
 from crt_presets import apply_preset
@@ -25,6 +26,17 @@ def scene(template, **extra):
     config = dict(apply_preset(defaults(template), 'crt'), theme='none', **extra)
     return MODULES[template].scene(config, LOGO, None, None, 1), config
 
+
+
+
+def on_a_bar(test, prepared, at):
+    """`at` sits on a bar line of the track: every 2 s at 120 bpm, or the real track's own bars (3.8)."""
+    beat = prepared[0].info.get('beat')
+    bar = 4*beat[0] if beat else 2.0
+    if beat and at < 4.0:       # before the drop of a real track: any beat of its intro
+        bar = beat[0]
+    steps = (at-4.0)/bar
+    test.assertAlmostEqual(steps, round(steps), places=1)
 
 class SafeZone(unittest.TestCase):
     def test_the_default_layouts_are_already_safe(self):
@@ -68,8 +80,8 @@ class OnTheMusic(unittest.TestCase):
                         config_extra.update(home_score=2, away_score=1)
                     prepared, _ = scene(template, **config_extra)
                     at = self.moment(prepared)
-                    self.assertAlmostEqual(at/2, round(at/2), places=2)      # on a bar line (every 2 s)
-                    self.assertEqual(prepared[0].info['drop_at'], round(at, 2))
+                    on_a_bar(self, prepared, at)
+                    self.assertAlmostEqual(prepared[0].info['drop_at'], at, places=2)
 
     def test_matchday_crests_crash_on_the_drop(self):
         prepared, _ = scene('Matchday Screen', music=True)
@@ -150,8 +162,8 @@ class ClassificaFocus(unittest.TestCase):
 
     def test_landing_on_the_drop_with_music(self):
         prepared, at, data = self.prepared(5, music=True)
-        self.assertAlmostEqual(at/2, round(at/2), places=2)
-        self.assertEqual(prepared[0].info['drop_at'], round(at, 2))
+        on_a_bar(self, prepared, at)
+        self.assertAlmostEqual(prepared[0].info['drop_at'], at, places=2)
 
     def test_still_image_keeps_the_small_arrow(self):
         import classifica_renderer as cr
@@ -285,3 +297,57 @@ class Stakes(unittest.TestCase):
         frame = np.asarray(animations.compose(prepared, gap[0]+1.0, True), np.int16)
         before = np.asarray(animations.compose(prepared, gap[0]-.05, True), np.int16)
         self.assertGreater(np.abs(frame[350:450, 70:150]-before[350:450, 70:150]).mean(), 2)
+
+
+class Replay(unittest.TestCase):
+    """3.7: Full Time told goal by goal; Calendario month tally."""
+
+    def test_goal_minutes_and_events(self):
+        import fulltime_renderer as f
+        self.assertEqual(f.goal_minutes("TEU 12', 41'\nCOCCO 30'"), [(12, 'TEU'), (41, 'TEU'), (30, 'COCCO')])
+        self.assertIsNone(f.goal_minutes("TEU\nCOCCO 30'"))
+        config = dict(defaults('Full Time'), home_score=2, away_score=1, home_scorers="TEU 12'\nCOCCO 30'", away_scorers="ROSSI 20'")
+        self.assertEqual(f.replay_events(config), [(12, 'home', 'TEU'), (20, 'away', 'ROSSI'), (30, 'home', 'COCCO')])
+        loose = f.replay_events(dict(config, home_score=3))                     # a goal without its minute
+        self.assertFalse(f.replay_timed(loose))
+        self.assertEqual([(s, n) for _, s, n in loose], [('home', 'TEU'), ('home', 'COCCO'), ('away', 'ROSSI'), ('home', '')])
+        self.assertEqual(f.scorer_goals("CAVA x2\nROSSI (2)\nTEU 12', 40'\nBIANCHI"), ['CAVA']*2+['ROSSI']*2+['TEU']*2+['BIANCHI'])
+        self.assertIsNone(f.replay_events(dict(config, show_scorers=False)))
+
+    def test_score_goes_step_by_step(self):
+        prepared, _ = scene('Full Time', power_on=False, home_score=2, away_score=1,
+                            home_scorers="TEU 12'\nCOCCO 30'", away_scorers="ROSSI 20'")
+        score = next(l for l in prepared[1] if l.id == 'score')
+        self.assertEqual(score.anim, 'replay')
+        goals = [m for m in animations.moments(prepared) if m[1] == 'replay_goal']
+        self.assertEqual([g[2]['side'] for g in goals], ['home', 'away', 'home'])
+        self.assertTrue(all(b[0]-a[0] >= .49 for a, b in zip(goals, goals[1:])))
+        scorers = next(l for l in prepared[1] if l.id == 'home_scorers')
+        self.assertGreater(scorers.start, score.start+score.dur-.2)          # the scorers wait for the replay
+        frames = [np.asarray(animations.compose(prepared, g[0]+.35, True), np.int16) for g in goals]
+        self.assertGreater(np.abs(frames[0]-frames[1])[420:480, 190:350].mean(), 2)
+        plain, _ = scene('Full Time', power_on=False, home_score=2, away_score=1, show_scorers=False)
+        self.assertEqual(next(l for l in plain[1] if l.id == 'score').anim, 'count')
+
+    def test_goal_by_goal_without_minutes(self):
+        """The minutes are rarely known: the score still rises goal by goal, with the names and no clock."""
+        prepared, _ = scene('Full Time', power_on=False, home_score=3, away_score=1,
+                            home_scorers='TEU x2\nCOCCO', away_scorers='ROSSI')
+        score = next(l for l in prepared[1] if l.id == 'score')
+        self.assertEqual(score.anim, 'replay')
+        self.assertFalse(score.replay['timed'])
+        goals = [m for m in animations.moments(prepared) if m[1] == 'replay_goal']
+        self.assertEqual([g[2]['side'] for g in goals], ['home', 'home', 'away', 'home'])
+        self.assertTrue(all(abs((b[0]-a[0])-focus.GOAL_STEP) < .01 for a, b in zip(goals, goals[1:])))
+        frames = [np.asarray(animations.compose(prepared, g[0]+.35, True), np.int16) for g in goals]
+        self.assertGreater(np.abs(frames[0]-frames[1])[420:480, 190:350].mean(), 2)
+        self.assertGreater(np.abs(frames[1]-frames[2])[600:630, 112:428].mean(), .5)   # the row of goals fills in
+
+    def test_month_tally(self):
+        prepared, _ = scene('Calendario', power_on=False)
+        tally = next(m for m in animations.moments(prepared) if m[1] == 'tally')
+        meta = next(l for l in prepared[1] if l.id == 'table').image.info
+        self.assertEqual(tally[2]['pt'], 3*meta['row_results'].count('V')+meta['row_results'].count('N'))
+        during = np.asarray(animations.compose(prepared, tally[0]+1.2, True), np.int16)[350:372, 150:440]
+        after = np.asarray(animations.compose(prepared, tally[0]+3.6, True), np.int16)[350:372, 150:440]
+        self.assertGreater(np.abs(during-after).mean(), 2)

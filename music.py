@@ -612,9 +612,16 @@ def render(track, seconds):
     return _cached(track, round(max(1.0, float(seconds)), 2)).copy()
 
 
-@lru_cache(maxsize=12)
 def preview_wav(track, seconds=14.0):
-    """A light WAV (22 kHz, bytes) of a track, to listen to it in the editor."""
+    """A light WAV (22 kHz, bytes) of a track, to listen to it in the editor (real tracks too)."""
+    import tracks
+    if tracks.is_real(track):
+        return tracks.preview_wav(track, seconds)
+    return _preview_synth(track, seconds)
+
+
+@lru_cache(maxsize=12)
+def _preview_synth(track, seconds=14.0):
     import io
     import wave
     import sounds
