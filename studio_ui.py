@@ -698,7 +698,7 @@ def show_studio(root: Path, template: str, library: dict):
                 image.thumbnail((480, 480))
                 small = (preview_key, image)
                 st.session_state['mobile_png_'+template] = small
-            st.image(small[1])
+            st.image(small[1], width='stretch')
             st.caption('Anteprima · le modifiche si vedono qui')
         # ------------------------------------------------------ PREVIEW
         with preview_column:
@@ -751,6 +751,8 @@ def show_studio(root: Path, template: str, library: dict):
             basename = file_stem(template, config)
             st.download_button(f'⬇ Scarica PNG  ·  1080 x {height}  ·  {len(png)/1e6:.1f} MB', png, file_name=basename+'.png', mime='image/png',
                                type='primary', width='stretch', key=key('download_png'))
+            import share
+            share.button(png, basename+'.png', 'image/png', key='png_'+template)
             if is_crt and config['mockup']:
                 st.image(png, width='stretch')
             else:
@@ -769,14 +771,15 @@ def show_studio(root: Path, template: str, library: dict):
                 st.divider()
             if template != 'Starting 7':
                 from caption_ui import quick
-                section('Didascalie', 'Tre proposte veloci. Centinaia di altre, con toni e filtri, nella pagina Didascalie.')
-                for item in quick(template, 3, st.session_state.get('caption_quick_seed', 0), library):
-                    st.code(item['text'], language=None, wrap_lines=True)
-                a, b = st.columns(2)
-                if a.button('🎲 Altre tre', key=key('caption_roll'), width='stretch'):
-                    st.session_state['caption_quick_seed'] = st.session_state.get('caption_quick_seed', 0)+1
-                    st.rerun()
-                b.button('✍️ Apri Didascalie', key=key('caption_page'), width='stretch', on_click=_open_captions, args=(template,))
+                with st.expander('✍️ Didascalia per il post (tre proposte)'):
+                    st.caption('Tocca l\'icona in alto a destra di un riquadro per copiarla. Centinaia di altre nella pagina Didascalie.')
+                    for item in quick(template, 3, st.session_state.get('caption_quick_seed', 0), library):
+                        st.code(item['text'], language=None, wrap_lines=True)
+                    a, b = st.columns(2)
+                    if a.button('🎲 Altre tre', key=key('caption_roll'), width='stretch'):
+                        st.session_state['caption_quick_seed'] = st.session_state.get('caption_quick_seed', 0)+1
+                        st.rerun()
+                    b.button('✍️ Apri Didascalie', key=key('caption_page'), width='stretch', on_click=_open_captions, args=(template,))
                 st.divider()
             section('Video MP4')
             if is_crt:
@@ -896,6 +899,8 @@ def show_studio(root: Path, template: str, library: dict):
                 st.video(video['data'])
                 st.download_button('⬇ Scarica MP4', video['data'], file_name=basename+'.mp4', mime='video/mp4',
                                    key=key('download_video'), width='stretch')
+                import share
+                share.button(video['data'], basename+'.mp4', 'video/mp4', key='mp4_'+template)
             st.divider()
             section('Progetti')
             with st.expander('Salva o riapri questa grafica'):

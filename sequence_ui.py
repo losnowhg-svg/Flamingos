@@ -220,6 +220,8 @@ def show_sequence(root: Path, library):
         if video:
             st.video(video)
             st.download_button('Scarica MP4', video, file_name='flamingos_sequenza.mp4', mime='video/mp4', width='stretch')
+            import share
+            share.button(video, 'flamingos_sequenza.mp4', 'video/mp4')
 
 
 def show_kit(root: Path, library):

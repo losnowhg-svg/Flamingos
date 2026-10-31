@@ -171,9 +171,13 @@ def show_wrapped(root: Path, library):
     if pack and pack['signature'] == signature:
         st.download_button('⬇ Scarica carosello ZIP', pack['data'], file_name='flamingos_wrapped.zip', mime='application/zip',
                            type='primary', width='stretch', key='wrapped_zip_dl')
+        import share
+        share.button(share.from_zip(pack['data']), label='📲 Condividi il carosello (tutte le slide)')
     video = st.session_state.get('wrapped_mp4')
     if video and video['signature'] == signature:
         st.video(video['data'])
         st.download_button('⬇ Scarica video Wrapped', video['data'], file_name='flamingos_wrapped.mp4', mime='video/mp4',
                            width='stretch', key='wrapped_mp4_dl')
+        import share
+        share.button(video['data'], 'flamingos_wrapped.mp4', 'video/mp4')
     st.caption('Per musica, televisore e animazioni usa le impostazioni video dell\'editor Classifica.')

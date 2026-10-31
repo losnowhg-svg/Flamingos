@@ -67,6 +67,8 @@ def show_instagram(root, library):
             st.image(data, width='stretch')
             st.download_button('⬇ Scarica foto di squadra', data, file_name=f'flamingos_squadra_{look}.png',
                                mime='image/png', type='primary', width='stretch', key='team_download')
+            import share
+            share.button(data, f'flamingos_squadra_{look}.png', 'image/png')
     with covers:
         logo = _logo(root, library, 'cover_logo')
         a, b = st.columns([2, 1])

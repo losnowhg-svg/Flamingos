@@ -31,10 +31,8 @@ h4{margin-bottom:.2rem!important}
  .st-key-page_head h3{font-size:1.25rem!important;padding:.1rem 0!important}
  .st-key-mobile_preview{display:block;background:#100d16;padding:.35rem 0 .45rem;border-bottom:1px solid #3c2d44}
  /* sticky goes on the wrapper Streamlit puts around the container (the container alone has nowhere to slide) */
- div:has(> .st-key-mobile_preview){position:sticky!important;top:0;z-index:50;background:#100d16}
- .st-key-mobile_preview [data-testid="stImage"],.st-key-mobile_preview [data-testid="stImageContainer"]{
-   display:flex;justify-content:center;width:100%}
- .st-key-mobile_preview img{max-height:34vh;width:auto!important;max-width:100%;margin:0 auto;display:block;border-radius:8px}
+ div:has(> .st-key-mobile_preview){position:sticky!important;top:3.6rem;z-index:50;background:#100d16}
+ .st-key-mobile_preview img{max-height:34vh;width:100%!important;object-fit:contain;display:block;border-radius:8px}
  .st-key-mobile_preview [data-testid="stCaptionContainer"]{text-align:center;margin-top:.15rem}
  .stButton button,.stDownloadButton button{min-height:44px}
  [data-testid="stSidebar"] [role="radiogroup"] label{padding:9px 0}

@@ -115,8 +115,12 @@ def show_departments(config, squad, home, font_bytes, key):
     if pack and pack['signature'] == signature:
         st.download_button('⬇ Scarica carosello ZIP', pack['data'], file_name='flamingos_convocati_reparti.zip',
                            mime='application/zip', type='primary', width='stretch', key=key('reparti_zip_dl'))
+        import share
+        share.button(share.from_zip(pack['data']), label='📲 Condividi il carosello (tutte le slide)')
     video = st.session_state.get('reparti_mp4')
     if video and video['signature'] == signature:
         st.video(video['data'])
         st.download_button('⬇ Scarica video presentazione', video['data'], file_name='flamingos_convocati_reparti.mp4',
                            mime='video/mp4', width='stretch', key=key('reparti_mp4_dl'))
+        import share
+        share.button(video['data'], 'flamingos_convocati_reparti.mp4', 'video/mp4')
