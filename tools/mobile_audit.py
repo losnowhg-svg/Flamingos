@@ -49,8 +49,9 @@ with sync_playwright() as p:
     page.goto(URL)
     page.wait_for_selector('h1', timeout=120000)
     settle(page, 20)
-    if page.get_by_text('Continua senza archivio').count():
-        page.get_by_text('Continua senza archivio').first.click()
+    skip = page.get_by_text('Continua senza archivio')
+    if skip.count() and skip.first.is_visible():
+        skip.first.click()
         settle(page, 10)
     shot(page, '00_apertura')
     # The phone menu at the top (3.6): try it once.
