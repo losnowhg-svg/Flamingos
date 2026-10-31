@@ -1,4 +1,15 @@
-# Flamingos Studio 3.3
+# Flamingos Studio 3.4
+
+## Novita della 3.4: lo stesso dettaglio ovunque
+
+Nei video (animazione Retro) la camera va vicino a quello che conta e mostra il cambiamento:
+
+- **Full Time:** quando il punteggio si ferma la camera si avvicina; dopo STAGE CLEAR / DRAW GAME / GAME OVER accanto
+  all'esito compare il chip dei punti: verde **+3 PT**, giallo **+1 PT**, rosso **+0 PT**.
+- **Calendario:** il risultato dell'ultima partita giocata viene "timbrato" di nuovo (si ingrandisce e batte giu con un
+  anello), poi la camera scivola sulla prossima partita, che lampeggia.
+- **Convocati:** quando entra il capitano la camera si avvicina e compare la fascia: una **C** gialla accanto al nome,
+  che resta.
 
 ## Novita della 3.3: i dettagli delle animazioni
 

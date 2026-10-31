@@ -255,10 +255,15 @@ def moments(prepared):
             out.append((offset+l.start+l.dur, 'impact', dict(strength=.45, flash=False)))
         if getattr(l, 'captain', False) and l.id.startswith('player_'):
             out.append((offset+l.start+l.dur+.1, 'shine', dict(layer=l.id)))
+            if info.get('kind') == 'convocati':
+                out.append((offset+l.start+l.dur+.15, 'captain', dict(layer=l.id)))
     score = by_id.get('score')
     if score is not None and getattr(score, 'anim', '') == 'count':
         end = offset+score.start+score.dur
         out.append((end, 'impact', dict(strength=1.0, flash=True)))
+        out.append((end, 'focus_score', {}))
+        if info.get('outcome') in ('win', 'draw', 'loss'):
+            out.append((end+2.4, 'points', dict(outcome=info['outcome'])))
         if info.get('our_goals', 0) > 0:
             out.append((end, 'goal', dict(layer='score')))
         if info.get('outcome'):
@@ -275,8 +280,14 @@ def moments(prepared):
             out.append((end+landing, 'climb', dict(ours=meta['ours'], prev=meta['prev'], mode=mode, lead=landing)))
         if info.get('kind') == 'classifica' and meta.get('first'):
             out.append((end+(landing+.35 if landing else 0), 'crown', dict(ours=meta['ours'])))
-        if info.get('kind') == 'calendario' and meta.get('next_row') is not None:
-            out.append((end, 'next', dict(row=meta['next_row'])))
+        if info.get('kind') == 'calendario':
+            results = meta.get('row_results') or []
+            nxt = meta.get('next_row')
+            played = [i for i, r in enumerate(results) if r and (nxt is None or i < nxt)]
+            if played:   # the last result gets stamped, then the camera glides to the next match
+                out.append((end+.35, 'stamp', dict(row=played[-1], result=results[played[-1]], next=nxt)))
+            if nxt is not None:
+                out.append((end+(2.3 if played else 0), 'next', dict(row=nxt)))
     return sorted(out, key=lambda m: m[0])
 
 
@@ -287,7 +298,8 @@ def intro_length(prepared):
         return None
     end = _offset(prepared)+max(l.start+l.dur for l in layers)
     for t, kind, _ in moments(prepared):
-        end = max(end, t+{'banner': 1.3, 'climb': 1.3, 'crown': 1.0, 'goal': .8}.get(kind, .3))
+        end = max(end, t+{'banner': 1.3, 'climb': 1.3, 'crown': 1.0, 'goal': .8, 'points': .8, 'stamp': 2.6,
+                          'captain': 1.5, 'focus_score': 1.4}.get(kind, .3))
     return end
 
 
@@ -332,6 +344,14 @@ def events(prepared):
             out.append((t, 'goal', 0))
         elif kind == 'banner':
             out.append((t, data['outcome'], 0))
+        elif kind == 'points':
+            out.append((t, 'ding', {'win': 2, 'draw': 1, 'loss': 0}[data['outcome']]))
+        elif kind == 'stamp':
+            out.append((t, 'impact', 0))
+            if data.get('next') is not None:
+                out.append((t+.95, 'whoosh', 0))
+        elif kind == 'captain':
+            out.append((t, 'whoosh', 0))
         elif kind == 'climb':
             out.append((t-data['lead']+.75, 'whoosh', 0))
             out.append((t, {'up': 'climb', 'same': 'ding', 'down': 'impact'}[data['mode']], 0))
@@ -892,11 +912,11 @@ def _compose(prepared, t=999, animated=True):
             _moment_overlay(canvas, prepared, t, t-at, kind, data)
     _sparkles(canvas, prepared, t)
     s = canvas.width/540
-    if focus_moment:
-        import focus
-        z, cx, cy = focus.camera(prepared, focus_moment[1], t-(focus_moment[0]-focus_moment[1]['lead']))
-        if z > 1.0005:
-            canvas = motion._affine(canvas, z, 0, 0, 0, cx*s, cy*s)
+    import focus
+    focus.overlays(canvas, prepared, all_moments, t)
+    z, cx, cy = focus.camera_at(prepared, all_moments, t)
+    if z > 1.0005:
+        canvas = motion._affine(canvas, z, 0, 0, 0, cx*s, cy*s)
     from render_utils import ScaledDraw
     y = 318+((t*.6) % 1)*354
     ScaledDraw(canvas, s, 'RGBA').rectangle((78, y, 462, y+6), fill=(255, 255, 255, 10))

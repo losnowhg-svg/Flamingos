@@ -171,3 +171,155 @@ def draw(canvas, prepared, data, p, backdrop):
         k = _back((p-show_at)/.35)
         x = tx+tw/2+tab.width/s/2+3
         _put(canvas, _scaled(tab, max(.05, k)), None, (x, ty-th/2+(a0+a1)/2), min(1.0, (p-show_at)/.12))
+
+
+# --- 3.4: the same care everywhere ---------------------------------------------------
+# A "window" is a short camera move: in, hold (the centre can travel), out.
+
+POINTS = {'win': ('+3 PT', COLORS['up']), 'draw': ('+1 PT', COLORS['same']), 'loss': ('+0 PT', COLORS['down'])}
+STAMP = {'V': COLORS['up'], 'N': COLORS['same'], 'P': COLORS['down']}
+
+
+def _layer(prepared, lid):
+    return next((l for l in prepared[1] if l.id == lid), None)
+
+
+def _window_zoom(p, zin, hold, zout, amount):
+    if p < 0 or p > zin+hold+zout:
+        return 1.0
+    if p < zin:
+        return 1+(amount-1)*_smooth(p/zin)
+    if p > zin+hold:
+        return 1+(amount-1)*_smooth((zin+hold+zout-p)/zout)
+    return amount
+
+
+def _path(p, keys):
+    """Centre along keyframes [(time, x, y)], eased between them."""
+    if p <= keys[0][0]:
+        return keys[0][1:]
+    for (t0, x0, y0), (t1, x1, y1) in zip(keys, keys[1:]):
+        if p <= t1:
+            k = _smooth((p-t0)/max(1e-6, t1-t0))
+            return x0+(x1-x0)*k, y0+(y1-y0)*k
+    return keys[-1][1:]
+
+
+def _row_centre(prepared, row):
+    """Centre of a table row; `row` indexes row_edges (the classifica has the header at 0)."""
+    s = prepared[0].width/540
+    table = _layer(prepared, 'table')
+    tx, ty = prepared[2]['table']
+    y0, y1 = _row_y(table, ty, row, s)
+    return tx, (y0+y1)/2
+
+
+def windows(prepared, moments_list):
+    """Camera windows [(start, zin, hold, zout, zoom, keys)] built from the scene's moments."""
+    out = []
+    positions = prepared[2]
+    for at, kind, data in moments_list:
+        if kind == 'climb':
+            continue                      # the classifica camera has its own path (camera())
+        if kind == 'focus_score':
+            x, y = positions['score']
+            out.append((at-.3, .35, 1.0, .5, 1.17, [(0, x, y)]))
+        elif kind == 'stamp':
+            x, y = _row_centre(prepared, data['row'])
+            keys = [(0, x+40, y)]
+            if data.get('next') is not None:
+                nx, ny = _row_centre(prepared, data['next'])
+                keys = [(0, x+40, y), (.95, x+40, y), (1.65, nx+40, ny)]
+            out.append((at-.35, .4, 1.6 if data.get('next') is not None else .9, .5, 1.2, keys))
+        elif kind == 'captain':
+            layer = _layer(prepared, data['layer'])
+            x, y = positions[data['layer']]
+            out.append((at-.3, .35, 1.1, .45, 1.16, [(0, x+30, y)]))
+    return out
+
+
+def camera_at(prepared, moments_list, t):
+    """(zoom, cx, cy) of every focus move at time t (the classifica climb included)."""
+    for at, kind, data in moments_list:
+        if kind == 'climb':
+            p = t-(at-data['lead'])
+            if 0 <= p <= length(data['mode']):
+                return camera(prepared, data, p)
+    for start, zin, hold, zout, amount, keys in windows(prepared, moments_list):
+        p = t-start
+        z = _window_zoom(p, zin, hold, zout, amount)
+        if z > 1.0005:
+            cx, cy = _path(p-zin*.5, keys)
+            return z, cx, cy
+    return 1.0, 270, 480
+
+
+def chip(text, colour, s, h=18):
+    """A rounded tab with dark text (points, results, tags)."""
+    from animations import _label
+    label = _label(text, (12, 16, 24), max(8, round(h*.6)), max(1, round(s)))
+    w = (label.width/s if label is not None else 20)+14
+    im = Image.new('RGBA', (round(w*s), round(h*s)))
+    ScaledDraw(im, s).rounded_rectangle((0, 0, w-.5, h-.5), radius=h/2.4, fill=(*colour, 255))
+    if label is not None:
+        im.alpha_composite(label, (round((w*s-label.width)/2), round((h*s-label.height)/2)))
+    return im
+
+
+def overlays(canvas, prepared, moments_list, t):
+    """The detail drawings of 3.4: points chip, calendar stamp, captain tag."""
+    from animations import _put, _scaled
+    s = canvas.width/540
+    positions = prepared[2]
+    for at, kind, data in moments_list:
+        p = t-at
+        if p < 0:
+            continue
+        if kind == 'points':
+            text, colour = POINTS[data['outcome']]
+            tab = chip(text, colour, s, 20)
+            k = _back(p/.4)
+            result = _layer(prepared, 'result')
+            if result is not None:          # next to VITTORIA / PAREGGIO / SCONFITTA
+                x, y = positions['result']
+                x += result.image.width/s/2+tab.width/s/2+6
+            else:
+                x, y = positions['score'][0], positions['score'][1]+44
+            pulse = 1+.05*math.sin(p*6)*max(0.0, 1-p/1.5)
+            _put(canvas, _scaled(tab, max(.05, k*pulse)), None, (x, y), min(1.0, p/.12))
+        elif kind == 'stamp':
+            # The result box of the last match is stamped again: big, then down hard, with a ring.
+            import calendario_renderer as cal
+            table = _layer(prepared, 'table')
+            tx, ty = positions['table']
+            tw, th = table.image.width/s, table.image.height/s
+            y0, y1 = table.image.info['row_edges'][data['row']]
+            box = (round((cal.TABLE_W-80)*s), round(y0*s), round(cal.TABLE_W*s), round(y1*s))
+            piece = table.image.crop(box)
+            cx = tx-tw/2+cal.TABLE_W-40
+            cy = ty-th/2+(y0+y1)/2
+            if p < .6:
+                k = 1+1.1*(1-_smooth(p/.2))
+                _put(canvas, _scaled(piece, k), None, (cx, cy), min(1.0, p/.06))
+                ring = max(0.0, (p-.18)/.4)
+                if 0 < ring < 1:
+                    d = ScaledDraw(canvas, s, 'RGBA')
+                    r = 30+50*ring
+                    d.ellipse((cx-r, cy-r*.6, cx+r, cy+r*.6), outline=(*STAMP[data['result']], round(200*(1-ring))), width=2)
+        elif kind == 'captain':
+            # The armband: a yellow C that pops on the left of the captain's row and stays.
+            layer = _layer(prepared, data['layer'])
+            x, y = positions[data['layer']]
+            w = layer.image.width/s
+            h = layer.image.height/s
+            size = max(9.0, min(14.0, h*1.1))
+            k = _back(p/.4)
+            tab = Image.new('RGBA', (round(size*s), round(size*s)))
+            ScaledDraw(tab, s).ellipse((0, 0, size-.5, size-.5), fill=(*COLORS['same'], 255))
+            from animations import _label
+            label = _label('C', (12, 16, 24), max(6, round(size*.6)), max(1, round(s)))
+            if label is not None:
+                tab.alpha_composite(label, (round((tab.width-label.width)/2), round((tab.height-label.height)/2)))
+            _put(canvas, _scaled(tab, max(.05, k)), None, (x-w/2-size/2-2, y), min(1.0, p/.1))
+
+

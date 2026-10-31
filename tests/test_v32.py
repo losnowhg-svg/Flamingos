@@ -161,3 +161,53 @@ class ClassificaFocus(unittest.TestCase):
         ys, xs = np.nonzero(changed)
         self.assertGreater(len(xs), 20)                       # the small = next to our name
         self.assertLess(xs.max(), 364-150)                    # inside the row, before the numbers
+
+
+class DetailsEverywhere(unittest.TestCase):
+    """3.4: score close-up and points chip, calendar stamp and glide to NEXT, captain armband."""
+
+    def moments(self, template, **extra):
+        prepared, _ = scene(template, power_on=False, **extra)
+        return prepared, animations.moments(prepared)
+
+    def test_full_time_points_chip_by_result(self):
+        for home, away, side, colour in ((3, 1, 'Casa', (91, 230, 164)), (1, 1, 'Casa', (255, 201, 99)),
+                                         (3, 1, 'Ospiti', (255, 107, 120))):
+            prepared, moments = self.moments('Full Time', home_score=home, away_score=away, our_side=side)
+            at = next(m[0] for m in moments if m[1] == 'points')
+            self.assertTrue(any(m[1] == 'focus_score' for m in moments))
+            frame = np.asarray(animations.compose(prepared, at+2, True), np.int16)
+            area = frame[530:590, 300:460].reshape(-1, 3)
+            self.assertGreater((np.abs(area-np.array(colour)).sum(axis=1) < 50).sum(), 30, (home, away, side))
+
+    def test_score_close_up_zooms_and_comes_back(self):
+        prepared, moments = self.moments('Full Time', home_score=2, away_score=0)
+        at = next(m[0] for m in moments if m[1] == 'focus_score')
+        import focus
+        self.assertGreater(focus.camera_at(prepared, moments, at+.4)[0], 1.1)
+        self.assertEqual(focus.camera_at(prepared, moments, at+2.5)[0], 1.0)
+
+    def test_calendar_stamp_then_next(self):
+        prepared, moments = self.moments('Calendario')
+        stamp = next(m for m in moments if m[1] == 'stamp')
+        nxt = next(m for m in moments if m[1] == 'next')
+        meta = next(l for l in prepared[1] if l.id == 'table').image.info
+        self.assertEqual(stamp[2]['row'], max(i for i, r in enumerate(meta['row_results']) if r and i < meta['next_row']))
+        self.assertGreater(nxt[0], stamp[0])
+        import focus
+        z1, _, y1 = focus.camera_at(prepared, moments, stamp[0]+.5)
+        z2, _, y2 = focus.camera_at(prepared, moments, stamp[0]+1.7)
+        self.assertGreater(z1, 1.1)
+        self.assertGreater(y2, y1)                    # the camera glides down to the next match
+
+    def test_captain_armband(self):
+        roster = defaults('Convocati')['roster']
+        roster[2]['captain'] = True
+        prepared, moments = self.moments('Convocati', roster=roster)
+        captain = next(m for m in moments if m[1] == 'captain')
+        self.assertEqual(captain[2]['layer'], 'player_2')
+        before = np.asarray(animations.compose(prepared, captain[0]-.05, True), np.int16)
+        after = np.asarray(animations.compose(prepared, captain[0]+2.5, True), np.int16)
+        yellow = np.array((255, 201, 99))
+        count = lambda f: (np.abs(f.reshape(-1, 3)-yellow).sum(axis=1) < 40).sum()
+        self.assertGreater(count(after), count(before)+10)
