@@ -173,85 +173,160 @@ def draw(canvas, prepared, data, p, backdrop):
         _put(canvas, _scaled(tab, max(.05, k)), None, (x, ty-th/2+(a0+a1)/2), min(1.0, (p-show_at)/.12))
 
 
-# --- 3.4: the same care everywhere ---------------------------------------------------
-# A "window" is a short camera move: in, hold (the centre can travel), out.
+# --- 3.4: the same care everywhere, with sense and variety --------------------------------
+# Every highlight answers "what changed?". The camera zooms only on what is small on screen
+# (a table row, a name in the list) or moves (the classifica climb); big things (the score,
+# a calendar row) get a spotlight, a highlighter or a stamp instead. The treatment changes
+# with the round, so two weeks never look the same; it can also be fixed in the editor.
 
-POINTS = {'win': ('+3 PT', COLORS['up']), 'draw': ('+1 PT', COLORS['same']), 'loss': ('+0 PT', COLORS['down'])}
-STAMP = {'V': COLORS['up'], 'N': COLORS['same'], 'P': COLORS['down']}
+HIGHLIGHTS = {'auto': 'Automatica (cambia ogni giornata)', 'riflettore': 'Riflettore', 'evidenziatore': 'Evidenziatore',
+              'timbro': 'Timbro', 'zoom': 'Zoom (solo su cose piccole)'}
+TREATMENTS = {'fulltime': ('riflettore', 'timbro', 'evidenziatore'),
+              'calendario': ('riflettore', 'evidenziatore', 'timbro'),
+              'convocati': ('zoom', 'riflettore', 'evidenziatore')}
+CHIPS = ('vola', 'conta', 'timbro')
+SMALL = 22                 # layout units: below this height a zoom helps reading
+POINTS = {'win': (3, COLORS['up']), 'draw': (1, COLORS['same']), 'loss': (0, COLORS['down'])}
+
+
+def treatment(info, kind):
+    options = TREATMENTS[kind]
+    chosen = info.get('highlight', 'auto')
+    if chosen in options:
+        return chosen
+    if chosen == 'zoom':           # zoom asked where the subject is big: the spotlight says the same
+        return 'riflettore'
+    level = int(info.get('level', 1) or 1)
+    shift = {'calendario': 1}.get(kind, 0)      # the same week, different looks in different graphics
+    return options[(level-1+shift) % len(options)]
+
+
+def chip_style(info):
+    level = int(info.get('level', 1) or 1)
+    return CHIPS[(level-1) % len(CHIPS)]
 
 
 def _layer(prepared, lid):
     return next((l for l in prepared[1] if l.id == lid), None)
 
 
-def _window_zoom(p, zin, hold, zout, amount):
-    if p < 0 or p > zin+hold+zout:
-        return 1.0
-    if p < zin:
-        return 1+(amount-1)*_smooth(p/zin)
-    if p > zin+hold:
-        return 1+(amount-1)*_smooth((zin+hold+zout-p)/zout)
-    return amount
+def _box(prepared, lid, pad=6):
+    layer = _layer(prepared, lid)
+    s = prepared[0].width/540
+    x, y = prepared[2][lid]
+    w, h = layer.image.width/s, layer.image.height/s
+    return (x-w/2-pad, y-h/2-pad, x+w/2+pad, y+h/2+pad)
 
 
-def _path(p, keys):
-    """Centre along keyframes [(time, x, y)], eased between them."""
-    if p <= keys[0][0]:
-        return keys[0][1:]
-    for (t0, x0, y0), (t1, x1, y1) in zip(keys, keys[1:]):
-        if p <= t1:
-            k = _smooth((p-t0)/max(1e-6, t1-t0))
-            return x0+(x1-x0)*k, y0+(y1-y0)*k
-    return keys[-1][1:]
-
-
-def _row_centre(prepared, row):
-    """Centre of a table row; `row` indexes row_edges (the classifica has the header at 0)."""
+def _row_box(prepared, row, pad=3):
     s = prepared[0].width/540
     table = _layer(prepared, 'table')
     tx, ty = prepared[2]['table']
-    y0, y1 = _row_y(table, ty, row, s)
-    return tx, (y0+y1)/2
+    tw, th = table.image.width/s, table.image.height/s
+    y0, y1 = table.image.info['row_edges'][row]
+    return (tx-tw/2-pad, ty-th/2+y0-pad, tx+tw/2+pad, ty-th/2+y1+pad)
 
 
-def windows(prepared, moments_list):
-    """Camera windows [(start, zin, hold, zout, zoom, keys)] built from the scene's moments."""
-    out = []
-    positions = prepared[2]
-    for at, kind, data in moments_list:
-        if kind == 'climb':
-            continue                      # the classifica camera has its own path (camera())
-        if kind == 'focus_score':
-            x, y = positions['score']
-            out.append((at-.3, .35, 1.0, .5, 1.17, [(0, x, y)]))
-        elif kind == 'stamp':
-            x, y = _row_centre(prepared, data['row'])
-            keys = [(0, x+40, y)]
-            if data.get('next') is not None:
-                nx, ny = _row_centre(prepared, data['next'])
-                keys = [(0, x+40, y), (.95, x+40, y), (1.65, nx+40, ny)]
-            out.append((at-.35, .4, 1.6 if data.get('next') is not None else .9, .5, 1.2, keys))
-        elif kind == 'captain':
-            layer = _layer(prepared, data['layer'])
-            x, y = positions[data['layer']]
-            out.append((at-.3, .35, 1.1, .45, 1.16, [(0, x+30, y)]))
-    return out
+def subjects(prepared, kind, data, style=None):
+    """[(time from the moment, box)] the highlight travels through."""
+    if kind == 'focus_score' and style == 'evidenziatore' and _layer(prepared, 'result'):
+        return [(0, _box(prepared, 'result', 4))]          # the pen underlines VITTORIA / PAREGGIO / SCONFITTA
+    if kind == 'focus_score':      # the match: crests, score and result, as one band
+        boxes = [_box(prepared, lid, 6) for lid in ('home_logo', 'score', 'away_logo', 'result') if _layer(prepared, lid)]
+        return [(0, (min(b[0] for b in boxes), min(b[1] for b in boxes), max(b[2] for b in boxes), max(b[3] for b in boxes)))]
+    if kind == 'stamp':
+        keys = [(0, _row_box(prepared, data['row']))]
+        if data.get('next') is not None:
+            keys += [(.95, _row_box(prepared, data['row'])), (1.6, _row_box(prepared, data['next']))]
+        return keys
+    if kind == 'captain':
+        return [(0, _box(prepared, data['layer'], 3))]
+    return []
+
+
+def _travel(keys, p):
+    if p <= keys[0][0]:
+        return keys[0][1]
+    for (t0, b0), (t1, b1) in zip(keys, keys[1:]):
+        if p <= t1:
+            k = _smooth((p-t0)/max(1e-6, t1-t0))
+            return tuple(u+(v-u)*k for u, v in zip(b0, b1))
+    return keys[-1][1]
+
+
+def _envelope(p, total, fade=.3):
+    if p < 0 or p > total:
+        return 0.0
+    return _smooth(min(p/fade, (total-p)/fade, 1.0))
+
+
+SPOT_HOLD = {'focus_score': 1.6, 'stamp': 2.3, 'captain': 1.7}
+KINDS = {'focus_score': 'fulltime', 'stamp': 'calendario', 'captain': 'convocati'}
 
 
 def camera_at(prepared, moments_list, t):
-    """(zoom, cx, cy) of every focus move at time t (the classifica climb included)."""
+    """(zoom, cx, cy): the classifica climb, and the zoom treatment on small subjects only."""
     for at, kind, data in moments_list:
         if kind == 'climb':
             p = t-(at-data['lead'])
             if 0 <= p <= length(data['mode']):
                 return camera(prepared, data, p)
-    for start, zin, hold, zout, amount, keys in windows(prepared, moments_list):
-        p = t-start
-        z = _window_zoom(p, zin, hold, zout, amount)
-        if z > 1.0005:
-            cx, cy = _path(p-zin*.5, keys)
-            return z, cx, cy
+    info = prepared[0].info
+    for at, kind, data in moments_list:
+        if kind not in KINDS or treatment(info, KINDS[kind]) != 'zoom':
+            continue
+        keys = subjects(prepared, kind, data)
+        box = keys[0][1]
+        if box[3]-box[1] > SMALL+8:      # not small: no zoom
+            continue
+        p = t-at+.2
+        total = SPOT_HOLD[kind]+.4
+        k = _envelope(p, total, .4)
+        if k > 0:
+            x0, y0, x1, y1 = _travel(keys, p)
+            return 1+.2*k, (x0+x1)/2, (y0+y1)/2
     return 1.0, 270, 480
+
+
+def _spotlight(canvas, box, k, s):
+    if k <= 0:
+        return
+    small = 4
+    w, h = canvas.width//small, canvas.height//small
+    mask = Image.new('L', (w, h), 255)
+    d = ScaledDraw(mask, s/small)
+    x0, y0, x1, y1 = box
+    d.rounded_rectangle((x0-4, y0-4, x1+4, y1+4), radius=10, fill=0)
+    from PIL import ImageFilter
+    mask = mask.filter(ImageFilter.GaussianBlur(3)).resize(canvas.size, Image.Resampling.BILINEAR)
+    mask = mask.point(lambda v: round(v*.72*k))
+    canvas.paste((6, 4, 14), (0, 0), mask)
+
+
+def _highlighter(canvas, box, k, s, colour, sweep):
+    if k <= 0:
+        return
+    x0, y0, x1, y1 = box
+    right = x0+(x1-x0)*_smooth(sweep)
+    d = ScaledDraw(canvas, s, 'RGBA')
+    d.rectangle((x0, y1-(y1-y0)*.42, right, y1-1), fill=(*colour, round(110*k)))
+    d.rectangle((x0, y1-3, right, y1-1), fill=(*colour, round(230*k)))
+
+
+def _stamp(canvas, backdrop, box, p, s, colour):
+    from animations import _put, _scaled
+    if p < 0 or p > .7:
+        return
+    x0, y0, x1, y1 = (round(v*s) for v in box)
+    piece = backdrop.crop((x0, y0, x1, y1)).convert('RGBA')
+    k = 1+.55*(1-_smooth(p/.22))
+    _put(canvas, _scaled(piece, k), None, ((box[0]+box[2])/2, (box[1]+box[3])/2), min(1.0, p/.05))
+    ring = (p-.18)/.45
+    if 0 < ring < 1:
+        d = ScaledDraw(canvas, s, 'RGBA')
+        cx, cy = (box[0]+box[2])/2, (box[1]+box[3])/2
+        rx, ry = (box[2]-box[0])/2+24*ring, (box[3]-box[1])/2+18*ring
+        d.rounded_rectangle((cx-rx, cy-ry, cx+rx, cy+ry), radius=8, outline=(*colour, round(220*(1-ring))), width=2)
 
 
 def chip(text, colour, s, h=18):
@@ -266,60 +341,75 @@ def chip(text, colour, s, h=18):
     return im
 
 
-def overlays(canvas, prepared, moments_list, t):
-    """The detail drawings of 3.4: points chip, calendar stamp, captain tag."""
+def _points_chip(canvas, prepared, data, p, s):
     from animations import _put, _scaled
+    value, colour = POINTS[data['outcome']]
+    style = data.get('style', 'vola')
+    result = _layer(prepared, 'result')
+    tab = chip(f'+{value} PT', colour, s, 20)
+    if result is not None:
+        rx, ry = prepared[2]['result']
+        home = (rx+result.image.width/s/2+tab.width/s/2+6, ry)
+    else:
+        home = (prepared[2]['score'][0], prepared[2]['score'][1]+44)
+    if style == 'vola':          # born on the score, flies down to the result
+        sx, sy = prepared[2]['score']
+        k = _smooth(p/.6)
+        x = sx+(home[0]-sx)*k
+        y = sy+(home[1]-sy)*k-28*math.sin(math.pi*k)
+        _put(canvas, _scaled(tab, 1.6-.6*k), None, (x, y), min(1.0, p/.1))
+    elif style == 'conta':       # counts up from +0
+        shown = min(value, int(p/.18)) if value else 0
+        tab = chip(f'+{shown} PT', colour if shown == value else (200, 200, 210), s, 20)
+        bump = 1+.12*max(0.0, 1-((p % .18)/.18)) if shown < value or p < value*.18+.2 else 1
+        _put(canvas, _scaled(tab, bump), None, home, min(1.0, p/.1))
+    else:                        # stamp
+        k = 1+.9*(1-_smooth(p/.22))
+        _put(canvas, _scaled(tab, k), None, home, min(1.0, p/.06))
+
+
+def overlays(canvas, prepared, moments_list, t, backdrop=None):
+    """Highlights (spotlight / highlighter / stamp), points chip and captain armband."""
+    from animations import _label, _put, _scaled
     s = canvas.width/540
-    positions = prepared[2]
+    info = prepared[0].info
+    pink, cyan, yellow = info.get('frame_colors', ((242, 104, 168), (121, 220, 247), (255, 201, 99)))
     for at, kind, data in moments_list:
         p = t-at
-        if p < 0:
-            continue
-        if kind == 'points':
-            text, colour = POINTS[data['outcome']]
-            tab = chip(text, colour, s, 20)
-            k = _back(p/.4)
-            result = _layer(prepared, 'result')
-            if result is not None:          # next to VITTORIA / PAREGGIO / SCONFITTA
-                x, y = positions['result']
-                x += result.image.width/s/2+tab.width/s/2+6
-            else:
-                x, y = positions['score'][0], positions['score'][1]+44
-            pulse = 1+.05*math.sin(p*6)*max(0.0, 1-p/1.5)
-            _put(canvas, _scaled(tab, max(.05, k*pulse)), None, (x, y), min(1.0, p/.12))
-        elif kind == 'stamp':
-            # The result box of the last match is stamped again: big, then down hard, with a ring.
-            import calendario_renderer as cal
-            table = _layer(prepared, 'table')
-            tx, ty = positions['table']
-            tw, th = table.image.width/s, table.image.height/s
-            y0, y1 = table.image.info['row_edges'][data['row']]
-            box = (round((cal.TABLE_W-80)*s), round(y0*s), round(cal.TABLE_W*s), round(y1*s))
-            piece = table.image.crop(box)
-            cx = tx-tw/2+cal.TABLE_W-40
-            cy = ty-th/2+(y0+y1)/2
-            if p < .6:
-                k = 1+1.1*(1-_smooth(p/.2))
-                _put(canvas, _scaled(piece, k), None, (cx, cy), min(1.0, p/.06))
-                ring = max(0.0, (p-.18)/.4)
-                if 0 < ring < 1:
-                    d = ScaledDraw(canvas, s, 'RGBA')
-                    r = 30+50*ring
-                    d.ellipse((cx-r, cy-r*.6, cx+r, cy+r*.6), outline=(*STAMP[data['result']], round(200*(1-ring))), width=2)
-        elif kind == 'captain':
+        if kind in KINDS and p >= -.3:
+            style = treatment(info, KINDS[kind])
+            keys = subjects(prepared, kind, data, style)
+            total = SPOT_HOLD[kind]
+            colour = STAMP_COLORS.get(data.get('result'), yellow) if kind == 'stamp' else yellow
+            if style == 'riflettore':
+                _spotlight(canvas, _travel(keys, p), _envelope(p+.3, total+.3), s)
+            elif style == 'evidenziatore':
+                k = _envelope(p, total)
+                if len(keys) > 1 and p > keys[1][0]:     # second subject: a new stroke
+                    seg = p-keys[1][0]
+                    _highlighter(canvas, keys[-1][1], k, s, cyan, seg/.45)
+                else:
+                    _highlighter(canvas, keys[0][1], k, s, colour, p/.45)
+            elif style == 'timbro' and backdrop is not None:
+                _stamp(canvas, backdrop, keys[0][1], p, s, colour)
+                if len(keys) > 1:
+                    _highlighter(canvas, keys[-1][1], _envelope(p-keys[-1][0], total-keys[-1][0]), s, cyan,
+                                 (p-keys[-1][0])/.45)
+        if kind == 'points' and p >= 0:
+            _points_chip(canvas, prepared, data, p, s)
+        elif kind == 'captain' and p >= 0:
             # The armband: a yellow C that pops on the left of the captain's row and stays.
             layer = _layer(prepared, data['layer'])
-            x, y = positions[data['layer']]
-            w = layer.image.width/s
-            h = layer.image.height/s
+            x, y = prepared[2][data['layer']]
+            w, h = layer.image.width/s, layer.image.height/s
             size = max(9.0, min(14.0, h*1.1))
             k = _back(p/.4)
             tab = Image.new('RGBA', (round(size*s), round(size*s)))
             ScaledDraw(tab, s).ellipse((0, 0, size-.5, size-.5), fill=(*COLORS['same'], 255))
-            from animations import _label
             label = _label('C', (12, 16, 24), max(6, round(size*.6)), max(1, round(s)))
             if label is not None:
                 tab.alpha_composite(label, (round((tab.width-label.width)/2), round((tab.height-label.height)/2)))
             _put(canvas, _scaled(tab, max(.05, k)), None, (x-w/2-size/2-2, y), min(1.0, p/.1))
 
 
+STAMP_COLORS = {'V': COLORS['up'], 'N': COLORS['same'], 'P': COLORS['down']}

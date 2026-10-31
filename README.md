@@ -1,15 +1,22 @@
 # Flamingos Studio 3.4
 
-## Novita della 3.4: lo stesso dettaglio ovunque
+## Novita della 3.4: lo stesso dettaglio ovunque, con senso e con varieta
 
-Nei video (animazione Retro) la camera va vicino a quello che conta e mostra il cambiamento:
+Ogni messa in evidenza risponde a "cosa e cambiato?". Lo **zoom** si usa solo dove serve: su cio che e piccolo sullo
+schermo (una riga della lista) o che si muove (la classifica). Per le cose grandi ci sono altri modi:
 
-- **Full Time:** quando il punteggio si ferma la camera si avvicina; dopo STAGE CLEAR / DRAW GAME / GAME OVER accanto
-  all'esito compare il chip dei punti: verde **+3 PT**, giallo **+1 PT**, rosso **+0 PT**.
-- **Calendario:** il risultato dell'ultima partita giocata viene "timbrato" di nuovo (si ingrandisce e batte giu con un
-  anello), poi la camera scivola sulla prossima partita, che lampeggia.
-- **Convocati:** quando entra il capitano la camera si avvicina e compare la fascia: una **C** gialla accanto al nome,
-  che resta.
+- **Riflettore:** tutto il resto si abbassa e resta acceso il soggetto; nel Calendario il riflettore scivola
+  dall'ultimo risultato alla prossima partita.
+- **Evidenziatore:** un tratto colorato sottolinea il soggetto (nel Full Time l'esito, nel Calendario prima l'ultimo
+  risultato e poi la partita NEXT).
+- **Timbro:** il soggetto si stacca, si ingrandisce e batte giu con un anello.
+
+Dove: **Full Time** (la partita e il suo esito, poi il chip punti verde +3 / giallo +1 / rosso +0, che a sua volta
+puo volare dal punteggio, contare da +0 o stamparsi), **Calendario** (ultimo risultato e prossima partita),
+**Convocati** (il capitano, con la fascia C gialla che resta; qui lo zoom ha senso perche la riga e piccola).
+
+**Varieta:** il modo cambia da solo a ogni giornata e non e lo stesso tra grafiche diverse della stessa settimana. In
+Video MP4 > *Messa in evidenza* si puo anche fissare.
 
 ## Novita della 3.3: i dettagli delle animazioni
 

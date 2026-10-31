@@ -114,6 +114,7 @@ def prepare(prepared, config, kind):
     info.setdefault('theme', '')
     import frames
     frames.store(info, config)
+    info['highlight'] = config.get('highlight', 'auto')
     info['camera'] = motion.camera(config)
     info['fx'] = motion.ambient(config)
     info['crest'] = _crest(layers, config, kind)
@@ -223,6 +224,11 @@ def _crest(layers, config, kind):
     return layer.image if layer is not None else None
 
 
+def focus_treatment(info, kind):
+    import focus
+    return focus.treatment(info, kind)
+
+
 def rich(prepared):
     return prepared[0].info.get('anim') == 'Retro' and all(hasattr(l, 'start') for l in prepared[1])
 
@@ -263,7 +269,8 @@ def moments(prepared):
         out.append((end, 'impact', dict(strength=1.0, flash=True)))
         out.append((end, 'focus_score', {}))
         if info.get('outcome') in ('win', 'draw', 'loss'):
-            out.append((end+2.4, 'points', dict(outcome=info['outcome'])))
+            import focus
+            out.append((end+2.4, 'points', dict(outcome=info['outcome'], style=focus.chip_style(info))))
         if info.get('our_goals', 0) > 0:
             out.append((end, 'goal', dict(layer='score')))
         if info.get('outcome'):
@@ -345,9 +352,13 @@ def events(prepared):
         elif kind == 'banner':
             out.append((t, data['outcome'], 0))
         elif kind == 'points':
-            out.append((t, 'ding', {'win': 2, 'draw': 1, 'loss': 0}[data['outcome']]))
+            if data.get('style') == 'conta':
+                for k in range({'win': 3, 'draw': 1, 'loss': 0}[data['outcome']]):
+                    out.append((t+(k+1)*.18, 'tick', k))
+            out.append((t+(.6 if data.get('style') == 'vola' else .55 if data.get('style') == 'conta' else 0), 'ding',
+                        {'win': 2, 'draw': 1, 'loss': 0}[data['outcome']]))
         elif kind == 'stamp':
-            out.append((t, 'impact', 0))
+            out.append((t, 'impact' if focus_treatment(info, 'calendario') == 'timbro' else 'blip', 0))
             if data.get('next') is not None:
                 out.append((t+.95, 'whoosh', 0))
         elif kind == 'captain':
@@ -898,12 +909,15 @@ def _compose(prepared, t=999, animated=True):
         placed = {k: (x+lx, y+ly) for k, (x, y) in positions.items()}
     focus_moment = next(((at, d) for at, k, d in all_moments if k == 'climb'), None)
     backdrop = canvas.copy() if focus_moment and t >= focus_moment[0]-focus_moment[1]['lead'] else None
+    stamping = any(k in ('stamp', 'focus_score', 'captain') and 0 <= t-at < .8 for at, k, _ in all_moments)
     for layer in layers:
         shown = layer
         if focus_moment and getattr(layer, 'before', None) is not None:
             shown = copy.copy(layer)       # last week's order until our row lands, then the clean table
             shown.image = layer.before if t < focus_moment[0] else getattr(layer, 'clean', layer.image)
         _draw(canvas, shown, placed[layer.id], t-offset-layer.start, frame_index, t, info)
+    if stamping and backdrop is None:
+        backdrop = None   # filled below, after the layers: the stamp lifts what is on screen
     for at, kind, data in all_moments:
         early = data.get('lead', 0) if isinstance(data, dict) else 0
         if t >= at-early:
@@ -912,8 +926,10 @@ def _compose(prepared, t=999, animated=True):
             _moment_overlay(canvas, prepared, t, t-at, kind, data)
     _sparkles(canvas, prepared, t)
     s = canvas.width/540
+    if stamping:
+        backdrop = canvas.copy()
     import focus
-    focus.overlays(canvas, prepared, all_moments, t)
+    focus.overlays(canvas, prepared, all_moments, t, backdrop)
     z, cx, cy = focus.camera_at(prepared, all_moments, t)
     if z > 1.0005:
         canvas = motion._affine(canvas, z, 0, 0, 0, cx*s, cy*s)

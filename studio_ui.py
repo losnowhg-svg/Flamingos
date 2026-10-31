@@ -47,7 +47,8 @@ HEADERS = {
 }
 LOGO_LABELS = {'default': 'Flamingos - incluso', 'none': 'Scudo con ?'}
 VIDEO_ONLY = ('duration', 'fps', 'video_scale', 'sound', 'volume', 'intro', 'music', 'ending', 'details', 'power_on', 'animation',
-              'intro_style', 'music_track', 'entrance', 'camera', 'fx_pulse', 'fx_flicker', 'fx_particles', 'fx_sweep')
+              'intro_style', 'music_track', 'entrance', 'camera', 'fx_pulse', 'fx_flicker', 'fx_particles', 'fx_sweep',
+              'highlight')
 STYLE_MIX = {'atmosphere': atmospheres.ATMOSPHERES, 'decor': atmospheres.DETAILS, 'panel_style': PANEL_STYLES,
              'title_fx': title_fx.EFFECTS, 'frame_style': frames.FRAMES, 'texture_fx': frames.TEXTURES}
 
@@ -794,6 +795,10 @@ def show_studio(root: Path, template: str, library: dict):
                     a, b = st.columns(2)
                     with a: select('entrance', 'Ingresso degli elementi', motion.ENTRANCES, motion.ENTRANCES.get)
                     with b: select('camera', 'Movimento di camera', motion.CAMERAS, motion.CAMERAS.get)
+                    if template in ('Full Time', 'Calendario', 'Convocati'):
+                        import focus
+                        select('highlight', 'Messa in evidenza (punteggio, ultimo risultato, capitano)', focus.HIGHLIGHTS,
+                               focus.HIGHLIGHTS.get)
                     st.caption('Effetti continui')
                     cols = st.columns(2)
                     for i, (name, label) in enumerate(motion.AMBIENT.items()):

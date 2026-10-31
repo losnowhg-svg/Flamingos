@@ -180,25 +180,46 @@ class DetailsEverywhere(unittest.TestCase):
             area = frame[530:590, 300:460].reshape(-1, 3)
             self.assertGreater((np.abs(area-np.array(colour)).sum(axis=1) < 50).sum(), 30, (home, away, side))
 
-    def test_score_close_up_zooms_and_comes_back(self):
-        prepared, moments = self.moments('Full Time', home_score=2, away_score=0)
-        at = next(m[0] for m in moments if m[1] == 'focus_score')
+    def test_zoom_only_on_small_things(self):
         import focus
-        self.assertGreater(focus.camera_at(prepared, moments, at+.4)[0], 1.1)
-        self.assertEqual(focus.camera_at(prepared, moments, at+2.5)[0], 1.0)
+        for highlight in ('zoom', 'riflettore', 'timbro', 'evidenziatore'):
+            prepared, moments = self.moments('Full Time', home_score=2, away_score=0, highlight=highlight)
+            at = next(m[0] for m in moments if m[1] == 'focus_score')
+            self.assertEqual(focus.camera_at(prepared, moments, at+.5)[0], 1.0, highlight)   # the score is big
+        roster = defaults('Convocati')['roster']
+        roster[2]['captain'] = True
+        prepared, moments = self.moments('Convocati', roster=roster, highlight='zoom')
+        at = next(m[0] for m in moments if m[1] == 'captain')
+        self.assertGreater(focus.camera_at(prepared, moments, at+.6)[0], 1.1)               # a list row is small
 
-    def test_calendar_stamp_then_next(self):
-        prepared, moments = self.moments('Calendario')
-        stamp = next(m for m in moments if m[1] == 'stamp')
-        nxt = next(m for m in moments if m[1] == 'next')
-        meta = next(l for l in prepared[1] if l.id == 'table').image.info
-        self.assertEqual(stamp[2]['row'], max(i for i, r in enumerate(meta['row_results']) if r and i < meta['next_row']))
-        self.assertGreater(nxt[0], stamp[0])
+    def test_spotlight_keeps_the_subject_bright(self):
         import focus
-        z1, _, y1 = focus.camera_at(prepared, moments, stamp[0]+.5)
-        z2, _, y2 = focus.camera_at(prepared, moments, stamp[0]+1.7)
-        self.assertGreater(z1, 1.1)
-        self.assertGreater(y2, y1)                    # the camera glides down to the next match
+        prepared, moments = self.moments('Full Time', home_score=2, away_score=0, highlight='riflettore')
+        at = next(m[0] for m in moments if m[1] == 'focus_score')
+        plain, plain_moments = self.moments('Full Time', home_score=2, away_score=0, highlight='timbro')
+        lit = np.asarray(animations.compose(prepared, at+1.2, True), np.int16)
+        ref = np.asarray(animations.compose(plain, at+1.2, True), np.int16)
+        x0, y0, x1, y1 = (round(v) for v in focus.subjects(prepared, 'focus_score', {})[0][1])
+        inside = np.abs(lit[y0+8:y1-8, x0+8:x1-8]-ref[y0+8:y1-8, x0+8:x1-8]).mean()
+        outside = (ref[100:300]-lit[100:300]).mean()
+        self.assertLess(inside, 8)
+        self.assertGreater(outside, 15)
+
+    def test_variety_by_round_and_by_graphic(self):
+        import focus
+        seen = {focus.treatment({'level': n}, 'fulltime') for n in range(1, 4)}
+        self.assertEqual(seen, set(focus.TREATMENTS['fulltime']))
+        self.assertNotEqual(focus.treatment({'level': 1}, 'fulltime'), focus.treatment({'level': 1}, 'calendario'))
+        self.assertEqual(focus.treatment({'level': 5, 'highlight': 'timbro'}, 'calendario'), 'timbro')
+        self.assertEqual(focus.treatment({'highlight': 'zoom'}, 'fulltime'), 'riflettore')
+        self.assertEqual({focus.chip_style({'level': n}) for n in range(1, 4)}, set(focus.CHIPS))
+
+    def test_calendar_highlight_travels_to_next(self):
+        import focus
+        prepared, moments = self.moments('Calendario', highlight='riflettore')
+        stamp = next(m for m in moments if m[1] == 'stamp')
+        keys = focus.subjects(prepared, 'stamp', stamp[2], 'riflettore')
+        self.assertGreater(focus._travel(keys, 1.7)[1], focus._travel(keys, .5)[1])
 
     def test_captain_armband(self):
         roster = defaults('Convocati')['roster']
