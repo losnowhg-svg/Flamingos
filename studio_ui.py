@@ -57,6 +57,11 @@ KINDS = {'Matchday Screen': 'matchday', 'Full Time': 'fulltime', 'Convocati': 'c
          'Calendario': 'calendario'}
 
 
+def r_output(image, config):
+    from crt_presets import output_image
+    return output_image(image, config.get('export_format', 'Story 9:16'), 1)
+
+
 def listen_track(config, template=None, key_name='listen'):
     """▶ Ascolta: the chosen track (or the one 'Automatica' picks now), without rendering a video."""
     import music
@@ -183,15 +188,18 @@ def show_studio(root: Path, template: str, library: dict):
 
     # ---------------------------------------------------------------- header
     title, subtitle = HEADERS[template]
-    head, back = st.columns([5, 1])
-    with head:
-        st.subheader(title)
-        st.caption(subtitle)
-    with back:
-        st.button('← Settimana', key=key('home'), on_click=go, args=('Settimana',), width='stretch')
+    with st.container(key='page_head'):
+        head, back = st.columns([5, 1])
+        with head:
+            st.subheader(title)
+            st.caption(subtitle)
+        with back:
+            st.button('← Settimana', key=key('home'), on_click=go, args=('Settimana',), width='stretch')
     todo = data_status(template, config)
     if todo:
         st.info('Ancora da completare: '+', '.join(todo)+'.', icon='✏️')
+    # Phone only (CSS): a small preview that stays at the top while the controls scroll under it.
+    mobile_slot = st.container(key='mobile_preview')
 
     controls, preview_column = st.columns([1, 1.1], gap='large')
     with controls:
@@ -682,6 +690,19 @@ def show_studio(root: Path, template: str, library: dict):
             editor_payload = r.editor_data(editor_scene)
             st.session_state['preview_'+template] = {'key': preview_key, 'prepared': prepared, 'payload': editor_payload}
         crop = CROPS[config['export_format']] if is_crt else None
+        with mobile_slot:
+            small = st.session_state.get('mobile_png_'+template)
+            if not small or small[0] != preview_key:
+                still = module.compose(prepared, 999, False) if is_crt else r.compose(prepared, animated=False)
+                image = r_output(still, config) if is_crt else still
+                image.thumbnail((480, 480))
+                from PIL import Image as _Image     # centred on a wide band: the phone shows it full width
+                band = _Image.new('RGB', (round(image.height*1.7), image.height), (16, 13, 22))
+                band.paste(image.convert('RGB'), ((band.width-image.width)//2, 0))
+                small = (preview_key, band)
+                st.session_state['mobile_png_'+template] = small
+            st.image(small[1], width='stretch')
+            st.caption('Anteprima · le modifiche si vedono qui')
         # ------------------------------------------------------ PREVIEW
         with preview_column:
             zones = safezone.editor_zones(config['export_format']) if is_crt else None
@@ -733,6 +754,8 @@ def show_studio(root: Path, template: str, library: dict):
             basename = file_stem(template, config)
             st.download_button(f'⬇ Scarica PNG  ·  1080 x {height}  ·  {len(png)/1e6:.1f} MB', png, file_name=basename+'.png', mime='image/png',
                                type='primary', width='stretch', key=key('download_png'))
+            import share
+            share.button(png, basename+'.png', 'image/png', key='png_'+template)
             if is_crt and config['mockup']:
                 st.image(png, width='stretch')
             else:
@@ -751,14 +774,15 @@ def show_studio(root: Path, template: str, library: dict):
                 st.divider()
             if template != 'Starting 7':
                 from caption_ui import quick
-                section('Didascalie', 'Tre proposte veloci. Centinaia di altre, con toni e filtri, nella pagina Didascalie.')
-                for item in quick(template, 3, st.session_state.get('caption_quick_seed', 0), library):
-                    st.code(item['text'], language=None, wrap_lines=True)
-                a, b = st.columns(2)
-                if a.button('🎲 Altre tre', key=key('caption_roll'), width='stretch'):
-                    st.session_state['caption_quick_seed'] = st.session_state.get('caption_quick_seed', 0)+1
-                    st.rerun()
-                b.button('✍️ Apri Didascalie', key=key('caption_page'), width='stretch', on_click=_open_captions, args=(template,))
+                with st.expander('✍️ Didascalia per il post (tre proposte)'):
+                    st.caption('Tocca l\'icona in alto a destra di un riquadro per copiarla. Centinaia di altre nella pagina Didascalie.')
+                    for item in quick(template, 3, st.session_state.get('caption_quick_seed', 0), library):
+                        st.code(item['text'], language=None, wrap_lines=True)
+                    a, b = st.columns(2)
+                    if a.button('🎲 Altre tre', key=key('caption_roll'), width='stretch'):
+                        st.session_state['caption_quick_seed'] = st.session_state.get('caption_quick_seed', 0)+1
+                        st.rerun()
+                    b.button('✍️ Apri Didascalie', key=key('caption_page'), width='stretch', on_click=_open_captions, args=(template,))
                 st.divider()
             section('Video MP4')
             if is_crt:
@@ -878,6 +902,8 @@ def show_studio(root: Path, template: str, library: dict):
                 st.video(video['data'])
                 st.download_button('⬇ Scarica MP4', video['data'], file_name=basename+'.mp4', mime='video/mp4',
                                    key=key('download_video'), width='stretch')
+                import share
+                share.button(video['data'], basename+'.mp4', 'video/mp4', key='mp4_'+template)
             st.divider()
             section('Progetti')
             with st.expander('Salva o riapri questa grafica'):
