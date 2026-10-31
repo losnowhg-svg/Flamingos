@@ -1,4 +1,16 @@
-# Flamingos Studio 3.7
+# Flamingos Studio 3.8
+
+## Novita della 3.8: musica vera
+- **Otto brani veri, senza copyright (CC0):** hip-hop pesante, elettronica scura, boom bap, r&b beat, lo-fi, funk,
+  veloce ed energica, cinematica. Sono estratti tagliati attorno al loro "drop", che cade sul momento clou del video
+  (4 secondi). La scelta *Automatica* ora usa questi, in base a grafica, risultato e giornata. Crediti in
+  `assets/music/CREDITS.md`.
+- **Il mio brano:** carichi un mp3/m4a/wav/ogg (da Pixabay Music, YouTube Audio Library, FreePD o tuo); l'app trova
+  da sola il momento forte e il tempo, lo allinea al drop e lo ripete se il video è più lungo. Il momento forte si
+  può spostare a mano. Funziona anche nella sequenza video.
+- **A tempo con la musica:** pulsazioni, camera "ritmo" e momento clou seguono il tempo vero del brano, non più solo
+  i 120 bpm delle basi sintetiche. Sotto un brano vero i suoni CRT sono più bassi, così comanda la musica.
+- Le basi sintetiche e gli 8-bit restano nel menu, in fondo.
 
 ## Novita della 3.7: i cambiamenti nei video
 

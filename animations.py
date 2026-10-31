@@ -128,6 +128,8 @@ def prepare(prepared, config, kind):
     info['crest'] = _crest(layers, config, kind)
     family = motion.entrance(config)
     info['music_track'] = variety.music_track(config, kind, info.get('outcome'), info.get('theme', ''))
+    import tracks
+    info['beat'] = tracks.beat(info['music_track']) if info['music'] else None
     timeline = TIMELINES.get(kind, {})
     last = max(timeline.values(), default=0)
     players = [l for l in layers if l.id.startswith('player_')]
@@ -200,17 +202,25 @@ def sync_to_music(prepared):
     offset = _offset(prepared)
     old = layer.start
     moment = offset+old+extra
+    beat = prepared[0].info.get('beat')
+    bar = 4*beat[0] if beat else MUSIC_BAR       # a real track has its own tempo
     target = DROP
     while target < moment-.3:
-        target += MUSIC_BAR
+        target += bar
 
     def valid(at):
         start = at-offset-extra
         return start >= 0 and ((old > 0 and .6 <= start/old <= 2.6) or (old == 0 and start <= 1.5))
     if not valid(target):
-        target = MUSIC_BAR        # too early for the drop: the first downbeat of the intro
-        if target < moment-.3 or not valid(target):
-            return
+        if beat:      # too early for the drop: the closest beat of the intro that keeps the pace natural
+            options = sorted((DROP-n*beat[0] for n in range(1, 9)), key=lambda at: abs(at-moment))
+            target = next((at for at in options if at >= moment-.7 and valid(at)), None)
+            if target is None:
+                return
+        else:
+            target = MUSIC_BAR        # too early for the drop: the first downbeat of the intro
+            if target < moment-.3 or not valid(target):
+                return
     new = target-offset-extra
     factor = new/old if old > 0 else 1.0
     for item in prepared[1]:

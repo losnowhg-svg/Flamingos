@@ -350,6 +350,9 @@ def chiptune(seconds, seed=0, bpm=120, track='arcade'):
     or one of the full-sounding tracks in music.py."""
     try:
         import music
+        import tracks
+        if tracks.is_real(track):
+            return tracks.render(track, seconds)
         if track in music.TRACKS:
             return music.render(track, seconds)
     except Exception:   # a music problem never stops a graphic: fall back to the 8-bit tune
@@ -422,12 +425,15 @@ def scene_events(prepared, compose, start=0.0, speed=1.0, until=None, effects=Tr
                                  track=prepared[0].info.get('music_track', 'arcade'))*.9)]
     if animations.rich(prepared):
         out = []
+        import tracks
+        # Under a real track the CRT sounds step back: the music leads.
+        level = .6 if prepared[0].info.get('music') and tracks.is_real(prepared[0].info.get('music_track')) else 1.0
         for t, kind, i in animations.events(prepared):
             at = start+t/speed
             if until is not None and at >= until:
                 continue
             maker = SOUNDS.get(kind)
-            out.append((at, maker(i) if maker else blip(i if isinstance(i, int) else 0)))
+            out.append((at, (maker(i) if maker else blip(i if isinstance(i, int) else 0))*level))
         if prepared[0].info.get('music'):
             length = (until-start) if until is not None else 12
             out.append((start, chiptune(max(1.0, length), len(prepared[1]),

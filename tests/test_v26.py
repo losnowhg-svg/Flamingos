@@ -137,15 +137,15 @@ class Music(unittest.TestCase):
         self.assertGreater(np.abs(clips['epica']-clips['festa']).mean(), .01)
 
     def test_automatic_choice(self):
-        self.assertEqual(variety.music_track({}, 'fulltime', 'win'), 'festa')
-        self.assertEqual(variety.music_track({}, 'fulltime', 'loss'), 'tensione')
-        self.assertEqual(variety.music_track({}, 'matchday', theme='derby'), 'tensione')
+        self.assertEqual(variety.music_track({}, 'fulltime', 'win'), 'cc0_funk')
+        self.assertEqual(variety.music_track({}, 'fulltime', 'loss'), 'cc0_city')
+        self.assertEqual(variety.music_track({}, 'matchday', theme='derby'), 'cc0_battle')
         self.assertEqual(variety.music_track({'music_track': 'epica'}, 'fulltime', 'win'), 'epica')
 
     def test_scene_carries_the_track(self):
         config = dict(defaults('Full Time'), home_score=3, away_score=0, music=True, theme='none')
         prepared = MODULES['Full Time'].scene(config, LOGO, None, None, 1)
-        self.assertEqual(prepared[0].info['music_track'], 'festa')
+        self.assertEqual(prepared[0].info['music_track'], 'cc0_funk')
 
 
 class Transitions(unittest.TestCase):

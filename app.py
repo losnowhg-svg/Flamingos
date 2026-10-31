@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.7 / i cambiamenti nei video: gol per gol, il mese in numeri')
+    st.caption('3.8 / musica vera: brani CC0 e il tuo brano, a tempo con le animazioni')
 
 from library import show_library
 from studio_ui import show_studio

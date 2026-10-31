@@ -27,6 +27,17 @@ def scene(template, **extra):
     return MODULES[template].scene(config, LOGO, None, None, 1), config
 
 
+
+
+def on_a_bar(test, prepared, at):
+    """`at` sits on a bar line of the track: every 2 s at 120 bpm, or the real track's own bars (3.8)."""
+    beat = prepared[0].info.get('beat')
+    bar = 4*beat[0] if beat else 2.0
+    if beat and at < 4.0:       # before the drop of a real track: any beat of its intro
+        bar = beat[0]
+    steps = (at-4.0)/bar
+    test.assertAlmostEqual(steps, round(steps), places=1)
+
 class SafeZone(unittest.TestCase):
     def test_the_default_layouts_are_already_safe(self):
         for template in TEMPLATES:
@@ -69,8 +80,8 @@ class OnTheMusic(unittest.TestCase):
                         config_extra.update(home_score=2, away_score=1)
                     prepared, _ = scene(template, **config_extra)
                     at = self.moment(prepared)
-                    self.assertAlmostEqual(at/2, round(at/2), places=2)      # on a bar line (every 2 s)
-                    self.assertEqual(prepared[0].info['drop_at'], round(at, 2))
+                    on_a_bar(self, prepared, at)
+                    self.assertAlmostEqual(prepared[0].info['drop_at'], at, places=2)
 
     def test_matchday_crests_crash_on_the_drop(self):
         prepared, _ = scene('Matchday Screen', music=True)
@@ -151,8 +162,8 @@ class ClassificaFocus(unittest.TestCase):
 
     def test_landing_on_the_drop_with_music(self):
         prepared, at, data = self.prepared(5, music=True)
-        self.assertAlmostEqual(at/2, round(at/2), places=2)
-        self.assertEqual(prepared[0].info['drop_at'], round(at, 2))
+        on_a_bar(self, prepared, at)
+        self.assertAlmostEqual(prepared[0].info['drop_at'], at, places=2)
 
     def test_still_image_keeps_the_small_arrow(self):
         import classifica_renderer as cr

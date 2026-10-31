@@ -22,6 +22,7 @@ import animations
 import atmospheres
 import frames
 import motion
+import music_ui
 import themes
 import safezone
 import title_fx
@@ -69,7 +70,10 @@ def listen_track(config, template=None, key_name='listen'):
     template = template or st.session_state.get('studio_template')
     outcome = f.outcome(config)[0] if template == 'Full Time' else None
     track = variety.music_track(config, KINDS.get(template, ''), outcome, themes.resolve(config) or '')
-    if st.toggle('▶ Ascolta il brano', key=f'{key_name}_{template}'):
+    if config.get('music_track') == 'mio' and not config.get('music_custom'):
+        return
+    if st.toggle('▶ Ascolta il pezzo che suonerà nel video' if config.get('music_track') == 'mio' else '▶ Ascolta il brano',
+                 key=f'{key_name}_{template}'):
         if config.get('music_track', 'auto') == 'auto':
             st.caption(f'Automatica, questa settimana: {variety.MUSIC_TRACKS.get(track, track)}')
         try:
@@ -835,6 +839,10 @@ def show_studio(root: Path, template: str, library: dict):
                             select('intro_style', 'Che intro', variety.INTRO_STYLES, variety.INTRO_STYLES.get)
                         if check('music', 'Musica'):
                             select('music_track', 'Brano', variety.MUSIC_TRACKS, variety.MUSIC_TRACKS.get)
+                            if config['music_track'] == 'mio':
+                                music_ui.uploader(config, key('my_music_file'))
+                            else:
+                                config.pop('music_custom', None)
                             listen_track(config)
                     with b:
                         check('details', 'Dettagli VHS: REC, contatore, disturbi')
@@ -861,7 +869,8 @@ def show_studio(root: Path, template: str, library: dict):
                 check('sound', 'Suoni CRT')
                 if config['sound'] or config.get('music'): slider('volume', 'Volume', 0, 100)
             video_signature = hashlib.sha256((signature+str(config['duration'])+str(config['fps'])+str(config['video_scale'])
-                                              + str(config['sound'])+str(config.get('music'))+str(config['volume'])).encode()).hexdigest()
+                                              + str(config['sound'])+str(config.get('music'))+str(config['volume'])
+                                              + (music_ui.signature(config) if config.get('music') else '')).encode()).hexdigest()
             a, b = st.columns(2)
             quick = a.button('⚡ Anteprima veloce', key=key('quick_video'), width='stretch',
                              help='540 px, 12 fotogrammi al secondo, senza audio: per controllare le animazioni in pochi secondi.')

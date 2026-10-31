@@ -11,19 +11,24 @@ import random
 INTRO_STYLES = {'press_start': 'PRESS START', 'cartuccia': 'Cartuccia', 'caricamento': 'Caricamento',
                 'versus': 'VS da picchiaduro', 'mappa': 'Mappa dei livelli', 'logo': 'Logo che si compone',
                 'rotazione': 'A rotazione (cambia ogni giornata)'}
-MUSIC_TRACKS = {'auto': 'Automatica (cambia con grafica, risultato e giornata)',
-                'synthwave': 'Synthwave - notte al neon', 'house': 'House - pre-partita', 'trap': 'Trap - cupa e decisa',
-                'disco': 'Disco funk - si balla', 'carica': 'Carica - rock da stadio', 'lofi': 'Lo-fi - tranquilla',
+MUSIC_TRACKS = {'auto': 'Automatica (brani veri, cambia con grafica, risultato e giornata)',
+                'cc0_robots': 'Hip-hop pesante - Big Ass Robots', 'cc0_club': 'Elettronica scura - Mutant Club',
+                'cc0_ritmo': 'Boom bap - Lost In The Rythm', 'cc0_sunglasses': 'R&B beat - Sunglasses',
+                'cc0_city': 'Lo-fi hip-hop - City Lights', 'cc0_funk': 'Funk - Funkeriffic',
+                'cc0_rush': 'Veloce ed energica - Rush', 'cc0_battle': 'Cinematica - Battle Ready',
+                'mio': '📁 Il mio brano (caricalo qui sotto)',
+                'synthwave': 'Base sintetica: synthwave', 'house': 'Base sintetica: house', 'trap': 'Base sintetica: trap',
+                'disco': 'Base sintetica: disco funk', 'carica': 'Base sintetica: rock da stadio', 'lofi': 'Base sintetica: lo-fi',
                 'arcade': '8-bit arcade, allegra', 'epica': '8-bit epica', 'tensione': '8-bit tensione', 'festa': '8-bit festa'}
-# The automatic choice rotates by round; the first entry of each list is the one of the earlier versions.
-AUTO_TRACKS = {'matchday': ('epica', 'synthwave', 'carica', 'house', 'trap'),
-               'big': ('tensione', 'trap', 'carica'),
-               'win': ('festa', 'disco', 'house', 'carica'),
-               'draw': ('arcade', 'synthwave', 'lofi'),
-               'loss': ('tensione', 'lofi', 'trap'),
-               'convocati': ('epica', 'trap', 'carica', 'synthwave', 'house'),
-               'wrapped': ('festa', 'disco', 'synthwave'),
-               'other': ('arcade', 'lofi', 'house', 'synthwave')}
+# The automatic choice: real CC0 tracks (assets/music), rotating by round.
+AUTO_TRACKS = {'matchday': ('cc0_robots', 'cc0_club', 'cc0_battle', 'cc0_rush', 'cc0_ritmo'),
+               'big': ('cc0_battle', 'cc0_club', 'cc0_robots'),
+               'win': ('cc0_funk', 'cc0_rush', 'cc0_sunglasses', 'cc0_ritmo'),
+               'draw': ('cc0_city', 'cc0_sunglasses', 'cc0_ritmo'),
+               'loss': ('cc0_city', 'cc0_club', 'cc0_sunglasses'),
+               'convocati': ('cc0_ritmo', 'cc0_robots', 'cc0_rush', 'cc0_club', 'cc0_battle'),
+               'wrapped': ('cc0_funk', 'cc0_sunglasses', 'cc0_city'),
+               'other': ('cc0_sunglasses', 'cc0_city', 'cc0_ritmo', 'cc0_funk')}
 POSES = {'ferma': 'Ferma', 'esultanza': 'Esultanza', 'conserte': 'Braccia conserte', 'pollice': 'Pollice su',
          'palleggio': 'Palleggio', 'saluto': 'Saluto', 'guanti': 'Guanti da portiere'}
 POSE_MODES = {'variate': 'Variate (in base al ruolo)', **POSES}
@@ -89,6 +94,12 @@ def intro_style(config, kind=''):
 
 def music_track(config, kind='', outcome=None, theme=''):
     track = config.get('music_track', 'auto')
+    if track == 'mio':     # the uploaded track (its key is put on the config at render time)
+        import tracks
+        found = tracks.resolve(track, config)
+        if found:
+            return found
+        track = 'auto'
     if track in MUSIC_TRACKS and track != 'auto':
         return track
     if kind == 'fulltime':
