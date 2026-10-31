@@ -548,3 +548,149 @@ def gap_overlay(canvas, prepared, data, p):
         tab = chip(text, colour, s, 14)
         q = _back((p-.45)/.3)
         _put(canvas, _scaled(tab, max(.05, q)), None, (x+tab.width/s/2+4, (ya+yb)/2), min(1.0, (p-.45)/.1)*fade)
+
+
+# --- 3.7: the match told goal by goal, the month in numbers -----------------------------------
+
+GOAL_GAP = .5
+GOAL_STEP = .6      # seconds between goals when the minutes are not known
+
+
+def _replay_keys(replay):
+    """[(seconds, minute)] of the match clock: steady, but never two goals closer than GOAL_GAP."""
+    events = replay['events']
+    length = replay['length']
+    if not replay.get('timed', True):     # no minutes: one goal after the other, steady beat
+        keys = [(.3, 0)]+[(.45+GOAL_STEP*i, i+1) for i in range(len(events))]
+        return keys+[(keys[-1][0]+.7, len(events))]
+    run = max(1.6, .45*len(events)+1.0)
+    keys, last = [(.3, 0)], .3-GOAL_GAP
+    for minute, _, _, _ in events:
+        at = max(.3+run*minute/length, last+GOAL_GAP)
+        keys.append((at, minute))
+        last = at
+    keys.append((max(last+.6, .3+run), length))
+    return keys
+
+
+def replay_length(replay):
+    return _replay_keys(replay)[-1][0]+.5
+
+
+def replay_goals(replay):
+    keys = _replay_keys(replay)
+    return [(at, side, name) for (at, _), (_, side, name, _) in zip(keys[1:-1], replay['events'])]
+
+
+def _minute_at(keys, p):
+    if p <= keys[0][0]:
+        return 0.0
+    for (t0, m0), (t1, m1) in zip(keys, keys[1:]):
+        if p <= t1:
+            return m0+(m1-m0)*(p-t0)/max(1e-6, t1-t0)
+    return float(keys[-1][1])
+
+
+def draw_replay(canvas, layer, pos, local, info):
+    """Full Time: the score goes 0-0, 1-0, 1-1... while a match clock runs along a timeline."""
+    from animations import _label, _put, _scaled, _whiten
+    if local <= 0:
+        return
+    s = canvas.width/540
+    replay = layer.replay
+    keys = _replay_keys(replay)
+    total = replay_length(replay)
+    if local >= total:
+        _put(canvas, layer.image, layer, pos)
+        return
+    goals = replay_goals(replay)
+    passed = [g for g in goals if g[0] <= local]
+    image = replay['events'][len(passed)-1][3] if passed else replay['zero']
+    since = local-passed[-1][0] if passed else 9
+    pop = 1+.28*(1-_smooth(since/.28)) if since < .28 else 1
+    _put(canvas, _whiten(_scaled(image, pop), .5*(1-since/.28)) if since < .28 else image, layer, pos, min(1.0, local/.15))
+    pink, cyan, yellow = info.get('frame_colors', ((242, 104, 168), (121, 220, 247), (255, 201, 99)))
+    ours = 'away' if info.get('our_side') == 'Ospiti' else 'home'
+    colour = {ours: pink, ('home' if ours == 'away' else 'away'): cyan}
+    # The timeline sits where the scorers will appear (they type in right after).
+    x0, x1, y = 112, 428, 618
+    fade = min(1.0, local/.25, (total-local)/.35)
+    if fade <= 0:
+        return
+    d = ScaledDraw(canvas, s, 'RGBA')
+    if not replay.get('timed', True):
+        _goal_row(canvas, d, goals, local, fade, colour, s, x0, x1, y)
+        return
+    length = replay['length']
+    minute = _minute_at(keys, local)
+    px = x0+(x1-x0)*minute/length
+    a = round(255*fade)
+    d.rectangle((x0, y-1.5, x1, y+1.5), fill=(255, 255, 255, round(70*fade)))
+    d.rectangle((x0, y-1.5, px, y+1.5), fill=(*yellow, a))
+    for m in (0, length//2, length):
+        tx = x0+(x1-x0)*m/length
+        d.rectangle((tx-.6, y-5, tx+.6, y+5), fill=(255, 255, 255, round(120*fade)))
+        label = _label(f"{m}'", (200, 196, 214), 7, max(1, round(s)))
+        _put(canvas, label, None, (tx, y+13), fade)
+    for (at, side, name), (m, _, _, _) in zip(goals, replay['events']):
+        if local < at:
+            continue
+        gx = x0+(x1-x0)*m/length
+        k = _back(min(1.0, (local-at)/.25))
+        r = 4.5*k
+        d.ellipse((gx-r, y-r, gx+r, y+r), fill=(*colour[side], a), outline=(255, 255, 255, a), width=1)
+        if local-at < 1.1:     # the scorer, just for a moment
+            tag = _label(f"{name} {m}'", colour[side], 9, max(1, round(s)))
+            _put(canvas, tag, None, (min(max(gx, x0+40), x1-40), y-14 if side == 'home' else y-14), fade*min(1.0, (1.1-(local-at))/.25))
+    d.ellipse((px-3.5, y-3.5, px+3.5, y+3.5), fill=(255, 255, 255, a))
+    clock = _label(f"{int(minute)}'", (255, 255, 255), 10, max(1, round(s)))
+    _put(canvas, clock, None, (px, y+26), fade)
+
+
+def _goal_row(canvas, d, goals, local, fade, colour, s, x0, x1, y):
+    """No minutes, no clock: each team's goals light up in its own half of the scorers panel, with the scorer."""
+    from animations import _label, _put
+    centre = {'home': 174, 'away': 366}           # the two scorer columns
+    count = {side: sum(1 for g in goals if g[1] == side) for side in centre}
+    seen = {side: 0 for side in centre}
+    a = round(255*fade)
+    for at, side, name in goals:
+        n, i = count[side], seen[side]
+        seen[side] += 1
+        gap = min(22.0, 150/max(1, n))
+        gx = centre[side]+gap*(i-(n-1)/2)
+        d.ellipse((gx-2.5, y-2.5, gx+2.5, y+2.5), outline=(255, 255, 255, round(90*fade)), width=1)
+        if local < at:
+            continue
+        k = _back(min(1.0, (local-at)/.25))
+        r = 5*k
+        d.ellipse((gx-r, y-r, gx+r, y+r), fill=(*colour[side], a), outline=(255, 255, 255, a), width=1)
+        if name and local-at < 1.0:
+            tag = _label(name, colour[side], 9, max(1, round(s)))
+            _put(canvas, tag, None, (min(max(gx, centre[side]-60), centre[side]+60), y-15), fade*min(1.0, (1.0-(local-at))/.25))
+
+
+def tally_overlay(canvas, prepared, data, p, backdrop):
+    """Calendario: the month label turns into the month's points and results, then back."""
+    from animations import _put
+    from pixel_fonts import pixel_text_runs
+    if backdrop is None or p < 0 or p > STAKE_HOLD+.5:
+        return
+    layer = _layer(prepared, 'subtitle')
+    if layer is None:
+        return
+    s = canvas.width/540
+    info = prepared[0].info
+    box = _box(prepared, 'subtitle', 0)
+    px = tuple(round(v*s) for v in box)
+    yellow = info.get('frame_colors', (None, None, (255, 201, 99)))[2]
+    runs = [(f"{data['pt']} PT  ", yellow), (f"{data['v']}V ", COLORS['up']), (f"{data['n']}N ", COLORS['same']),
+            (f"{data['p']}P", COLORS['down'])]
+    stat = pixel_text_runs(runs, 'CRT Scoreboard', max(8.0, (box[3]-box[1])*.8), box[2]-box[0]+60, max(1, round(s)))
+    if stat is None:
+        return
+    k = min(1.0, p/.35) if p < STAKE_HOLD else max(0.0, 1-(p-STAKE_HOLD)/.5)
+    canvas.paste(backdrop.crop(px), px[:2])
+    style = stake_style(info)
+    img = _swap(layer.image, stat, k, style, s) if 0 < k < 1 else (stat if k >= 1 else layer.image)
+    _put(canvas, img, None, ((box[0]+box[2])/2, (box[1]+box[3])/2))

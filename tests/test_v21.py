@@ -40,7 +40,7 @@ class MomentTests(unittest.TestCase):
         self.assertGreater(flash, before+10)
 
     def test_fulltime_outcomes(self):
-        win = scene('Full Time', home_score=3, away_score=1)
+        win = scene('Full Time', home_score=3, away_score=1, show_scorers=False)   # the counter: no scorers
         self.assertEqual(win[0].info['outcome'], 'win')
         self.assertIn('goal', kinds(win))
         banner = [d for _, k, d in animations.moments(win) if k == 'banner'][0]

@@ -103,7 +103,7 @@ class AnimationTests(unittest.TestCase):
         self.assertFalse(animations.rich(scene('Matchday Screen', animation='Classica')))
 
     def test_score_counts_up(self):
-        prepared = scene('Full Time', home_score=5, away_score=1)
+        prepared = scene('Full Time', home_score=5, away_score=1, show_scorers=False)
         score = next(l for l in prepared[1] if l.id == 'score')
         self.assertEqual(score.anim, 'count')
         self.assertEqual(len(score.variants), 6)
@@ -133,7 +133,7 @@ class AnimationTests(unittest.TestCase):
             self.assertLess(np.abs(moving-still).mean(), 3, template)
 
     def test_sound_events(self):
-        events = animations.events(scene('Full Time', home_score=3, away_score=0))
+        events = animations.events(scene('Full Time', home_score=3, away_score=0, show_scorers=False))
         kinds = [k for _, k, _ in events]
         self.assertEqual(kinds[0], 'power')
         self.assertIn('tick', kinds)

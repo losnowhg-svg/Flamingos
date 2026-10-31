@@ -1,4 +1,16 @@
-# Flamingos Studio 3.6
+# Flamingos Studio 3.7
+
+## Novita della 3.7: i cambiamenti nei video
+
+- **Full Time gol per gol:** nel video il punteggio parte da 0-0 e sale un gol alla volta. Bastano i marcatori
+  (TEU x2, COCCO): a ogni gol si accende un pallino nella metà della squadra (rosa noi, azzurro loro) con il nome del
+  marcatore. Senza minuti l'ordine dei gol è indicativo (distribuito in modo regolare). Se ogni gol ha il suo minuto
+  (es. TEU 12', 41') l'ordine è quello vero e compare un orologio che corre su una linea del tempo. Con i marcatori
+  nascosti resta il contatore.
+- **Calendario, il mese in numeri:** alla fine il mese sotto il titolo diventa i punti del mese e le partite
+  (es. 7 PT 2V 1N 0P), poi torna.
+- **Classifica:** il campo si chiama *Posizione della settimana scorsa* e sotto dice cosa succedera nel video
+  (es. *dal 5° al 2°, ▲ 3*).
 
 ## Novita della 3.6: dal telefono
 
