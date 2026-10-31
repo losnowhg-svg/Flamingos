@@ -235,7 +235,7 @@ def sanitize_config(template, raw):
         elif key in RANGES[template]:
             config[key] = _integer(value,default,*RANGES[template][key])
         elif key in ('fps','video_scale'):
-            valid = [12,15,24,30] if key == 'fps' else [1,2]
+            valid = [12,15,24,30,60] if key == 'fps' else [1,2]
             config[key] = value if type(value) is int and value in valid else default
         elif key == 'png_quality':
             config[key] = value if value in ('Fine','Standard') else default

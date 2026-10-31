@@ -131,7 +131,9 @@ class FramingTests(unittest.TestCase):
 
     def test_music_snaps_and_plays(self):
         prepared = scene('Classifica', music=True)
-        self.assertTrue(all(abs(l.start/animations.BEAT-round(l.start/animations.BEAT)) < 1e-9 for l in prepared[1]))
+        anchor = animations._anchor(prepared)[0]   # 3.2: the strongest moment is placed exactly on the drop instead
+        self.assertTrue(all(abs(l.start/animations.BEAT-round(l.start/animations.BEAT)) < 1e-9
+                            for l in prepared[1] if l is not anchor))
         track = sounds.chiptune(4.0)
         self.assertEqual(len(track), int(4*sounds.SR)+1)
         self.assertGreater(np.abs(track).max(), .05)

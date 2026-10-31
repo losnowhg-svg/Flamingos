@@ -1,4 +1,18 @@
-# Flamingos Studio 3.1
+# Flamingos Studio 3.2
+
+## Novita della 3.2: Reel pro
+
+- **Zona sicura di Instagram.** Con il formato Story 9:16 l'editor mostra a righe le parti che nei Reel e nelle Storie
+  restano sotto l'interfaccia (intestazione, nome e didascalia, colonna dei mi piace). Se trascini un testo o uno stemma
+  li sotto compare un avviso con **📲 Sposta dentro la zona sicura**. In *Guarda il PNG finale* puoi vedere la grafica
+  con sopra un'interfaccia di Reel finta, solo per controllare (non finisce nel file).
+- **Animazioni a tempo di musica.** Con la musica attiva il momento forte cade sul *drop* del brano (a 4 secondi) o sulla
+  battuta successiva: lo scontro degli stemmi nel Matchday, il punteggio nel Full Time, la tabella o la scalata in
+  classifica, la lista dei convocati. Sul drop lo schermo da un colpo e la camera *A ritmo* fa lo zoom piu forte.
+- **60 fotogrammi al secondo** tra le scelte (anche nella Sequenza). La Modalita Reel usa 30.
+- **Controllo Streamlit Cloud** (`python tools/cloud_check.py`, e in automatico su GitHub a ogni PR): installa solo
+  `requirements.txt`, come il cloud, e genera tutte le grafiche e i video. L'errore *No module named 'scipy'* della 3.1
+  non puo piu arrivare online.
 
 ## Correzione 3.1.1
 

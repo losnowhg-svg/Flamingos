@@ -40,7 +40,7 @@ SCREEN_CENTRE = (270, 495)
 
 REEL = dict(animation='Retro', intro=True, intro_style='logo', camera='parallasse', entrance='misto',
             fx_pulse=True, fx_particles=True, fx_sweep=True, fx_flicker=False, ending='loop', music=True,
-            power_on=True, details=True, export_format='Story 9:16', duration=10)
+            power_on=True, details=True, export_format='Story 9:16', duration=10, fps=30)
 
 
 def _round(config):
@@ -169,6 +169,9 @@ def camera_frame(frame, t, info):
         zoom = (1.07 if bar % 2 else 1.0)+.035*(1-phase)**3   # a jump cut every bar, a punch every beat
         if t % BAR < .12:
             zoom += .03*(1-(t % BAR)/.12)
+        drop = info.get('drop_at')
+        if drop and 0 <= t-drop < .3:                          # the big one, on the drop of the music
+            zoom += .06*(1-(t-drop)/.3)
     return _affine(frame, zoom, angle, dx, dy, cx, cy)
 
 

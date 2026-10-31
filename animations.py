@@ -137,7 +137,77 @@ def prepare(prepared, config, kind):
         if info['music']:
             layer.start = round(layer.start/BEAT)*BEAT
         layer.dur = _duration(layer, layer.anim)
+    if info['music']:
+        sync_to_music(prepared)
     return prepared
+
+
+DROP = 4.0          # every track has two bars of intro, then the drop (music.py); a bar lasts 2 s
+MUSIC_BAR = 2.0
+
+
+def _anchor(prepared):
+    """(layer, seconds after its start) of the scene's strongest moment, or None."""
+    layers = prepared[1]
+    by_id = {l.id: l for l in layers}
+    offset = _offset(prepared)
+    owners = {'impact': None, 'goal': 'score', 'climb': 'table', 'crown': 'table'}
+    for at, kind, data in moments(prepared):
+        if kind not in owners:
+            continue
+        if kind == 'impact':
+            owner = 'home_logo' if prepared[0].info.get('kind') == 'matchday' and 'home_logo' in by_id else None
+            if owner is None and 'score' in by_id and getattr(by_id['score'], 'anim', '') == 'count':
+                owner = 'score'
+            if owner is None:
+                continue
+        else:
+            owner = owners[kind]
+        layer = by_id.get(owner)
+        if layer is not None:
+            return layer, at-offset-layer.start
+    for lid in ('table', 'big'):
+        if lid in by_id:
+            return by_id[lid], 0.0
+    firsts = [l for l in layers if l.id.startswith(('card_', 'player_'))]
+    if firsts:
+        return min(firsts, key=lambda l: l.start), 0.0
+    return None
+
+
+def sync_to_music(prepared):
+    """Move the timeline so the strongest moment lands on the drop (4 s) or on the next downbeat."""
+    found = _anchor(prepared)
+    if not found:
+        return
+    layer, extra = found
+    offset = _offset(prepared)
+    old = layer.start
+    moment = offset+old+extra
+    target = DROP
+    while target < moment-.3:
+        target += MUSIC_BAR
+
+    def valid(at):
+        start = at-offset-extra
+        return start >= 0 and ((old > 0 and .6 <= start/old <= 2.6) or (old == 0 and start <= 1.5))
+    if not valid(target):
+        target = MUSIC_BAR        # too early for the drop: the first downbeat of the intro
+        if target < moment-.3 or not valid(target):
+            return
+    new = target-offset-extra
+    factor = new/old if old > 0 else 1.0
+    for item in prepared[1]:
+        if item is layer:
+            continue
+        if item.start == old:            # starts together with the anchor (the other crest)
+            item.start = new
+        elif item.start < old:
+            item.start = round(item.start*factor/BEAT)*BEAT if old > 0 else item.start+new
+        else:
+            item.start = round((new+item.start-old)/BEAT)*BEAT
+    layer.start = new
+    prepared[0].info['drop_at'] = target
 
 
 def _crest(layers, config, kind):
@@ -814,7 +884,11 @@ def _compose(prepared, t=999, animated=True):
     frame = canvas
     if info.get('details', True):
         frame = _tracking(frame, t)
-    frame = _shake(frame, t, [(at, d) for at, k, d in all_moments if k == 'impact'], s)
+    impacts = [(at, d) for at, k, d in all_moments if k == 'impact']
+    drop = info.get('drop_at') if info.get('music') else None
+    if drop and not any(abs(at-drop) < .15 for at, _ in impacts):
+        impacts.append((drop, dict(strength=.35, flash=True)))   # the drop of the music is felt on screen too
+    frame = _shake(frame, t, impacts, s)
     frame = motion.camera_frame(frame, t, info)
     if 'fx_flicker' in info.get('fx', ()):
         frame = motion.flicker(frame, t)
