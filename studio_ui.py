@@ -282,6 +282,11 @@ def show_studio(root: Path, template: str, library: dict):
                                                      max_chars=1200, key=key(field), placeholder="ROSSI 12', 38'\nBIANCHI 44'")
                         if len(f.scorer_lines(config[field])) > 6:
                             st.warning('Massimo 6 righe: raggruppa i gol dello stesso giocatore.')
+                if f.replay_events(config):
+                    st.caption('🎞 Nel video il risultato si racconta gol per gol, con il minuto e il marcatore.')
+                elif int(config['home_score'])+int(config['away_score']) > 0:
+                    st.caption('Scrivi il minuto di ogni gol (es. ROSSI 12\') e nel video il risultato si racconterà gol '
+                               'per gol. Ora parte il contatore.')
             if check('show_penalties', 'Decisa ai rigori'):
                 a, b = st.columns(2)
                 with a: number('home_penalties', 'Rigori segnati casa', 0, 99)
@@ -417,7 +422,15 @@ def show_studio(root: Path, template: str, library: dict):
             a, b = st.columns(2)
             with a: text('round_label', 'Giornata', 36)
             with b: text('our_team', 'La nostra squadra', 34)
-            number('prev_pos', 'Nostra posizione la settimana scorsa (0 = non mostrare la freccia)', 0, 30)
+            number('prev_pos', 'Posizione della settimana scorsa (anima la classifica nel video)', 0, 30)
+            ours_now = next((int(x.get('pos', i+1)) for i, x in enumerate(active) if k.is_ours(x['team'], config['our_team'])), None)
+            if not config['prev_pos']:
+                st.caption('Con 0 non c\'e animazione. Si compila da sola quando aggiorni la classifica dal CSI '
+                           '(se quella vecchia era vera); altrimenti scrivila qui.')
+            elif ours_now:
+                change = config['prev_pos']-ours_now
+                st.caption(f"Nel video: dal {config['prev_pos']}° al {ours_now}° "
+                           + ('(▲ %d, verde)' % change if change > 0 else '(▼ %d, rosso)' % -change if change < 0 else '(=, giallo)'))
             if check('show_zones', 'Colora promozione e spareggio'):
                 a, b = st.columns(2)
                 with a: number('promo_count', 'Posti promozione', 0, 8)

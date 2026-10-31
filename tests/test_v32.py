@@ -285,3 +285,40 @@ class Stakes(unittest.TestCase):
         frame = np.asarray(animations.compose(prepared, gap[0]+1.0, True), np.int16)
         before = np.asarray(animations.compose(prepared, gap[0]-.05, True), np.int16)
         self.assertGreater(np.abs(frame[350:450, 70:150]-before[350:450, 70:150]).mean(), 2)
+
+
+class Replay(unittest.TestCase):
+    """3.7: Full Time told goal by goal; Calendario month tally."""
+
+    def test_goal_minutes_and_events(self):
+        import fulltime_renderer as f
+        self.assertEqual(f.goal_minutes("TEU 12', 41'\nCOCCO 30'"), [(12, 'TEU'), (41, 'TEU'), (30, 'COCCO')])
+        self.assertIsNone(f.goal_minutes("TEU\nCOCCO 30'"))
+        config = dict(defaults('Full Time'), home_score=2, away_score=1, home_scorers="TEU 12'\nCOCCO 30'", away_scorers="ROSSI 20'")
+        self.assertEqual(f.replay_events(config), [(12, 'home', 'TEU'), (20, 'away', 'ROSSI'), (30, 'home', 'COCCO')])
+        self.assertIsNone(f.replay_events(dict(config, home_score=3)))          # a goal without its minute
+        self.assertIsNone(f.replay_events(dict(config, show_scorers=False)))
+
+    def test_score_goes_step_by_step(self):
+        prepared, _ = scene('Full Time', power_on=False, home_score=2, away_score=1,
+                            home_scorers="TEU 12'\nCOCCO 30'", away_scorers="ROSSI 20'")
+        score = next(l for l in prepared[1] if l.id == 'score')
+        self.assertEqual(score.anim, 'replay')
+        goals = [m for m in animations.moments(prepared) if m[1] == 'replay_goal']
+        self.assertEqual([g[2]['side'] for g in goals], ['home', 'away', 'home'])
+        self.assertTrue(all(b[0]-a[0] >= .49 for a, b in zip(goals, goals[1:])))
+        scorers = next(l for l in prepared[1] if l.id == 'home_scorers')
+        self.assertGreater(scorers.start, score.start+score.dur-.2)          # the scorers wait for the replay
+        frames = [np.asarray(animations.compose(prepared, g[0]+.35, True), np.int16) for g in goals]
+        self.assertGreater(np.abs(frames[0]-frames[1])[420:480, 190:350].mean(), 2)
+        plain, _ = scene('Full Time', power_on=False, home_score=2, away_score=1)
+        self.assertEqual(next(l for l in plain[1] if l.id == 'score').anim, 'count')
+
+    def test_month_tally(self):
+        prepared, _ = scene('Calendario', power_on=False)
+        tally = next(m for m in animations.moments(prepared) if m[1] == 'tally')
+        meta = next(l for l in prepared[1] if l.id == 'table').image.info
+        self.assertEqual(tally[2]['pt'], 3*meta['row_results'].count('V')+meta['row_results'].count('N'))
+        during = np.asarray(animations.compose(prepared, tally[0]+1.2, True), np.int16)[350:372, 150:440]
+        after = np.asarray(animations.compose(prepared, tally[0]+3.6, True), np.int16)[350:372, 150:440]
+        self.assertGreater(np.abs(during-after).mean(), 2)

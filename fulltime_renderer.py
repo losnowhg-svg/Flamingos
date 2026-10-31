@@ -54,6 +54,30 @@ def _scorers(value,label,color,white,style,size,font_bytes,s):
     return im
 
 
+def goal_minutes(value):
+    """[(minute, name)] from the scorers box ("TEU 12', 38'" per line); None if a goal has no minute."""
+    import re
+    out=[]
+    for line in scorer_lines(value):
+        minutes=[int(m) for m in re.findall(r"(\d{1,3})\s*'", line)] or [int(m) for m in re.findall(r'\b(\d{1,3})\b', line)]
+        name=re.split(r'\d', line, maxsplit=1)[0].strip(" ,.-'(").upper() or 'GOL'
+        if not minutes:
+            return None
+        out+=[(m,name) for m in minutes]
+    return out
+
+
+def replay_events(config):
+    """Goals in time order [(minute, 'home'|'away', name)] when every goal has its minute, else None."""
+    a,b=int(config.get('home_score',0)),int(config.get('away_score',0))
+    if not config.get('show_scorers',True) or a+b==0:
+        return None
+    home,away=goal_minutes(config.get('home_scorers','')),goal_minutes(config.get('away_scorers',''))
+    if home is None or away is None or len(home)!=a or len(away)!=b:
+        return None
+    return sorted([(m,'home',n) for m,n in home]+[(m,'away',n) for m,n in away])
+
+
 def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
     s=checked_scale(render_scale)
     style=config.get('text_style',config.get('font_choice','CRT Terminal'))
@@ -83,6 +107,15 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
             im=_decorate_text(text_image(f'{min(i,a)}-{min(i,b)}',style,config.get('score_size',54),yellow,142,font_bytes,s,63),s)
             if im:variants.append(im)
         layers[-1].variants=variants or [layers[-1].image]
+        events=replay_events(config)
+        if events:   # the match told goal by goal: one score image per step
+            score=[0,0]; steps=[]
+            for minute,side,name in events:
+                score[0 if side=='home' else 1]+=1
+                im=_decorate_text(text_image(f'{score[0]}-{score[1]}',style,config.get('score_size',54),yellow,142,font_bytes,s,63),s)
+                steps.append((minute,side,name,im))
+            zero=_decorate_text(text_image('0-0',style,config.get('score_size',54),yellow,142,font_bytes,s,63),s)
+            layers[-1].replay=dict(events=steps,zero=zero,length=max(50,events[-1][0]+2))
     if config.get('show_penalties',False) and config.get('home_score',0)==config.get('away_score',0):
         text('penalties',f"{config.get('home_penalties',0)}-{config.get('away_penalties',0)} D.C.R.",10,white,142,12)
     ours='away' if config.get('our_side','Casa')=='Ospiti' else 'home'
