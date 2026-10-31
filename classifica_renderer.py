@@ -191,6 +191,11 @@ def table_image(config, font_bytes=None, s=1):
         if prev and 1 <= prev <= len(rows):
             image.info['prev'] = prev
         image.info['first'] = int(rows[ours_index].get('pos', ours_index+1)) == 1
+        # Points to the team above (or our lead over the second), for the video.
+        if len(rows) > 1:
+            other = ours_index-1 if ours_index > 0 else 1
+            points = abs(int(rows[other].get('pt', 0) or 0)-int(rows[ours_index].get('pt', 0) or 0))
+            image.info['gap'] = dict(ours=ours_index+1, other=other+1, points=points, lead=ours_index == 0)
     return image
 
 

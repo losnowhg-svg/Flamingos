@@ -232,3 +232,56 @@ class DetailsEverywhere(unittest.TestCase):
         yellow = np.array((255, 201, 99))
         count = lambda f: (np.abs(f.reshape(-1, 3)-yellow).sum(axis=1) < 40).sum()
         self.assertGreater(count(after), count(before)+10)
+
+
+class Stakes(unittest.TestCase):
+    """3.5: the Matchday shows positions and points of both teams; the Classifica shows the gap."""
+
+    def test_lookup_both_sides(self):
+        import stakes
+        table = defaults('Classifica')
+        self.assertEqual(stakes.lookup(table, 'FLAMINGOS', 'SQUADRA A'), {'home': {'pos': 2, 'pt': 17}, 'away': {'pos': 1, 'pt': 19}})
+        self.assertEqual(stakes.lookup(table, 'SQUADRA B', 'FLAMINGOS', 'Ospiti'),
+                         {'home': {'pos': 3, 'pt': 15}, 'away': {'pos': 2, 'pt': 17}})
+        self.assertIsNone(stakes.lookup(table, 'FLAMINGOS', 'REAL BOVEZZO'))
+        config = stakes.attach('Matchday Screen', dict(defaults('Matchday Screen'), away_name='SQUADRA A'), {'Classifica': table})
+        self.assertIn('stakes', config)
+        self.assertNotIn('stakes', stakes.attach('Full Time', dict(defaults('Full Time')), {'Classifica': table}))
+        self.assertNotIn('stakes', sanitize_config('Matchday Screen', config))      # never saved
+
+    def test_name_boxes_turn_into_stats_and_back(self):
+        import stakes
+        table = defaults('Classifica')
+        config = stakes.attach('Matchday Screen', dict(apply_preset(defaults('Matchday Screen'), 'crt'), theme='none',
+                                                       power_on=False, away_name='SQUADRA A'), {'Classifica': table})
+        prepared = MODULES['Matchday Screen'].scene(config, LOGO, None, None, 1)
+        plain = MODULES['Matchday Screen'].scene(dict(config, stakes=None), LOGO, None, None, 1)
+        at = next(m[0] for m in animations.moments(prepared) if m[1] == 'stakes')
+        self.assertFalse(any(m[1] == 'stakes' for m in animations.moments(plain)))
+        box = (559, 600, 91, 449)
+        during = np.asarray(animations.compose(prepared, at+1.2, True), np.int16)[box[0]:box[1], box[2]:box[3]]
+        same_time = np.asarray(animations.compose(plain, at+1.2, True), np.int16)[box[0]:box[1], box[2]:box[3]]
+        self.assertGreater(np.abs(during-same_time).mean(), 3)
+        yellow = np.array((255, 201, 99))
+        self.assertGreater((np.abs(during.reshape(-1, 3)-yellow).sum(axis=1) < 60).sum(), 15)
+        after = np.asarray(animations.compose(prepared, at+3.4, True), np.int16)[box[0]:box[1], box[2]:box[3]]
+        after_plain = np.asarray(animations.compose(plain, at+3.4, True), np.int16)[box[0]:box[1], box[2]:box[3]]
+        self.assertLess(np.abs(after-after_plain).mean(), 1.5)
+
+    def test_styles_rotate(self):
+        import focus
+        self.assertEqual({focus.stake_style({'level': n}) for n in range(1, 4)}, set(focus.STAKE_STYLES))
+
+    def test_classifica_gap(self):
+        import classifica_renderer as cr
+        meta = cr.table_image(defaults('Classifica')).info
+        self.assertEqual(meta['gap'], dict(ours=2, other=1, points=2, lead=False))
+        rows = defaults('Classifica')['standings']
+        rows[0], rows[1] = dict(rows[1], pos=1), dict(rows[0], pos=2)
+        lead = cr.table_image(dict(defaults('Classifica'), standings=rows)).info['gap']
+        self.assertTrue(lead['lead'])
+        prepared, _ = scene('Classifica', power_on=False)
+        gap = next(m for m in animations.moments(prepared) if m[1] == 'gap')
+        frame = np.asarray(animations.compose(prepared, gap[0]+1.0, True), np.int16)
+        before = np.asarray(animations.compose(prepared, gap[0]-.05, True), np.int16)
+        self.assertGreater(np.abs(frame[350:450, 70:150]-before[350:450, 70:150]).mean(), 2)

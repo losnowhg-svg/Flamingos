@@ -413,3 +413,138 @@ def overlays(canvas, prepared, moments_list, t, backdrop=None):
 
 
 STAMP_COLORS = {'V': COLORS['up'], 'N': COLORS['same'], 'P': COLORS['down']}
+
+
+# --- 3.5: what is at stake ----------------------------------------------------------------
+
+STAKE_STYLES = ('gira', 'scorri', 'glitch')
+STAKE_HOLD = 2.6
+
+
+def stake_style(info):
+    level = int(info.get('level', 1) or 1)
+    return STAKE_STYLES[(level-1) % len(STAKE_STYLES)]
+
+
+def _swap(old, new, p, style, s):
+    """The name box turning into the stats and back: p 0..1 is the change."""
+    from animations import _glitched
+    w = max(old.width, new.width)
+    h = max(old.height, new.height)
+    out = Image.new('RGBA', (w, h))
+    if style == 'gira':          # the box flips on its horizontal axis
+        k = abs(math.cos(math.pi*p))
+        img = old if p < .5 else new
+        sh = max(1, round(img.height*k))
+        out.alpha_composite(img.resize((img.width, sh)), ((w-img.width)//2, (h-sh)//2))
+    elif style == 'scorri':      # the old text leaves upwards, the new one comes from below
+        e = _smooth(p)
+        for img, dy in ((old, -e), (new, 1-e)):
+            y = round((h-img.height)/2+dy*h)
+            layer = Image.new('RGBA', (w, h))
+            layer.alpha_composite(img, ((w-img.width)//2, 0), (0, max(0, -y))) if y < 0 else \
+                layer.alpha_composite(img.crop((0, 0, img.width, max(0, min(img.height, h-y)))), ((w-img.width)//2, y)) \
+                if y < h else None
+            out.alpha_composite(layer)
+    else:                        # glitch: the name breaks into the stats
+        img = old if p < .5 else new
+        broken = _glitched(img, 1-abs(1-2*p), int(p*997), s)
+        if broken is not None:
+            out.alpha_composite(broken.crop((0, 0, min(w, broken.width), min(h, broken.height))),
+                                ((w-min(w, broken.width))//2, 0))
+    return out
+
+
+def _stat_image(card, colour, s, max_w, max_h, accent=(255, 201, 99)):
+    """'2°  17 PT': the position in the accent colour with a small drawn degree sign, the points in the team colour."""
+    from pixel_fonts import pixel_text_runs
+    scale = max(1, round(s))
+    size = max_h*.62
+    pos = pixel_text_runs([(str(card['pos']), accent)], 'CRT Scoreboard', size, 0, scale)
+    pts = pixel_text_runs([(f"{card['pt']} PT", colour)], 'CRT Scoreboard', size, 0, scale)
+    ring = max(2, round(pos.height*.32))
+    gap = round(size*.9*scale)
+    out = Image.new('RGBA', (pos.width+ring+round(scale)+gap+pts.width, max(pos.height, pts.height)))
+    out.alpha_composite(pos, (0, 0))
+    d = ScaledDraw(out, 1)
+    x0 = pos.width+round(scale)
+    d.ellipse((x0, 0, x0+ring, ring), outline=(*accent, 255), width=max(1, round(ring/3.2)))
+    out.alpha_composite(pts, (pos.width+ring+round(scale)+gap, 0))
+    limit = round(max_w*.9*s)
+    if out.width > limit:
+        out = out.resize((limit, max(1, round(out.height*limit/out.width))), Image.Resampling.LANCZOS)
+    return out
+
+
+def stakes_overlay(canvas, prepared, data, p, backdrop):
+    """Matchday: both name boxes turn into position and points, a gap chip under the VS, then back."""
+    from animations import _put, _scaled
+    if backdrop is None or p < 0 or p > STAKE_HOLD+.5:
+        return
+    s = canvas.width/540
+    info = prepared[0].info
+    pink, cyan, yellow = info.get('frame_colors', ((242, 104, 168), (121, 220, 247), (255, 201, 99)))
+    ours = 'away' if info.get('our_side') == 'Ospiti' else 'home'
+    style = data['style']
+    change = .35
+    if p < change:
+        k = p/change
+    elif p > STAKE_HOLD:
+        k = 1-(p-STAKE_HOLD)/.5
+    else:
+        k = 1.0
+    for side in ('home', 'away'):
+        layer = _layer(prepared, f'{side}_name')
+        if layer is None:
+            continue
+        box = _box(prepared, f'{side}_name', 0)
+        px = tuple(round(v*s) for v in box)
+        canvas.paste(backdrop.crop(px), px[:2])           # the name off the panel, the panel stays
+        stat = _stat_image(data[side], pink if side == ours else cyan, s, box[2]-box[0], box[3]-box[1], yellow)
+        img = _swap(layer.image, stat, max(0.0, min(1.0, k)), style, s) if 0 < k < 1 else (stat if k >= 1 else layer.image)
+        _put(canvas, img, None, ((box[0]+box[2])/2, (box[1]+box[3])/2))
+    gap = data['home']['pt']-data['away']['pt']
+    vs = _layer(prepared, 'vs')
+    if vs is not None and k > 0:
+        x, y = prepared[2]['vs']
+        text = 'PARI' if gap == 0 else f'{abs(gap)} PT'
+        tab = chip(text, yellow, s, 15)
+        arrow = Image.new('RGBA', (round(10*s), round(12*s)))
+        if gap:                                            # pointing at the team ahead
+            d = ScaledDraw(arrow, s)
+            d.polygon([(9, 1), (9, 11), (1, 6)] if gap > 0 else [(1, 1), (1, 11), (9, 6)], fill=(*yellow, 255))
+        top = y+vs.image.height/s/2+2
+        _put(canvas, _scaled(tab, max(.05, _back(min(1.0, k*1.3)))), None, (x, top), min(1.0, k*2))
+        if gap:
+            side_x = x-tab.width/s/2-8 if gap > 0 else x+tab.width/s/2+8
+            _put(canvas, arrow, None, (side_x, top), min(1.0, k*2))
+
+
+def gap_overlay(canvas, prepared, data, p):
+    """Classifica: a bracket from our row to the one above with the points to close (or our lead)."""
+    from animations import _put, _scaled
+    if p < 0:
+        return
+    s = canvas.width/540
+    table = _layer(prepared, 'table')
+    tx, ty = prepared[2]['table']
+    tw, th = table.image.width/s, table.image.height/s
+    edges = table.image.info['row_edges']
+    a0, a1 = edges[data['ours']]
+    b0, b1 = edges[data['other']]
+    ya, yb = ty-th/2+(a0+a1)/2, ty-th/2+(b0+b1)/2
+    x = tx-tw/2-3                                   # just inside the screen, on the table's left edge
+    fade = 1.0 if p < 2.6 else max(0.0, 1-(p-2.6)/.4)
+    if fade <= 0:
+        return
+    k = _smooth(p/.45)
+    d = ScaledDraw(canvas, s, 'RGBA')
+    colour = COLORS['up'] if data['lead'] else (121, 220, 247)
+    end = ya+(yb-ya)*k
+    d.line((x+6, ya, x, ya, x, end), fill=(*colour, round(230*fade)), width=1.8)
+    if k >= 1:
+        d.line((x, yb, x+6, yb), fill=(*colour, round(230*fade)), width=1.8)
+        text = f"+{data['points']} PT" if data['lead'] else f"-{data['points']} PT"
+        tab = chip(text, colour, s, 14)
+        q = _back((p-.45)/.3)
+        _put(canvas, _scaled(tab, max(.05, q)), None, (x+tab.width/s/2+4, (ya+yb)/2), min(1.0, (p-.45)/.1)*fade)
