@@ -329,6 +329,11 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
     for prepared, _ in scenes:
         prepared[0].info['music'] = False  # one soundtrack for the whole sequence, below
     speeds = [max(1.0, intro_length(p, c)/(hold*.65)) for p, c in scenes]
+    import tracks
+    beat = tracks.beat(track) if music else None
+    for index, (prepared, _) in enumerate(scenes):   # pulses follow the one soundtrack, in each scene's own clock
+        start = index*(hold_frames+trans_frames)/fps
+        prepared[0].info['beat'] = (beat[0]*speeds[index], (beat[1]-start)*speeds[index]) if beat else None
 
     def frame_at(index, t, animated=True):
         prepared, compose = scenes[index]

@@ -1,4 +1,28 @@
-# Flamingos Studio 3.6
+# Flamingos Studio 3.8
+
+## Novita della 3.8: musica vera
+- **Otto brani veri, senza copyright (CC0):** hip-hop pesante, elettronica scura, boom bap, r&b beat, lo-fi, funk,
+  veloce ed energica, cinematica. Sono estratti tagliati attorno al loro "drop", che cade sul momento clou del video
+  (4 secondi). La scelta *Automatica* ora usa questi, in base a grafica, risultato e giornata. Crediti in
+  `assets/music/CREDITS.md`.
+- **Il mio brano:** carichi un mp3/m4a/wav/ogg (da Pixabay Music, YouTube Audio Library, FreePD o tuo); l'app trova
+  da sola il momento forte e il tempo, lo allinea al drop e lo ripete se il video è più lungo. Il momento forte si
+  può spostare a mano. Funziona anche nella sequenza video.
+- **A tempo con la musica:** pulsazioni, camera "ritmo" e momento clou seguono il tempo vero del brano, non più solo
+  i 120 bpm delle basi sintetiche. Sotto un brano vero i suoni CRT sono più bassi, così comanda la musica.
+- Le basi sintetiche e gli 8-bit restano nel menu, in fondo.
+
+## Novita della 3.7: i cambiamenti nei video
+
+- **Full Time gol per gol:** nel video il punteggio parte da 0-0 e sale un gol alla volta. Bastano i marcatori
+  (TEU x2, COCCO): a ogni gol si accende un pallino nella metà della squadra (rosa noi, azzurro loro) con il nome del
+  marcatore. Senza minuti l'ordine dei gol è indicativo (distribuito in modo regolare). Se ogni gol ha il suo minuto
+  (es. TEU 12', 41') l'ordine è quello vero e compare un orologio che corre su una linea del tempo. Con i marcatori
+  nascosti resta il contatore.
+- **Calendario, il mese in numeri:** alla fine il mese sotto il titolo diventa i punti del mese e le partite
+  (es. 7 PT 2V 1N 0P), poi torna.
+- **Classifica:** il campo si chiama *Posizione della settimana scorsa* e sotto dice cosa succedera nel video
+  (es. *dal 5° al 2°, ▲ 3*).
 
 ## Novita della 3.6: dal telefono
 

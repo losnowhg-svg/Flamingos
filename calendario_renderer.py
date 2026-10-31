@@ -97,6 +97,10 @@ def table_image(config, font_bytes=None, s=1):
             put(f.get('time', '') or '--:--', ink if is_next else yellow, TABLE_W-78, mid+row_h*.1, 74, big)
     image.info['next_row'] = next_index
     image.info['row_results'] = [result_of(f) for f in rows]
+    results = [r for r in image.info['row_results'] if r]
+    if results:     # the month in numbers, for the video
+        image.info['tally'] = dict(pt=3*results.count('V')+results.count('N'), v=results.count('V'),
+                                   n=results.count('N'), p=results.count('P'))
     image.info['row_edges'] = [(max(0, offset+i*(row_h+gap)-gap/2), min(TABLE_H, offset+i*(row_h+gap)+row_h+gap/2))
                                for i in range(len(rows))]
     return image

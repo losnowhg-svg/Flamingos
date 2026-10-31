@@ -38,6 +38,14 @@ BAR = 2.0          # four beats at 120 bpm
 QUARTER = .5
 SCREEN_CENTRE = (270, 495)
 
+
+def beat_of(info):
+    """(seconds per beat, a time on the beat): the real track's when there is one, else 120 bpm."""
+    beat = (info or {}).get('beat')
+    if beat and beat[0] > .2:
+        return float(beat[0]), float(beat[1])
+    return QUARTER, 0.0
+
 REEL = dict(animation='Retro', intro=True, intro_style='logo', camera='parallasse', entrance='misto',
             fx_pulse=True, fx_particles=True, fx_sweep=True, fx_flicker=False, ending='loop', music=True,
             power_on=True, details=True, export_format='Story 9:16', duration=10, fps=30)
@@ -164,11 +172,13 @@ def camera_frame(frame, t, info):
         dy = (40-80*p)*s
         dx = 10*math.sin(t*.5)*s
     elif mode == 'ritmo':
-        bar = int(t/BAR)
-        phase = (t % QUARTER)/QUARTER
+        quarter, zero = beat_of(info)
+        local = t-zero+64*quarter
+        bar = int(local/(4*quarter))
+        phase = (local % quarter)/quarter
         zoom = (1.07 if bar % 2 else 1.0)+.035*(1-phase)**3   # a jump cut every bar, a punch every beat
-        if t % BAR < .12:
-            zoom += .03*(1-(t % BAR)/.12)
+        if local % (4*quarter) < .12:
+            zoom += .03*(1-(local % (4*quarter))/.12)
         drop = info.get('drop_at')
         if drop and 0 <= t-drop < .3:                          # the big one, on the drop of the music
             zoom += .06*(1-(t-drop)/.3)
@@ -239,7 +249,8 @@ def ambient_effects(canvas, t, info):
     s = canvas.width/540
     if 'fx_pulse' in fx:
         rgb, alpha = _pulse_glow(info, canvas.size, s)
-        k = .25+.75*(1-(t % QUARTER)/QUARTER)**2       # on the beat
+        quarter, zero = beat_of(info)
+        k = .25+.75*(1-((t-zero) % quarter)/quarter)**2       # on the beat (of the real track, if any)
         canvas.paste(rgb, (0, 0), alpha.point(lambda v: round(v*k)))
     if 'fx_particles' in fx:
         d = ScaledDraw(canvas, s, 'RGBA')
