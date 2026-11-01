@@ -1,4 +1,16 @@
-# Flamingos Studio 3.9
+# Flamingos Studio 3.10
+
+## Novita della 3.10: figurine nei preset e transizioni da collezione
+- **Stile delle figurine:** nella pagina Figurine e pagelle il menu *Stile* mette pagelle, figurine, bustina e
+  album sullo sfondo del preset (di serie quello del Full Time: TV, cassetta, Game Boy, tabellone...), con la sua
+  atmosfera e il tema del periodo; bagliore e polvere prendono i colori del preset. La carta resta la stessa.
+  Resta anche la notte synthwave.
+- **Nella Sequenza video:** si possono scegliere anche *Pagelle*, *Figurina MVP (bustina)* e *Album*. La carta esce
+  dalla bustina su un beat della musica della sequenza, l'MVP delle pagelle pure.
+- **Cinque transizioni da collezione (✨):** *Diventa una figurina* (la schermata si stringe in una carta, si gira e
+  dietro c'è la successiva: perfetta tra Full Time e MVP), *Strappo della bustina*, *Lampo olografico*, *Pioggia di
+  figurine*, *Pagina dell'album*, ognuna con il suo suono. Il pulsante *✨ Transizioni speciali da collezione* le
+  sceglie in base alle schermate vicine. Funzionano anche tra le grafiche CRT.
 
 ## Novita della 3.9: figurine e pagelle
 Nuova pagina **🃏 Figurine e pagelle** (anche dal Full Time e dalla Settimana, card ⑤ Dopo la partita).

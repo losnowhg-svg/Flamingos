@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.9 / figurine e pagelle: carte olografiche, la bustina in video, l\'album della stagione')
+    st.caption('3.10 / figurine nei preset e transizioni da collezione nella sequenza video')
 
 from library import show_library
 from studio_ui import show_studio

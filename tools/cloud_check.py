@@ -164,6 +164,17 @@ pagelle.png_bytes(rows, {'line': 'A 1-0 B'}, LOGO, 'Post 4:5', 1)
 album.png_bytes(album.members_for(squad), LOGO, 'Post 4:5', 1)
 album.zip_bytes(album.members_for(squad)[:2], LOGO, 300)
 done.append('figurine, bustina, pagelle, album')
+import figurine_style, figurine_scenes
+style = figurine_style.key_for('stadium', defaults('Full Time'))
+card_video.poster(teu, LOGO, 'Story 9:16', 1, 'prova', figurine_style.build(style, 'Story 9:16', 540))
+seq = [figurine_scenes.scene('Figurina MVP', {'spec': teu}, LOGO, 1, style),
+       figurine_scenes.scene('Pagelle', {'rows': rows, 'info': {'line': 'A 1-0 B'}}, LOGO, 1, style),
+       figurine_scenes.scene('Album', {'members': album.members_for(squad)[:4]}, LOGO, 1, None)]
+with tempfile.TemporaryDirectory() as folder:
+    transitions.render_sequence(seq, ['olografica', 'pagina'], Path(folder, 's.mp4'), 8, 2.0, .5, 'Post 4:5', 1, sound=True)
+for kind in transitions.SPECIAL:
+    transitions.transition_frame(kind, Image.new('RGB', (54, 96)), Image.new('RGB', (54, 96), (255, 0, 0)), .5)
+done.append('stili dei preset, sequenza con figurine e transizioni da collezione')
 print('OK: '+', '.join(done))
 '''
 
