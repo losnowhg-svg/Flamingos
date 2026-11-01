@@ -1,4 +1,26 @@
-# Flamingos Studio 3.8
+# Flamingos Studio 3.9
+
+## Novita della 3.9: figurine e pagelle
+Nuova pagina **🃏 Figurine e pagelle** (anche dal Full Time e dalla Settimana, card ⑤ Dopo la partita).
+
+- **Le pagelle:** chi ha giocato arriva dai Convocati, i gol dai marcatori del Full Time. Dai i voti (da 4 a 10,
+  con i mezzi voti 6½) e un commento: esce la grafica delle pagelle, con le facce pixel, i palloni dei gol e i voti
+  colorati. L'MVP (voto più alto, a pari voto chi ha segnato di più) è illuminato d'oro. C'è anche il **video**: le
+  righe entrano a tempo, l'MVP arriva sul drop della musica.
+- **La figurina olografica:** una carta da collezione per ogni giocatore, con lo sprite, il voto (o il numero), il
+  ruolo, tre statistiche, il numero di serie (09/15) e la stagione. Sette edizioni (MVP della partita, bomber, porta
+  inviolata, capitano, nuovo acquisto, auguri, base) e quattro rarità (base, rara, epica, leggendaria) con cornici
+  metalliche, riflesso olografico e brillantini che si muovono con l'inclinazione.
+- **Apri la bustina (video):** una bustina cade su un pavimento synthwave con il sole al tramonto; tre indizi a tempo
+  di musica (ruolo, numero, stemma), un riflesso sulla carta della bustina a ogni indizio, la camera che si avvicina,
+  lo strappo, il fascio di luce e, sul drop, la carta che esce girandosi, onda d'urto e coriandoli (epiche e
+  leggendarie). Poi i numeri contano fino al valore vero, la carta respira in 3D e fa una giravolta prima della fine.
+  Story, 4:5 o quadrato, 30 o 60 fps, con i brani della 3.8 o il tuo.
+- **Solo la carta:** PNG con lo sfondo trasparente, per WhatsApp e gli sticker.
+- **L'album della stagione:** tutta la rosa come collezione. Ogni MVP segnato rende la figurina più rara (1 rara,
+  2 epica, 3 o più leggendaria); i gol arrivano dai marcatori della stagione. PNG dell'album e ZIP con tutte le
+  figurine. La collezione si salva nel browser con la settimana.
+- Carattere: Inter Display (licenza OFL, sottoinsieme latino in `assets/fonts`).
 
 ## Novita della 3.8: musica vera
 - **Otto brani veri, senza copyright (CC0):** hip-hop pesante, elettronica scura, boom bap, r&b beat, lo-fi, funk,

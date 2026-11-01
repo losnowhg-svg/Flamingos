@@ -300,6 +300,8 @@ def sanitize_week(raw):
     week = dict(match=sanitize_match(raw.get('match')),updated=str(raw.get('updated',''))[:32],
                 standings=[],fixtures=[],month_label=str(raw.get('month_label',''))[:30],matches=[],
                 sponsor=sanitize_sponsor(raw.get('sponsor')),season=[],scorers=[])
+    import figurine_data
+    week['mvps'] = figurine_data.sanitize_mvps(raw.get('mvps'))
     for item in (raw.get('season') or [])[:120] if isinstance(raw.get('season'),list) else []:
         if not isinstance(item,dict):
             continue

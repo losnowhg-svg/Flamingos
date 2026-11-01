@@ -927,6 +927,10 @@ def show_studio(root: Path, template: str, library: dict):
                                    key=key('download_video'), width='stretch')
                 import share
                 share.button(video['data'], basename+'.mp4', 'video/mp4', key='mp4_'+template)
+            if template == 'Full Time':
+                st.button('🃏 Pagelle e figurina del migliore in campo', key=key('to_figurine'), width='stretch',
+                          on_click=go, args=('Figurine',),
+                          help='Vota la partita: l\'MVP diventa una figurina olografica che esce da una bustina.')
             st.divider()
             section('Progetti')
             with st.expander('Salva o riapri questa grafica'):
