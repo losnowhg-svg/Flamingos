@@ -82,6 +82,14 @@ class Store(unittest.TestCase):
         with self.assertRaises(ss.StoreError):
             ss.asset_path('../../etc')
 
+    def test_only_uploaded_files_travel(self):
+        logo = b'\x89PNG' + bytes(100)
+        good = 'logo:'+hashlib.sha256(logo).hexdigest()
+        self.assertTrue(ss.shareable(good, logo))
+        self.assertFalse(ss.shareable('stemma:galba', logo))          # built-in girone crests stay in the app
+        self.assertFalse(ss.shareable(good, logo+b'x'))
+        self.assertFalse(ss.shareable('font:'+hashlib.sha256(bytes(5_000_000)).hexdigest(), bytes(5_000_000)))
+
     def test_clear_errors(self):
         fake = FakeGitHub()
         with self.assertRaisesRegex(ss.StoreError, 'Token'):

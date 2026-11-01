@@ -109,10 +109,17 @@ def restore(snap):
     return {k: decode(state[k]) for k in SHARE_KEYS if k in state}
 
 
+def shareable(asset_id, data):
+    """Only files uploaded to the archive (named kind:sha256 of their bytes) travel; built-in crests do not."""
+    kind, _, digest = str(asset_id).partition(':')
+    return (kind in ('font', 'logo') and len(digest) == 64 and isinstance(data, (bytes, bytearray))
+            and len(data) <= MAX_ASSET and hashlib.sha256(data).hexdigest() == digest)
+
+
 def asset_path(asset_id):
     kind, _, digest = str(asset_id).partition(':')
     if kind not in ('font', 'logo') or len(digest) != 64 or any(c not in '0123456789abcdef' for c in digest):
-        raise StoreError('Nome file non valido.')
+        raise StoreError('Nome file non valido')
     return f'{FOLDER}/{kind}-{digest}'
 
 
