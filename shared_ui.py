@@ -147,7 +147,10 @@ def _save(conf, snap, uploads, meta):
     try:
         store = ss.GitHubStore(*conf)
         for asset_id, data in uploads:
-            store.put_asset(asset_id, data)
+            try:
+                store.put_asset(asset_id, data)
+            except ss.StoreError:                        # one file that does not go up does not stop the save
+                snap['assets'].pop(asset_id, None)
         sha, theirs = store.save(snap, meta.get('sha'))
         meta.update(sha=sha, saved_at=snap['saved_at'], error=None)
         if theirs and (theirs.get('author') or '') != snap.get('author'):     # a friend saved in the meantime
@@ -159,15 +162,24 @@ def _save(conf, snap, uploads, meta):
         meta['pending'] = max(0, meta.get('pending', 1)-1)
 
 
+def _known(asset_id):
+    """An archive name (font:/logo: + sha256), not a built-in crest: the index keeps only those."""
+    try:
+        ss.asset_path(asset_id)
+        return True
+    except ss.StoreError:
+        return False
+
+
 def autosave(library):
     """At the end of every run: if anything changed, save it (in the background)."""
     meta, conf = _meta(), settings()
     if meta.get('status') != 'on' or not conf:
         return
-    index = dict(meta.get('assets') or {})
+    index = {k: v for k, v in (meta.get('assets') or {}).items() if _known(k)}
     uploads = []
     for asset_id, asset in ((library or {}).get('assets') or {}).items():
-        if asset_id not in index and len(asset['bytes']) <= ss.MAX_ASSET:
+        if asset_id not in index and ss.shareable(asset_id, asset.get('bytes')):
             index[asset_id] = {'kind': asset['kind'], 'name': asset['name']}
             uploads.append((asset_id, asset['bytes']))
     snap = ss.snapshot(st.session_state, st.session_state.get('studio_template', ''), author(), index)
@@ -204,7 +216,7 @@ def sidebar():
         st.text_input('Chi sta lavorando?', key='shared_author', max_chars=24, placeholder='Il tuo nome',
                       on_change=_remember_author, help='Compare nei salvataggi, così gli amici sanno di chi è il lavoro.')
         if meta.get('error'):
-            st.warning(f"Ultimo salvataggio non riuscito: {meta['error']}. Riprovo alla prossima modifica.")
+            st.warning(f"Ultimo salvataggio non riuscito: {meta['error'].rstrip('.')}. Riprovo alla prossima modifica.")
         elif meta.get('pending'):
             st.caption('Salvataggio in corso...')
         elif meta.get('saved_at'):
