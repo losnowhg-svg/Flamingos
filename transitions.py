@@ -631,7 +631,7 @@ def special_for(previous, following):
         return 'spogliatoio'
     if following == 'Full Time':
         return 'cronometro'
-    if following == 'Classifica':
+    if following in ('Classifica', 'Risultati'):
         return 'righe'
     if following == 'Calendario':
         return 'calendario'

@@ -110,7 +110,9 @@ def _figurine_scene(root, template, library, preset_override, scale):
                season=fd.season_label(match.get('date')), team=match.get('our_name', 'FLAMINGOS'))
     payload = figurine_scenes.payloads(st.session_state, squad, ctx['mvps'], ctx['scorers'], ctx)[template]
     if payload is None:
-        raise ValueError('per le Pagelle dai prima i voti nella pagina Figurine e pagelle.')
+        raise ValueError('per i Risultati servono le partite del sito CSI (Settimana, ① Aggiorna dal sito CSI) o la '
+                         'pagina Risultati della giornata.' if template == 'Risultati'
+                         else 'per le Pagelle dai prima i voti nella pagina Figurine e pagelle.')
     if preset_override in PRESETS:
         style = figurine_style.key_for(preset_override, fulltime)
     else:

@@ -1,4 +1,17 @@
-# Flamingos Studio 3.11
+# Flamingos Studio 3.12
+
+## Novita della 3.12: risultati della giornata
+Nuova pagina **📋 Risultati della giornata**: tutte le partite del girone in una grafica, da pubblicare ogni
+settimana. Le partite arrivano già dal sito CSI (segnalibro *Invia a Flamingos* o pagina incollata nella
+Settimana): di serie la pagina apre l'ultima giornata con almeno un risultato.
+- Chi vince è in grassetto bianco, chi perde più spento; **la nostra partita è rosa** e arriva per ultima, sul drop
+  della musica. Le partite non ancora giocate mostrano giorno e ora.
+- Stemmi del girone dall'archivio (o le iniziali), il nostro logo per noi.
+- Tabella modificabile per correggere o completare i risultati (anche senza dati dal sito), titolo e sottotitolo.
+- Formati storia, post 4:5 e 1:1; stile come la Classifica (preset e tema), un altro preset o la notte synthwave.
+- PNG in HD e **video** di 8 secondi con un brano vero (righe che entrano una alla volta), scarica e condividi.
+- Anche nella **Sequenza video** (*📋 Risultati della giornata*), con la transizione *righe che si aggiornano*:
+  per esempio Full Time → Risultati → Classifica.
 
 ## Novita della 3.11: transizioni a tema tra le grafiche della partita
 Cinque transizioni nuove, che raccontano il passaggio, ognuna con il suo suono:
