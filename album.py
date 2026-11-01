@@ -77,6 +77,8 @@ def poster(members, logo=None, format='Story 9:16', scale=2, title='LA COLLEZION
     glow = (style or {}).get('glow') or cards.PINK
     backdrop = Backdrop(size, u, size[1]*.45, L['h']*u*.93, L['title']*u, glow, sun=False, dust=24, phases=1, style=style)
     canvas = backdrop.canvas(0.0, .45)
+    from preset_look import Look
+    look = Look(style, u)                 # title and line follow the preset (3.13); the cards stay the cards
     area_w, area_h = 500, L['bottom']-L['top']
     gap = 10
     if members:
@@ -88,13 +90,13 @@ def poster(members, logo=None, format='Story 9:16', scale=2, title='LA COLLEZION
         cols = w = h = rows = 0
         slack = 0
     shift = slack*.4                      # the title comes down with the cards: one block, centred
-    t = cards.text(title, 'black', 38, cards.WHITE, u, max_width=480, shadow=(0, 3, 6, 200))
-    backdrop.plate(canvas, (size[0]/2-t.width/2-18*u, (L['title']+shift)*u-t.height/2-10*u,
-                            size[0]/2+t.width/2+18*u, (L['sub']+shift+12)*u))
+    t = look.text(title, 'black', 38, look.white, 480, shadow=(0, 3, 6, 200))
+    look.plate(canvas, (size[0]/2-t.width/2-18*u, (L['title']+shift)*u-t.height/2-10*u,
+                            size[0]/2+t.width/2+18*u, (L['sub']+shift+12)*u), backdrop.styled)
     special = sum(1 for m in members if m['rarity'] != 'base')
     canvas.paste(t, (int(size[0]/2-t.width/2), int((L['title']+shift)*u-t.height/2)), t)
-    sub = cards.text(f'FIGURINE {team}  ·  {season}  ·  {len(members)} CARTE'+(f'  ·  {special} SPECIALI' if special else ''),
-                     'heavy', 10, cards.YELLOW, u, max_width=500, tracking=2)
+    sub = look.text(f'FIGURINE {team}  ·  {season}  ·  {len(members)} CARTE'+(f'  ·  {special} SPECIALI' if special else ''),
+                    'heavy', 10, look.yellow, 500, tracking=2)
     canvas.paste(sub, (int(size[0]/2-sub.width/2), int((L['sub']+shift)*u-sub.height/2)), sub)
     if not members:
         return canvas.convert('RGB')

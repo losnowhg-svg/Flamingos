@@ -1,4 +1,12 @@
-# Flamingos Studio 3.12
+# Flamingos Studio 3.13
+
+## Novita della 3.13: figurine e pagelle nello stile del preset
+Come i risultati della giornata, anche la presentazione delle figurine segue il preset scelto nel menu *Stile*
+(di serie quello del Full Time): font pixel del preset, i suoi colori, riquadri e bordi.
+- **Pagelle:** titolo, righe, numeri, commenti e voti nei colori del preset; la riga dell'MVP piena del suo giallo.
+- **Bustina e figurina MVP:** titolo, suggerimenti (ruolo, numero, stemma) e frase sotto la carta.
+- **Album:** titolo e riga della collezione.
+Le carte restano le stesse, così la collezione si riconosce. La notte synthwave resta com'era.
 
 ## Novita della 3.12: risultati della giornata
 Nuova pagina **📋 Risultati della giornata**: tutte le partite del girone in una grafica, da pubblicare ogni

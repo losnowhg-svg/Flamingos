@@ -255,6 +255,8 @@ class Show:
         self.still = still
         self.style = style
         self.fades = fades
+        from preset_look import Look
+        self.look = Look(style, self.u)     # words and chips follow the preset (3.13); the card stays the card
         self._prepare()
 
     # Prepared pieces -------------------------------------------------------------------------
@@ -287,15 +289,15 @@ class Show:
                                                      self.spec['team'], self.spec['season'])
         # Words.
         ed = cards.EDITIONS[self.spec['edition']]
-        self.label = cards.text(f"FIGURINE {self.spec['team']}  ·  {self.spec['season']}", 'heavy', 11,
-                                (*cards.WHITE, 220), u, tracking=2.6)
-        self.title = cards.text(ed['title'] or 'LA COLLEZIONE', 'black', 34, cards.WHITE, u, max_width=500,
-                                shadow=(0, 3, 6, 200))
+        look = self.look
+        self.label = look.text(f"FIGURINE {self.spec['team']}  ·  {self.spec['season']}", 'heavy', 11,
+                               look.yellow if look.preset else (*cards.WHITE, 220), tracking=2.6)
+        self.title = look.text(ed['title'] or 'LA COLLEZIONE', 'black', 34, look.white, 500, shadow=(0, 3, 6, 200))
         self.title_glow = self.title.filter(ImageFilter.GaussianBlur(8*u)) if self.title else None
         self.slot_imgs = self._slots()
         self.pill = self._pill(self.caption) if self.caption else None
         # Confetti.
-        colors = [cards.PINK, cards.CYAN, cards.YELLOW, (255, 255, 255), rr['metal'][1]]
+        colors = [self.look.pink, self.look.cyan, self.look.yellow, self.look.white, rr['metal'][1]]
         self.confetti = []
         if self.spec['rarity'] in ('epica', 'leggenda'):
             count = 130 if self.spec['rarity'] == 'leggenda' else 90
@@ -312,9 +314,10 @@ class Show:
         """The three hints: role, number, crest (FUT-style walkout, our way)."""
         u, sp, rr = self.u, self.spec, self.rarity
         out = []
-        role = cards.text(cards.ROLES[sp['role']][1], 'black', 15, cards.WHITE, u, max_width=150, tracking=1.0)
+        look = self.look
+        role = look.text(cards.ROLES[sp['role']][1], 'black', 15, look.white, 150, tracking=1.0)
         out.append(self._chip(role))
-        number = cards.text(f"#{sp['number']}" if sp['number'] else cards.ROLES[sp['role']][0], 'black', 22, cards.WHITE, u)
+        number = look.text(f"#{sp['number']}" if sp['number'] else cards.ROLES[sp['role']][0], 'black', 22, look.white)
         out.append(self._chip(number))
         if self.logo:
             from renderer import clean_logo
@@ -322,7 +325,7 @@ class Show:
             crest = clean_logo(self.logo, 30, True, base)
             crest = crest.resize((max(1, int(crest.width*u/base)), max(1, int(crest.height*u/base))), Image.Resampling.LANCZOS)
         else:
-            crest = cards.text(sp['team'][:3], 'black', 18, cards.WHITE, u)
+            crest = look.text(sp['team'][:3], 'black', 18, look.white)
         out.append(self._chip(crest))
         return out
 
@@ -333,7 +336,9 @@ class Show:
         img = Image.new('RGBA', (w+int(20*u), h+int(20*u)))
         d = ImageDraw.Draw(img)
         x0, y0 = int(10*u), int(10*u)
-        d.rounded_rectangle((x0, y0, x0+w, y0+h), radius=int(12*u), fill=(16, 12, 26, 235),
+        look = self.look
+        d.rounded_rectangle((x0, y0, x0+w, y0+h), radius=look.radius(12),
+                            fill=(*look.panel, 240) if look.preset else (16, 12, 26, 235),
                             outline=(*rr['metal'][1], 255), width=max(1, int(1.6*u)))
         glow = img.filter(ImageFilter.GaussianBlur(6*u))
         tinted = Image.new('RGBA', img.size, (*rr['glow'], 0))
@@ -346,14 +351,16 @@ class Show:
 
     def _pill(self, caption):
         u, rr = self.u, self.rarity
-        words = cards.text(caption.upper(), 'heavy', 13, cards.WHITE, u, max_width=470, tracking=1.2)
+        look = self.look
+        words = look.text(caption.upper(), 'heavy', 13, look.white, 470, tracking=1.2)
         if words is None:
             return None
         h = int(34*u)
         w = words.width+int(36*u)
         img = Image.new('RGBA', (w, h))
         d = ImageDraw.Draw(img)
-        d.rounded_rectangle((0, 0, w-1, h-1), radius=h//2, fill=(16, 12, 26, 230), outline=(*rr['accent'], 255),
+        d.rounded_rectangle((0, 0, w-1, h-1), radius=look.radius(h//2/u) if look.preset else h//2,
+                            fill=(*look.panel, 236) if look.preset else (16, 12, 26, 230), outline=(*rr['accent'], 255),
                             width=max(1, int(1.4*u)))
         img.alpha_composite(words, ((w-words.width)//2, (h-words.height)//2))
         return img
@@ -425,7 +432,7 @@ class Show:
         k = out_cubic((t-.15)/.6)
         if self.backdrop.styled and self.title:
             half = max(self.title.width, self.label.width if self.label else 0)/2+18*u
-            self.backdrop.plate(canvas, (cx-half, (L['label']-16)*u, cx+half, (L['title'])*u+self.title.height/2+10*u))
+            self.look.plate(canvas, (cx-half, (L['label']-16)*u, cx+half, (L['title'])*u+self.title.height/2+10*u))
         if self.label:
             self._paste(canvas, self.label, cx, (L['label']-10*(1-k))*u, k)
         if self.title:

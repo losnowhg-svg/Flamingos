@@ -113,12 +113,11 @@ class RoundShow:
         self.u = float(scale)
         self.size = (int(540*self.u), int(self.L['h']*self.u))
         self.style, self.length, self.still, self.fades = style, float(length), still, fades
-        look = style or {}
-        self.font = look.get('font') if look.get('panel') else None
-        self.pink, self.cyan, self.yellow, self.white = look.get('palette') or (cards.PINK, cards.CYAN, cards.YELLOW,
-                                                                              cards.WHITE)
-        self.panel = tuple(look.get('panel') or (18, 13, 28))
-        self.border = tuple(look.get('border') or self.white)
+        from preset_look import Look
+        self.look = Look(style, self.u)
+        self.font = self.look.font
+        self.pink, self.cyan, self.yellow, self.white = self.look.pink, self.look.cyan, self.look.yellow, self.look.white
+        self.panel, self.border = self.look.panel, self.look.border
         beat = None
         if track:
             import tracks
@@ -154,20 +153,10 @@ class RoundShow:
         self.scan_step = self.backdrop.scan_step
 
     def _text(self, value, kind, size, color, max_width, **kw):
-        """Inter Display on the synthwave night, the preset's pixel font on a preset."""
-        if not self.font:
-            return cards.text(value, kind, size, color, self.u, max_width=max_width, **kw)
-        from renderer import text_image
-        r = max(1, min(4, round(self.u)))
-        img = text_image(value, self.font, max(7.0, size*.62), tuple(color[:3]), max_width, None, r)   # 7: digits stay whole
-        if img is not None and r != self.u:
-            k = self.u/r
-            img = img.resize((max(1, round(img.width*k)), max(1, round(img.height*k))), Image.Resampling.NEAREST)
-        return img
+        return self.look.text(value, kind, size, color, max_width, **kw)
 
-    @staticmethod
-    def _mix(a, b, k):
-        return tuple(round(x*k+y*(1-k)) for x, y in zip(a[:3], b[:3]))
+    def _mix(self, a, b, k):
+        return self.look.mix(a, b, k)
 
     def _crest(self, name, ours, size):
         data = crest_for(name, self.logo, ours)
@@ -227,8 +216,7 @@ class RoundShow:
             winner = win_home if side == 'home' else win_away
             loser = (win_away if side == 'home' else win_home)
             if self.font:
-                from render_utils import contrast_ink
-                color = contrast_ink(pink) if r['ours'] else (self._mix(self.white, self.panel, .62) if loser else self.white)
+                color = self.look.ink(pink) if r['ours'] else (self.look.dim() if loser else self.white)
             else:
                 color = pink if ours else (cards.WHITE if not loser else (176, 166, 192))
             label = self._text(name, 'black' if winner or ours else 'heavy', min(16, h*.32), color, 146)
@@ -247,12 +235,9 @@ class RoundShow:
         else:
             t = self._text(r['when'] or 'DA GIOCARE', 'heavy', min(11, h*.26), self.cyan, 72)
         box = Image.new('RGBA', (int(80*u), int((h-12)*u)))
-        from render_utils import is_light
-        darker = .88 if is_light(self.panel) else .7       # LCD: a light panel with dark ink keeps a light box
-        fill = (*self._mix(self.panel, (0, 0, 0), darker), 255) if self.font else (8, 6, 14, 255)
         line = (*self.border, 110) if self.font else (255, 255, 255, 50)
-        ImageDraw.Draw(box).rounded_rectangle((0, 0, box.width-1, box.height-1), radius=int((3 if self.font else 8)*u),
-                                              fill=fill, outline=line, width=max(1, int(u)))
+        ImageDraw.Draw(box).rounded_rectangle((0, 0, box.width-1, box.height-1), radius=self.look.radius(8),
+                                              fill=self.look.box_fill(), outline=line, width=max(1, int(u)))
         if t:
             box.alpha_composite(t, ((box.width-t.width)//2, (box.height-t.height)//2))
         return box
@@ -268,7 +253,7 @@ class RoundShow:
         k, s = out_cubic((t-.1)/.6), self.shift
         if self.backdrop.styled and self.title:
             half = max(self.title.width, self.sub.width if self.sub else 0)/2+18*u
-            self._plate(canvas, (W/2-half, (L['title']+s)*u-self.title.height/2-10*u, W/2+half, (L['date']+s+12)*u))
+            self.look.plate(canvas, (W/2-half, (L['title']+s)*u-self.title.height/2-10*u, W/2+half, (L['date']+s+12)*u))
         self._paste(canvas, self.title, W/2, (L['title']+s+12*(1-k))*u, k)
         k2 = out_cubic((t-.3)/.6)
         self._paste(canvas, self.sub, W/2, (L['sub']+s+10*(1-k2))*u, k2)
@@ -297,15 +282,6 @@ class RoundShow:
                     d.ellipse((sx-rad, sy-rad, sx+rad, sy+rad), fill=(*pink_dots, int(230*(1-p/1.2))))
         flash = (1-(t-DROP)/.3)**2*.3 if self.mine is not None and 0 <= t-DROP < .3 else 0.0
         return finish(canvas, t if self.fades else 1.0, self.length if self.fades else 1e9, self.scan_step, flash)
-
-    def _plate(self, canvas, box):
-        """The plate under the title: the preset's panel and border (it may sit on a light background)."""
-        x0, y0, x1, y1 = box
-        layer = Image.new('RGBA', (int(x1-x0), int(y1-y0)))
-        ImageDraw.Draw(layer).rounded_rectangle((0, 0, layer.width-1, layer.height-1), radius=int(6*self.u),
-                                                fill=(*self.panel, 222), outline=(*self.border, 90),
-                                                width=max(1, int(self.u)))
-        canvas.paste(layer, (int(x0), int(y0)), layer)
 
     def _score_cached(self, i):
         cache = self.__dict__.setdefault('_scores', {})
