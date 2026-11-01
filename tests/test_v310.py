@@ -61,6 +61,12 @@ class Transitions(unittest.TestCase):
         self.assertEqual(tr.special_for('Figurina MVP', 'Pagelle'), 'olografica')
         self.assertEqual(tr.special_for('Pagelle', 'Album'), 'pagina')
         self.assertEqual(tr.special_for('Figurina MVP', 'Classifica'), 'pioggia')
+        self.assertEqual(tr.special_for('Matchday Screen', 'Convocati'), 'spogliatoio')
+        self.assertEqual(tr.special_for('Convocati', 'Matchday Screen'), 'spogliatoio')
+        self.assertEqual(tr.special_for('Convocati', 'Full Time'), 'cronometro')
+        self.assertEqual(tr.special_for('Full Time', 'Classifica'), 'righe')
+        self.assertEqual(tr.special_for('Classifica', 'Calendario'), 'calendario')
+        self.assertEqual(tr.special_for('Calendario', 'Matchday Screen'), 'countdown')
 
 
 class Sequence(unittest.TestCase):

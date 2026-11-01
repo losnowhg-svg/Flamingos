@@ -27,8 +27,14 @@ TRANSITIONS = {
     'olografica': '✨ Lampo olografico',
     'pioggia': '✨ Pioggia di figurine',
     'pagina': '✨ Pagina dell\'album',
+    'spogliatoio': '✨ Porte dello spogliatoio',
+    'cronometro': '✨ Cronometro (si gioca)',
+    'righe': '✨ Righe che si aggiornano',
+    'calendario': '✨ Pagina del calendario',
+    'countdown': '✨ Conto alla rovescia 3-2-1',
 }
-SPECIAL = ('carta', 'strappo', 'olografica', 'pioggia', 'pagina')
+SPECIAL = ('carta', 'strappo', 'olografica', 'pioggia', 'pagina', 'spogliatoio', 'cronometro', 'righe', 'calendario',
+           'countdown')
 VARIED = ('channel', 'pixel', 'blocks', 'iris', 'glitch', 'wipe', 'rewind', 'roll')
 TRANSITION_IDS = tuple(TRANSITIONS)
 OSD_GREEN = (120, 255, 140)
@@ -465,8 +471,154 @@ def _pagina(a, b, p, channel=2):
     return canvas
 
 
+def _big_text(width, text, color, ratio):
+    from pixel_fonts import pixel_text_runs
+    scale = max(1, round(width/540))
+    return pixel_text_runs([(text, color)], 'CRT Scoreboard', max(12, width*ratio/scale), 540, scale)
+
+
+def _spogliatoio(a, b, p, channel=2):
+    """The locker-room doors: the frame splits in the middle and the two halves slide apart, light behind."""
+    A = np.asarray(a, np.float32)
+    h, w = A.shape[:2]
+    half = w//2
+    zoom = 1.06-.06*_ease(p)
+    B = np.asarray(b.resize((round(w*zoom), round(h*zoom)), Image.Resampling.BILINEAR), np.float32)
+    y0, x0 = (B.shape[0]-h)//2, (B.shape[1]-w)//2
+    out = B[y0:y0+h, x0:x0+w].copy()
+    glow = np.exp(-((np.arange(w)-w/2)/(w*.12))**2)[None, :, None]*max(0, 1-p)*120
+    out = out+glow
+    if p < .12:                                     # a seam of light down the middle first
+        out = A.copy()
+        k = p/.12
+        seam = np.exp(-((np.arange(w)-w/2)/(w*.004+w*.01*k))**2)[None, :, None]*255*k
+        out = np.minimum(255, out+seam)
+        return Image.fromarray(out.astype(np.uint8))
+    k = _ease((p-.12)/.88)
+    shift = int(half*k*1.05)
+    edge = max(2, w//110)
+    if half-shift > 0:
+        left = A[:, shift:half]
+        out[:, :left.shape[1]] = left
+        out[:, max(0, left.shape[1]-edge):left.shape[1]] = (210, 214, 224)   # door edges, metal
+        right = A[:, half:w-shift]
+        out[:, w-right.shape[1]:] = right
+        out[:, w-right.shape[1]:w-right.shape[1]+edge] = (210, 214, 224)
+    return Image.fromarray(out.clip(0, 255).astype(np.uint8))
+
+
+def _cronometro(a, b, p, channel=2):
+    """A stopwatch sweep: the hand turns from 0' to 50' and the next scene appears behind it."""
+    A, B = np.asarray(a, np.float32), np.asarray(b, np.float32)
+    h, w = A.shape[:2]
+    angle = _angles(h, w)
+    k = _ease(p)
+    out = np.where((angle < k)[..., None], B, A)
+    canvas = Image.fromarray(out.clip(0, 255).astype(np.uint8)).convert('RGBA')
+    from PIL import ImageDraw
+    d = ImageDraw.Draw(canvas, 'RGBA')
+    cx, cy, r = w/2, h/2, min(w, h)*.36
+    fade = int(220*math.sin(math.pi*p))
+    a1 = 2*math.pi*k-math.pi/2                       # the hand, with a soft glow
+    tip = (cx+math.cos(a1)*max(w, h), cy+math.sin(a1)*max(w, h))
+    d.line((cx, cy)+tip, fill=(255, 201, 99, 70), width=max(6, w//40))
+    d.line((cx, cy)+tip, fill=(255, 220, 140, 255), width=max(2, w//150))
+    d.ellipse((cx-w/60, cy-w/60, cx+w/60, cy+w/60), fill=(255, 220, 140, 255))
+    for i in range(12):                              # the dial
+        a0 = math.radians(i*30-90)
+        d.line((cx+math.cos(a0)*r*.9, cy+math.sin(a0)*r*.9, cx+math.cos(a0)*r, cy+math.sin(a0)*r),
+               fill=(255, 255, 255, fade), width=max(2, w//150))
+    label = _big_text(w, f"{int(round(50*k))}'", (255, 201, 99), .14)
+    if label and fade > 0:
+        label.putalpha(label.getchannel('A').point(lambda v: v*fade//255))
+        canvas.alpha_composite(label, (int(cx-label.width/2), int(cy-label.height/2)))
+    return canvas.convert('RGB')
+
+
+@lru_cache(maxsize=4)
+def _angles(h, w):
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    return ((np.arctan2(yy-h/2, xx-w/2)+math.pi/2) % (2*math.pi))/(2*math.pi)
+
+
+def _righe(a, b, p, channel=2):
+    """Like a standings table updating: row after row slides out, the new rows slide in."""
+    A, B = np.asarray(a), np.asarray(b)
+    h, w = A.shape[:2]
+    rows = 12
+    out = A.copy()
+    for i in range(rows):
+        y0, y1 = h*i//rows, h*(i+1)//rows
+        k = _ease(min(1.0, max(0.0, (p-i*.035)/.55)))
+        shift = int(w*k)
+        if shift <= 0:
+            continue
+        strip = np.empty_like(A[y0:y1])
+        strip[:, :w-shift] = A[y0:y1, shift:]
+        strip[:, w-shift:] = B[y0:y1, :shift]
+        if 0 < shift < w:
+            edge = max(2, w//160)
+            strip[:, max(0, w-shift-edge):w-shift] = (255, 92, 190)
+        out[y0:y1] = strip
+    return Image.fromarray(out)
+
+
+def _calendario(a, b, p, channel=2):
+    """A desk calendar: the page flips up and over its rings, the next month underneath."""
+    from PIL import ImageDraw
+    w, h = a.size
+    ang = math.radians(100*_ease(p))
+    out = np.asarray(b, np.float32).copy()
+    edge = h*max(0.0, math.cos(ang))
+    ys = np.arange(h, dtype=np.float32)
+    shade = 1-.5*(1-p)*np.exp(-np.maximum(0, ys-edge)/(h*.18))
+    out *= shade[:, None, None]
+    canvas = Image.fromarray(out.clip(0, 255).astype(np.uint8))
+    if ang < math.radians(89.5):
+        import cards
+        dist = 3.2*h
+        pts = []
+        for x, y in ((0, 0), (w, 0), (w, h), (0, h)):
+            py, pz = y*math.cos(ang), y*math.sin(ang)
+            f = dist/(dist+pz)
+            pts.append(((x-w/2)*f+w/2, py*f))
+        page = np.asarray(a, np.float32)*(.6+.4*math.cos(ang))
+        img = Image.fromarray(page.clip(0, 255).astype(np.uint8)).convert('RGBA')
+        coeffs = cards._coeffs([(0, 0), (w, 0), (w, h), (0, h)], pts)
+        warped = img.transform((w, h), Image.Transform.PERSPECTIVE, tuple(coeffs), Image.Resampling.BILINEAR)
+        canvas.paste(warped, (0, 0), warped)
+    d = ImageDraw.Draw(canvas)                       # the rings on top
+    r = max(3, w//60)
+    for i in range(9):
+        x = w*(i+1)/10
+        d.ellipse((x-r, -r, x+r, r*1.6), outline=(225, 228, 236), width=max(2, r//2))
+    return canvas
+
+
+def _countdown(a, b, p, channel=2):
+    """3, 2, 1 over the darkening frame, then the next scene with a flash: kick off."""
+    if p >= .78:
+        k = (p-.78)/.22
+        out = np.asarray(b, np.float32)
+        out = out+(255-out)*(1-k)**2*.7
+        return Image.fromarray(out.clip(0, 255).astype(np.uint8))
+    A = np.asarray(a, np.float32)
+    w = A.shape[1]
+    i = min(2, int(p/.26))
+    q = (p-i*.26)/.26
+    canvas = Image.fromarray((A*(1-.55*min(1, p/.2))).clip(0, 255).astype(np.uint8)).convert('RGBA')
+    number = _big_text(w, str(3-i), ((255, 201, 99), (121, 220, 247), (242, 104, 168))[i], .5)
+    if number:
+        size = 1.35-.35*_ease(min(1, q/.35))
+        number = number.resize((max(1, int(number.width*size)), max(1, int(number.height*size))), Image.Resampling.NEAREST)
+        alpha = 1-max(0, (q-.7)/.3)
+        number.putalpha(number.getchannel('A').point(lambda v: int(v*alpha)))
+        canvas.alpha_composite(number, (int(canvas.width/2-number.width/2), int(canvas.height/2-number.height/2)))
+    return canvas.convert('RGB')
+
+
 def special_for(previous, following):
-    """The collection transition that suits two screens of a sequence (by name)."""
+    """The themed transition that suits two screens of a sequence (by name)."""
     if following == 'Figurina MVP':
         return 'carta' if previous in ('Full Time', 'Pagelle') else 'strappo'
     if following == 'Album' or previous == 'Album':
@@ -475,13 +627,24 @@ def special_for(previous, following):
         return 'olografica'
     if previous == 'Figurina MVP':
         return 'pioggia'
+    if {previous, following} == {'Matchday Screen', 'Convocati'}:
+        return 'spogliatoio'
+    if following == 'Full Time':
+        return 'cronometro'
+    if following == 'Classifica':
+        return 'righe'
+    if following == 'Calendario':
+        return 'calendario'
+    if following == 'Matchday Screen':
+        return 'countdown'
     return 'olografica'
 
 
 FUNCTIONS = {'channel': _channel, 'poweroff': _poweroff, 'glitch': _glitch,
              'rewind': _rewind, 'roll': _roll, 'cut': _cut, 'pixel': _pixel, 'iris': _iris,
              'blocks': _blocks, 'wipe': _wipe, 'carta': _carta, 'strappo': _strappo, 'olografica': _olografica,
-             'pioggia': _pioggia, 'pagina': _pagina}
+             'pioggia': _pioggia, 'pagina': _pagina, 'spogliatoio': _spogliatoio, 'cronometro': _cronometro,
+             'righe': _righe, 'calendario': _calendario, 'countdown': _countdown}
 
 
 def varied(count, start=0):

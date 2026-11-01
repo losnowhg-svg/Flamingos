@@ -184,10 +184,40 @@ def page_turn(seconds):
     return _layered(seconds, [(0, whoosh(max(.2, seconds*.7))*.8)])
 
 
+def whistle(seconds=.45):
+    """The referee's whistle: a bright tone with the pea's trill."""
+    t = _t(seconds)
+    trill = 1+.03*np.sign(np.sin(2*np.pi*28*t))
+    return np.sin(2*np.pi*2900*t*trill)*np.minimum(1, t/.02)*np.minimum(1, (seconds-t)/.06)*.16
+
+
+def doors(seconds):
+    return _layered(seconds, [(0, impact(0)*.5), (seconds*.12, whoosh(max(.3, seconds*.6))*.8)])
+
+
+def stopwatch(seconds):
+    return _layered(seconds, [(seconds*k/12, tick(k % 4)*.9) for k in range(12)]+[(seconds*.82, whistle())])
+
+
+def rows_update(seconds):
+    return _layered(seconds, [(seconds*k*.035+.02, tick(k)*.7) for k in range(12)])
+
+
+def calendar_page(seconds):
+    return _layered(seconds, [(0, whoosh(max(.25, seconds*.6))*.8), (seconds*.55, impact(0)*.3)])
+
+
+def countdown_beeps(seconds):
+    return _layered(seconds, [(seconds*.26*i, press_start(0)*.9) for i in range(3)]+[(seconds*.78, press_start(1)*1.1),
+                                                                                     (seconds*.78, impact(1)*.6)])
+
+
 TRANSITION_SOUNDS = {'channel': channel_change, 'poweroff': power_cycle, 'glitch': glitch,
                      'rewind': rewind, 'roll': roll, 'cut': cut, 'pixel': pixelate, 'iris': iris,
                      'blocks': blocks, 'wipe': wipe, 'carta': card_flip, 'strappo': pack_tear,
-                     'olografica': holo_sweep, 'pioggia': card_shower, 'pagina': page_turn}
+                     'olografica': holo_sweep, 'pioggia': card_shower, 'pagina': page_turn,
+                     'spogliatoio': doors, 'cronometro': stopwatch, 'righe': rows_update, 'calendario': calendar_page,
+                     'countdown': countdown_beeps}
 
 
 def hum(seconds):

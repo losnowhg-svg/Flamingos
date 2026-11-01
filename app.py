@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.10 / figurine nei preset e transizioni da collezione nella sequenza video')
+    st.caption('3.11 / transizioni a tema: spogliatoio, cronometro, classifica, calendario, 3-2-1')
 
 from library import show_library
 from studio_ui import show_studio
