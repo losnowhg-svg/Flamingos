@@ -1,4 +1,18 @@
-# Flamingos Studio 3.12
+# Flamingos Studio 3.13
+
+## Novita della 3.13: figurine e pagelle nello stile del preset
+Come i risultati della giornata, anche la presentazione delle figurine segue il preset scelto nel menu *Stile*
+(di serie quello del Full Time): font pixel del preset, i suoi colori, riquadri e bordi.
+- **Pagelle:** titolo, righe, numeri, commenti e voti nei colori del preset; la riga dell'MVP piena del suo giallo.
+- **Bustina e figurina MVP:** titolo, suggerimenti (ruolo, numero, stemma) e frase sotto la carta.
+- **Album:** titolo e riga della collezione.
+Le carte restano le stesse, così la collezione si riconosce. La notte synthwave resta com'era.
+
+**Dieci brani veri in più (CC0, senza diritti):** ora sono 18. Nuovi generi: punk rock (*Punk*), rock con chitarre
+(*Snowboard Rock*), elettronica potente e veloce (*Uberpunch*, *Hard Mode*), eroica ed epica (*Rising Hero*,
+*Epic Blockbuster 2*), disco (*Downtown Boogie*), synthwave (*Retro Synths*), positiva (*Good Vibes*), reggae dub
+(*Sunday Dub*). Entrano anche nella scelta automatica (in coda, quindi la prima giornata non cambia). Crediti in
+`assets/music/CREDITS.md`.
 
 ## Novita della 3.12: risultati della giornata
 Nuova pagina **📋 Risultati della giornata**: tutte le partite del girone in una grafica, da pubblicare ogni
