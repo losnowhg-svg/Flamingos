@@ -40,12 +40,15 @@ def _meta():
 
 
 def when(iso):
-    """'oggi 18:42', 'ieri 21:05', 'sab 25/10 18:40'."""
+    """'oggi 18:42', 'ieri 21:05', 'sab 25/10 18:40', in Italian time (old saves without a zone were UTC)."""
     try:
         at = dt.datetime.fromisoformat(str(iso))
     except ValueError:
         return ''
-    today = dt.date.today()
+    if at.tzinfo is None:
+        at = at.replace(tzinfo=dt.timezone.utc)
+    at = at.astimezone(ss.ZONE)
+    today = ss.now().date()
     if at.date() == today:
         return f'oggi {at:%H:%M}'
     if at.date() == today-dt.timedelta(days=1):
@@ -118,11 +121,39 @@ def reload():
         meta.pop('overwrote', None)
 
 
+def merge_squad(library):
+    """Once per session: sprites, photo avatars and Instagram names this browser has and the shared squad lacks.
+
+    So a device that opens a save made elsewhere never loses what it had; the next save shares it with everyone."""
+    if st.session_state.get('shared_squad_merged') or not library:
+        return
+    st.session_state['shared_squad_merged'] = True
+    local = {p['name']: p for p in library.get('squad') or []}
+    shared = st.session_state.get('squad')
+    if not shared or not local:
+        return
+    merged, changed = [], False
+    for person in shared:
+        person = dict(person)
+        mine = local.get(person.get('name'), {})
+        if not person.get('look') and not person.get('avatar'):
+            for field in ('look', 'avatar'):
+                if mine.get(field):
+                    person[field], changed = mine[field], True
+        if not person.get('ig') and mine.get('ig'):
+            person['ig'], changed = mine['ig'], True
+        merged.append(person)
+    if changed:
+        st.session_state['squad'] = merged
+        _meta().pop('baseline', None)                    # save it right away: the others get the sprites too
+
+
 def merge_assets(library):
     """Fonts and logos uploaded by friends, added to this session's archive."""
     meta = _meta()
     if meta.get('status') != 'on' or not library:
         return
+    merge_squad(library)
     cache = st.session_state.setdefault('shared_asset_cache', {})
     conf = settings()
     for asset_id, info in (meta.get('assets') or {}).items():
