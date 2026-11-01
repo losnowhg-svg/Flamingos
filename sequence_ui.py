@@ -154,10 +154,11 @@ def _still(root, template, library, preset_override, format):
 def show_sequence(root: Path, library):
     st.subheader('SEQUENZA VIDEO')
     st.caption('Le grafiche una dopo l\'altra, unite da transizioni retrò: cambio canale, glitch, VHS, pixel, '
-               'cerchio, blocchi, tendina, più quelle ✨ da collezione. Ci sono anche Pagelle, Figurina MVP e Album. '
+               'cerchio, blocchi, tendina, più quelle ✨ a tema (spogliatoio, cronometro, calendario, figurine...). '
+               'Ci sono anche Pagelle, Figurina MVP e Album. '
                'Ogni grafica usa i dati e il preset che hai impostato nel suo editor.')
     state = st.session_state.setdefault('sequence', {
-        'items': ['Matchday Screen', 'Convocati'], 'transitions': ['channel'], 'format': 'Story 9:16',
+        'items': ['Matchday Screen', 'Convocati'], 'transitions': ['spogliatoio'], 'format': 'Story 9:16',
         'hold': 4.0, 'transition_seconds': 1.0, 'fps': 24, 'scale': 2, 'preset': 'own', 'sound': True, 'volume': 80,
         'mockup': False})
     state.setdefault('sound', True); state.setdefault('volume', 80); state.setdefault('mockup', False)
@@ -175,9 +176,11 @@ def show_sequence(root: Path, library):
         import figurine_scenes
         from transitions import special_for
         options = tuple(CRT_TEMPLATES)+figurine_scenes.EXTRA
-        if st.button('✨ Transizioni speciali da collezione', key='seq_special', width='stretch',
-                     help='Carta che si gira verso la figurina, strappo della bustina, lampo olografico, pioggia di '
-                          'figurine, pagina dell\'album: scelte in base alle schermate vicine.'):
+        if st.button('✨ Transizioni a tema', key='seq_special', width='stretch',
+                     help='Scelte in base alle schermate vicine: porte dello spogliatoio tra Matchday e Convocati, '
+                          'cronometro verso il Full Time, righe che si aggiornano verso la Classifica, pagina del '
+                          'calendario, conto alla rovescia verso il Matchday, la carta che si gira verso la figurina '
+                          'MVP, lampo olografico, pagina dell\'album.'):
             chosen = [st.session_state.get(f'seq_item_{i}', state['items'][i] if i < len(state['items']) else options[0])
                       for i in range(count)]
             state['transitions'] = [special_for(chosen[i], chosen[i+1]) for i in range(count-1)]
@@ -193,9 +196,9 @@ def show_sequence(root: Path, library):
             if i < count-1:
                 if i < len(state['transitions']):
                     current = state['transitions'][i]
-                else:   # a new step next to a figurine screen starts with its collection transition
-                    previous = items[-1]
-                    current = special_for(previous, '') if previous in figurine_scenes.EXTRA else 'channel'
+                else:   # a new step starts with the themed transition that suits the screen before it
+                    upcoming = state['items'][i+1] if i+1 < len(state['items']) else ''
+                    current = special_for(items[-1], upcoming)
                 current = current if current in TRANSITION_IDS else 'channel'
                 transitions.append(st.selectbox(f'Transizione {i+1} > {i+2}', TRANSITION_IDS,
                     index=TRANSITION_IDS.index(current), format_func=TRANSITIONS.get, key=f'seq_trans_{i}'))

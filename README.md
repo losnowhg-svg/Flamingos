@@ -1,4 +1,14 @@
-# Flamingos Studio 3.10
+# Flamingos Studio 3.11
+
+## Novita della 3.11: transizioni a tema tra le grafiche della partita
+Cinque transizioni nuove, che raccontano il passaggio, ognuna con il suo suono:
+- **Porte dello spogliatoio** tra Matchday e Convocati (e all'inizio del video dei reparti);
+- **Cronometro**: la lancetta gira da 0' a 50', con il fischio finale, verso il Full Time;
+- **Righe che si aggiornano**, come una classifica, verso la Classifica;
+- **Pagina del calendario** da tavolo, con gli anelli, verso il Calendario;
+- **Conto alla rovescia 3-2-1** verso il Matchday.
+Il pulsante *✨ Transizioni a tema* della Sequenza video sceglie per ogni passaggio quella giusta (anche le
+transizioni da collezione verso figurine, pagelle e album); i passaggi nuovi partono già con quella a tema.
 
 ## Novita della 3.10: figurine nei preset e transizioni da collezione
 - **Stile delle figurine:** nella pagina Figurine e pagelle il menu *Stile* mette pagelle, figurine, bustina e

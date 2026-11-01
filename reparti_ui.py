@@ -102,7 +102,8 @@ def show_departments(config, squad, home, font_bytes, key):
             with tempfile.TemporaryDirectory() as folder:
                 path = Path(folder)/'reparti.mp4'
                 from transitions import varied
-                render_sequence(scenes, varied(len(scenes)-1), path, config['fps'], 3.5, .9,
+                steps = ['spogliatoio']+varied(len(scenes)-2)     # from the list into the locker room
+                render_sequence(scenes, steps[:len(scenes)-1], path, config['fps'], 3.5, .9,
                                 config['export_format'], scale,
                                 progress_with_eta(progress),
                                 sound=config['sound'], volume=config['volume']/100, mockup=config.get('mockup', False))
