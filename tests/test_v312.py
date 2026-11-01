@@ -77,6 +77,19 @@ class Render(unittest.TestCase):
         light = np.asarray(rr.RoundShow(self.rows, logo=LOGO, scale=1, still=True, style=style).still_frame(), np.int16)
         self.assertGreater(np.abs(night-light)[:120].mean(), 20)
 
+    def test_preset_rows_follow_the_preset(self):
+        style = fs.build(fs.key_for('gameboy', defaults('Classifica')), 'Story 9:16', 540)
+        self.assertEqual(style['font'], 'CRT Scoreboard')
+        show = rr.RoundShow(self.rows, logo=LOGO, scale=1, still=True, style=style)
+        self.assertEqual(show.font, 'CRT Scoreboard')
+        self.assertEqual(show.panel, tuple(style['panel']))
+        mine = show.panels[next(i for i, r in enumerate(self.rows) if r['ours'])]
+        pixels = np.asarray(mine)
+        inside = pixels[pixels[..., 3] > 240][:, :3]
+        typical = np.median(inside, axis=0)
+        self.assertLess(np.abs(typical-np.array(style['palette'][0])).max(), 40)   # our row: filled with the accent
+        self.assertIsNone(rr.RoundShow(self.rows, logo=LOGO, scale=1, still=True).font)       # synthwave: Inter
+
     def test_video(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder)/'r.mp4'

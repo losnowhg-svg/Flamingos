@@ -9,6 +9,8 @@ Settimana): di serie la pagina apre l'ultima giornata con almeno un risultato.
 - Stemmi del girone dall'archivio (o le iniziali), il nostro logo per noi.
 - Tabella modificabile per correggere o completare i risultati (anche senza dati dal sito), titolo e sottotitolo.
 - Formati storia, post 4:5 e 1:1; stile come la Classifica (preset e tema), un altro preset o la notte synthwave.
+  Con un preset le righe sono quelle delle grafiche CRT: font pixel del preset, i suoi colori, riquadri e bordi
+  (verdi sul Game Boy, chiari sul gioco LCD...), la nostra riga piena del suo colore come nella Classifica.
 - PNG in HD e **video** di 8 secondi con un brano vero (righe che entrano una alla volta), scarica e condividi.
 - Anche nella **Sequenza video** (*📋 Risultati della giornata*), con la transizione *righe che si aggiornano*:
   per esempio Full Time → Risultati → Classifica.

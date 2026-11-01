@@ -46,7 +46,7 @@ def label(choice, fulltime):
 
 @lru_cache(maxsize=12)
 def build(key, format='Story 9:16', width=1080):
-    """{'image', 'glow', 'palette'} for a style key at a canvas width (pixels), or None for synthwave."""
+    """{'image', 'glow', 'palette', 'panel', 'border', 'font'} for a style key at a canvas width (pixels), or None for synthwave."""
     data = json.loads(key) if key else {}
     preset = data.get('preset')
     from crt_presets import CROPS, PRESETS, apply_preset, background
@@ -61,4 +61,8 @@ def build(key, format='Story 9:16', width=1080):
         k = image.width/540
         image = image.crop(tuple(round(v*k) for v in crop))
     colors = [_rgb(PRESETS[preset][c]) for c in ('pink', 'cyan', 'yellow', 'white')]
-    return {'image': image, 'glow': colors[0], 'palette': tuple(colors), 'preset': preset}
+    from crt_presets import STYLE
+    look = STYLE.get(preset, STYLE['crt'])
+    # panel, border and font as the CRT graphics use them (the round results follow them, 3.12)
+    return {'image': image, 'glow': colors[0], 'palette': tuple(colors), 'preset': preset,
+            'panel': look['panel'], 'border': look.get('border'), 'font': PRESETS[preset].get('font', 'CRT Terminal')}

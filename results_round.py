@@ -4,6 +4,10 @@ The matches come from the CSI page (bookmark or pasted), grouped by round. A row
 home crest and name, the score (or day and time if not played yet), away name
 and crest; the winner bright, the loser dimmer. In the video the rows enter
 one by one with their score, and our match arrives last, on the drop.
+
+Two looks: the synthwave night (Inter Display, pink glow), or a studio preset,
+where the rows follow the CRT graphics like the Classifica: the preset's pixel
+font, its colours, its panel and border, our row filled with its accent.
 """
 from __future__ import annotations
 
@@ -109,6 +113,12 @@ class RoundShow:
         self.u = float(scale)
         self.size = (int(540*self.u), int(self.L['h']*self.u))
         self.style, self.length, self.still, self.fades = style, float(length), still, fades
+        look = style or {}
+        self.font = look.get('font') if look.get('panel') else None
+        self.pink, self.cyan, self.yellow, self.white = look.get('palette') or (cards.PINK, cards.CYAN, cards.YELLOW,
+                                                                              cards.WHITE)
+        self.panel = tuple(look.get('panel') or (18, 13, 28))
+        self.border = tuple(look.get('border') or self.white)
         beat = None
         if track:
             import tracks
@@ -123,9 +133,9 @@ class RoundShow:
         glow = (self.style or {}).get('glow') or cards.CYAN
         self.backdrop = Backdrop(self.size, u, H*.45, L['h']*u*.92, L['title']*u, glow, sun=False, dust=26,
                                  phases=1 if self.still else 20, style=self.style)
-        self.title = cards.text(self.title_text, 'black', 44, cards.WHITE, u, max_width=480, shadow=(0, 3, 6, 200))
-        self.sub = cards.text(self.subtitle, 'black', 15, cards.YELLOW, u, max_width=480, tracking=1)
-        self.when = cards.text(self.date, 'heavy', 10, (*cards.WHITE, 200), u, max_width=480, tracking=2)
+        self.title = self._text(self.title_text, 'black', 44, self.white, 480, shadow=(0, 3, 6, 200))
+        self.sub = self._text(self.subtitle, 'black', 15, self.yellow, 480, tracking=1)
+        self.when = self._text(self.date, 'heavy', 10, self._mix(self.white, self.panel, .8), 480, tracking=2)
         n = max(1, len(self.rows))
         self.row_h = min(L['max_row'], (L['bottom']-L['top'])/n)
         self.gap = 6 if self.row_h > 44 else 4
@@ -143,6 +153,22 @@ class RoundShow:
         self.mine = mine
         self.scan_step = self.backdrop.scan_step
 
+    def _text(self, value, kind, size, color, max_width, **kw):
+        """Inter Display on the synthwave night, the preset's pixel font on a preset."""
+        if not self.font:
+            return cards.text(value, kind, size, color, self.u, max_width=max_width, **kw)
+        from renderer import text_image
+        r = max(1, min(4, round(self.u)))
+        img = text_image(value, self.font, max(7.0, size*.62), tuple(color[:3]), max_width, None, r)   # 7: digits stay whole
+        if img is not None and r != self.u:
+            k = self.u/r
+            img = img.resize((max(1, round(img.width*k)), max(1, round(img.height*k))), Image.Resampling.NEAREST)
+        return img
+
+    @staticmethod
+    def _mix(a, b, k):
+        return tuple(round(x*k+y*(1-k)) for x, y in zip(a[:3], b[:3]))
+
     def _crest(self, name, ours, size):
         data = crest_for(name, self.logo, ours)
         u = self.u
@@ -156,9 +182,10 @@ class RoundShow:
         side = int(size*u)
         img = Image.new('RGBA', (side, side))
         d = ImageDraw.Draw(img)
-        d.ellipse((0, 0, side-1, side-1), fill=(46, 34, 62, 255), outline=(255, 255, 255, 120), width=max(1, int(u)))
+        d.ellipse((0, 0, side-1, side-1), fill=(*self._mix(self.white, self.panel, .18), 255),
+                  outline=(*self.white, 120), width=max(1, int(u)))
         initials = ''.join(w[0] for w in name.split()[:2]) or '?'
-        t = cards.text(initials, 'black', size*.42, cards.WHITE, u)
+        t = self._text(initials, 'black', size*.42, self.white, size)
         img.alpha_composite(t, ((side-t.width)//2, (side-t.height)//2))
         return img
 
@@ -168,9 +195,16 @@ class RoundShow:
         img = Image.new('RGBA', (int((w+24)*u), int((h+24)*u)))
         d = ImageDraw.Draw(img)
         x0, y0 = 12*u, 12*u
-        pink = cards.PINK
-        d.rounded_rectangle((x0, y0, x0+w*u, y0+h*u), radius=int(12*u), fill=(18, 13, 28, 225) if not r['ours'] else (34, 18, 40, 238),
-                            outline=(*pink, 255) if r['ours'] else (255, 255, 255, 34), width=max(1, int((2 if r['ours'] else 1)*u)))
+        pink = self.pink
+        if self.font:       # the preset look: its panel and border, our row filled with its accent (as in the Classifica)
+            fill = (*pink, 245) if r['ours'] else (*self.panel, 232)
+            line = (*self.border, 255) if r['ours'] else (*self.border, 70)
+        else:
+            fill = (34, 18, 40, 238) if r['ours'] else (18, 13, 28, 225)
+            line = (*pink, 255) if r['ours'] else (255, 255, 255, 34)
+        radius = int((4 if self.font else 12)*u)
+        d.rounded_rectangle((x0, y0, x0+w*u, y0+h*u), radius=radius, fill=fill, outline=line,
+                            width=max(1, int((2 if r['ours'] else 1)*u)))
         if r['ours']:
             glow = img.filter(ImageFilter.GaussianBlur(7*u))
             tint = Image.new('RGBA', img.size, (*pink, 0))
@@ -192,8 +226,12 @@ class RoundShow:
             img.alpha_composite(crest, (int(cx-crest.width/2), int(cy-crest.height/2)))
             winner = win_home if side == 'home' else win_away
             loser = (win_away if side == 'home' else win_home)
-            color = pink if ours else (cards.WHITE if not loser else (176, 166, 192))
-            label = cards.text(name, 'black' if winner or ours else 'heavy', min(16, h*.32), color, u, max_width=146)
+            if self.font:
+                from render_utils import contrast_ink
+                color = contrast_ink(pink) if r['ours'] else (self._mix(self.white, self.panel, .62) if loser else self.white)
+            else:
+                color = pink if ours else (cards.WHITE if not loser else (176, 166, 192))
+            label = self._text(name, 'black' if winner or ours else 'heavy', min(16, h*.32), color, 146)
             if label:                                  # names stop short of the score box in the middle
                 if side == 'home':
                     img.alpha_composite(label, (int(x0+(w/2-48)*u-label.width), int(cy-label.height/2)))
@@ -205,12 +243,16 @@ class RoundShow:
         u = self.u
         if r['score']:
             a, b = r['score']
-            t = cards.text(f'{a} - {b}', 'black', min(24, h*.5), cards.YELLOW if r['ours'] else cards.WHITE, u)
+            t = self._text(f'{a} - {b}', 'black', min(24, h*.5), self.yellow if r['ours'] else self.white, 72)
         else:
-            t = cards.text(r['when'] or 'DA GIOCARE', 'heavy', min(11, h*.26), (*cards.CYAN, 255), u, max_width=74)
+            t = self._text(r['when'] or 'DA GIOCARE', 'heavy', min(11, h*.26), self.cyan, 72)
         box = Image.new('RGBA', (int(80*u), int((h-12)*u)))
-        ImageDraw.Draw(box).rounded_rectangle((0, 0, box.width-1, box.height-1), radius=int(8*u), fill=(8, 6, 14, 255),
-                                              outline=(255, 255, 255, 50), width=max(1, int(u)))
+        from render_utils import is_light
+        darker = .88 if is_light(self.panel) else .7       # LCD: a light panel with dark ink keeps a light box
+        fill = (*self._mix(self.panel, (0, 0, 0), darker), 255) if self.font else (8, 6, 14, 255)
+        line = (*self.border, 110) if self.font else (255, 255, 255, 50)
+        ImageDraw.Draw(box).rounded_rectangle((0, 0, box.width-1, box.height-1), radius=int((3 if self.font else 8)*u),
+                                              fill=fill, outline=line, width=max(1, int(u)))
         if t:
             box.alpha_composite(t, ((box.width-t.width)//2, (box.height-t.height)//2))
         return box
@@ -226,7 +268,7 @@ class RoundShow:
         k, s = out_cubic((t-.1)/.6), self.shift
         if self.backdrop.styled and self.title:
             half = max(self.title.width, self.sub.width if self.sub else 0)/2+18*u
-            self.backdrop.plate(canvas, (W/2-half, (L['title']+s)*u-self.title.height/2-10*u, W/2+half, (L['date']+s+12)*u))
+            self._plate(canvas, (W/2-half, (L['title']+s)*u-self.title.height/2-10*u, W/2+half, (L['date']+s+12)*u))
         self._paste(canvas, self.title, W/2, (L['title']+s+12*(1-k))*u, k)
         k2 = out_cubic((t-.3)/.6)
         self._paste(canvas, self.sub, W/2, (L['sub']+s+10*(1-k2))*u, k2)
@@ -245,15 +287,25 @@ class RoundShow:
                 pop = 1+.45*math.exp(-q*10)*math.cos(q*24) if q < .5 else 1
                 self._paste(canvas, self._score_cached(i), x, y, clamp(q/.1), pop)
             if r['ours'] and p < 1.2:
+                pink_dots = self.yellow if self.font else cards.PINK
                 d = ImageDraw.Draw(canvas, 'RGBA')
                 rnd = np.random.default_rng(i)
                 for _ in range(24):
                     sx = W/2+rnd.uniform(-250, 250)*u
                     sy = y+rnd.uniform(-30, 30)*u-p*rnd.uniform(20, 80)*u
                     rad = rnd.uniform(1.2, 3.2)*u*(1-p/1.2)
-                    d.ellipse((sx-rad, sy-rad, sx+rad, sy+rad), fill=(*cards.PINK, int(230*(1-p/1.2))))
+                    d.ellipse((sx-rad, sy-rad, sx+rad, sy+rad), fill=(*pink_dots, int(230*(1-p/1.2))))
         flash = (1-(t-DROP)/.3)**2*.3 if self.mine is not None and 0 <= t-DROP < .3 else 0.0
         return finish(canvas, t if self.fades else 1.0, self.length if self.fades else 1e9, self.scan_step, flash)
+
+    def _plate(self, canvas, box):
+        """The plate under the title: the preset's panel and border (it may sit on a light background)."""
+        x0, y0, x1, y1 = box
+        layer = Image.new('RGBA', (int(x1-x0), int(y1-y0)))
+        ImageDraw.Draw(layer).rounded_rectangle((0, 0, layer.width-1, layer.height-1), radius=int(6*self.u),
+                                                fill=(*self.panel, 222), outline=(*self.border, 90),
+                                                width=max(1, int(self.u)))
+        canvas.paste(layer, (int(x0), int(y0)), layer)
 
     def _score_cached(self, i):
         cache = self.__dict__.setdefault('_scores', {})
