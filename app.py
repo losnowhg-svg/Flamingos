@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.8 / musica vera: brani CC0 e il tuo brano, a tempo con le animazioni')
+    st.caption('3.9 / figurine e pagelle: carte olografiche, la bustina in video, l\'album della stagione')
 
 from library import show_library
 from studio_ui import show_studio
@@ -58,6 +58,7 @@ PAGES = {
     'Full Time':'Full Time - il risultato',
     'Classifica':'Classifica - il girone',
     'Calendario':'Calendario - il mese',
+    'Figurine':'🃏  Figurine e pagelle',
     'Sequenza video':'🎬  Video con transizioni',
     'Didascalie':'✍️  Didascalie',
     'Wrapped':'🎁  Flamingos Wrapped',
@@ -112,5 +113,8 @@ elif template == 'Wrapped':
 elif template == 'Instagram':
     from instagram_ui import show_instagram
     show_instagram(root,library)
+elif template == 'Figurine':
+    from figurine_ui import show_figurine
+    show_figurine(root,library)
 else:
     show_studio(root,template,library)

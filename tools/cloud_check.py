@@ -151,6 +151,19 @@ sponsor.scene(dict(defaults('Classifica'), theme='none'), None, None, None, 1)
 done.append('sponsor')
 team_photo.png_bytes(squad, 'crt', LOGO)
 done.append('foto di squadra')
+import cards, card_video, pagelle, album
+teu = dict(next(p for p in squad if p['name'] == 'TEU'), edition='mvp', vote=8.5,
+           stats=[('GOL', '2'), ('RISULTATO', '3-1'), ('GIORNATA', '7')], serial=(9, 15))
+cards.card_png(teu, LOGO, 600)
+card_video.poster(teu, LOGO, 'Post 4:5', 1, 'FLAMINGOS 3-1 UNITED FLERO')
+rows = [dict(p, vote=v, goals=g) for p, v, g in zip(squad[1:6], (6.5, 7, 8.5, 6, 5.5), (0, 1, 2, 0, 0))]
+with tempfile.TemporaryDirectory() as folder:
+    card_video.render_video(teu, LOGO, Path(folder, 'f.mp4'), 8, 'Post 1:1', .5, 'cc0_battle', 'prova', True, .8, 5.0)
+    pagelle.render_video(rows, {'line': 'A 1-0 B'}, LOGO, Path(folder, 'p.mp4'), 8, 'Post 1:1', .5, 'cc0_funk', True, .8, 5.0)
+pagelle.png_bytes(rows, {'line': 'A 1-0 B'}, LOGO, 'Post 4:5', 1)
+album.png_bytes(album.members_for(squad), LOGO, 'Post 4:5', 1)
+album.zip_bytes(album.members_for(squad)[:2], LOGO, 300)
+done.append('figurine, bustina, pagelle, album')
 print('OK: '+', '.join(done))
 '''
 

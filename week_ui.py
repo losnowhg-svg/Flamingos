@@ -58,6 +58,7 @@ def save_week():
         season=[dict(g, date=g['date'].isoformat() if hasattr(g['date'], 'isoformat') else g['date'])
                 for g in st.session_state.get('season_games') or []],
         scorers=st.session_state.get('season_scorers') or [],
+        mvps=st.session_state.get('season_mvps') or [],
     )
     st.session_state['week_saved'] = week['updated']
     queue_save('Settimana', 'Settimana', sanitize_week(week), WEEK_ID)
@@ -73,6 +74,7 @@ def restore_week(library):
         st.session_state.setdefault('sponsor', week.get('sponsor') or {})
         st.session_state.setdefault('season_games', [dict(g, date=dt.date.fromisoformat(g['date'])) for g in week.get('season', [])])
         st.session_state.setdefault('season_scorers', week.get('scorers', []))
+        st.session_state.setdefault('season_mvps', week.get('mvps', []))
     if not week or st.session_state.get('shared_match'):
         return
     models = st.session_state.setdefault('studio_models', {})
@@ -489,6 +491,46 @@ def show_graphics(root, library):
                 st.button('Apri', key='open_'+template, on_click=go, args=(template,), width='stretch')
 
 
+@st.cache_data(show_spinner=False, max_entries=8)
+def _mini_card(spec_json, logo):
+    import io
+    import json
+    import cards
+    out = io.BytesIO()
+    cards.Card(json.loads(spec_json), .75, logo).flat().save(out, 'PNG')
+    return out.getvalue()
+
+
+def show_after_match(root, library):
+    """⑤ After the match: the way into the ratings, the MVP card and the album."""
+    import json
+    st.markdown('#### ⑤ Dopo la partita')
+    players = squad(library) or [dict(p) for p in OFFICIAL_SQUAD]
+    mvps = st.session_state.get('season_mvps') or []
+    last = mvps[-1]['name'] if mvps else None
+    member = next((p for p in players if p['name'] == last), None) or \
+        next((p for p in players if p.get('role') == 'A'), None) or (players[0] if players else None)
+    with st.container(border=True):
+        a, b = st.columns([1, 2.2])
+        if member:
+            spec = dict(name=member['name'], number=member.get('number', 0), role=member.get('role'),
+                        look=member.get('look'), avatar=member.get('avatar', ''),
+                        edition='mvp' if last else 'base', vote=mvps[-1].get('vote') if last else None,
+                        stats=[('MVP', str(sum(1 for m in mvps if m['name'] == member['name'])))] if last else None)
+            try:
+                a.image(_mini_card(json.dumps(spec, sort_keys=True, default=str),
+                                   (root/'assets'/'flamingos_logo.jpg').read_bytes()), width='stretch')
+            except Exception as exc:     # never hide the page for a card
+                a.caption(f'Anteprima non disponibile: {exc}')
+        with b:
+            st.markdown('**🃏 Pagelle e figurina dell\'MVP**')
+            st.caption('Vota la partita: il migliore in campo diventa una figurina olografica che esce da una '
+                       'bustina, in video, sul drop della musica. L\'album della stagione diventa più raro a ogni MVP.'
+                       + (f' Ultimo MVP: **{last}**.' if last else ''))
+            st.button('Apri Figurine e pagelle', key='open_figurine', on_click=go, args=('Figurine',), type='primary',
+                      width='stretch')
+
+
 def show_week(root: Path, library):
     st.subheader('LA TUA SETTIMANA')
     st.caption('Tutto in ordine: aggiorna dal CSI, controlla la partita, poi apri le grafiche una alla volta.')
@@ -509,5 +551,6 @@ def show_week(root: Path, library):
     st.divider()
     with st.container(key='week_grid'):
         show_graphics(root, library)
+    show_after_match(root, library)
     st.divider()
     show_kit(root, library)

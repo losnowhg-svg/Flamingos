@@ -15,10 +15,14 @@ Dalla 1.9: mockup su televisore a tubo (PNG, video e sequenze con manopola che
 gira), animazioni Retro (scrittura, glitch, contatore, righe, accensione) e temi
 per eventi e stagioni con scelta automatica.
 
+## Dalla 3.9
+
+Pagelle (anche in video), figurine olografiche con apertura della bustina in video, album
+della stagione con rarità che crescono a ogni MVP: il Player of the Match è la figurina MVP.
+
 ## Idee successive, non incluse in questa consegna
 
-Un editor Player of the Match con foto e statistiche; risultati della giornata
-del girone; GOL in diretta, pagelle, figurine; diario della stagione con backup; layout indipendenti per ogni rapporto;
+Risultati della giornata del girone; GOL in diretta; diario della stagione con backup; layout indipendenti per ogni rapporto;
 transizioni anche nel video del singolo editor; salvataggio della Partita della
 settimana nell'archivio browser.
 
