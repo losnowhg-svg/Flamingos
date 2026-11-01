@@ -47,9 +47,9 @@ def _sig(*parts):
 
 
 @st.cache_data(show_spinner=False, max_entries=24)
-def _poster_png(spec_json, logo, format, scale, caption):
+def _poster_png(spec_json, logo, format, scale, caption, style_key=None):
     import io
-    image = card_video.poster(json.loads(spec_json), logo, format, scale, caption)
+    image = card_video.poster(json.loads(spec_json), logo, format, scale, caption, _style(style_key, format, scale))
     out = io.BytesIO()
     image.save(out, 'PNG', optimize=True)
     return out.getvalue()
@@ -61,13 +61,20 @@ def _card_png(spec_json, logo, height):
 
 
 @st.cache_data(show_spinner=False, max_entries=12)
-def _pagelle_png(rows_json, match_json, logo, format, scale):
-    return pagelle.png_bytes(json.loads(rows_json), json.loads(match_json), logo, format, scale)
+def _pagelle_png(rows_json, match_json, logo, format, scale, style_key=None):
+    return pagelle.png_bytes(json.loads(rows_json), json.loads(match_json), logo, format, scale,
+                             _style(style_key, format, scale))
 
 
 @st.cache_data(show_spinner=False, max_entries=8)
-def _album_png(members_json, logo, format, scale, season, team):
-    return album.png_bytes(json.loads(members_json), logo, format, scale, season=season, team=team)
+def _album_png(members_json, logo, format, scale, season, team, style_key=None):
+    return album.png_bytes(json.loads(members_json), logo, format, scale, season=season, team=team,
+                           style=_style(style_key, format, scale))
+
+
+def _style(style_key, format, scale):
+    import figurine_style
+    return figurine_style.build(style_key, format, int(540*scale)) if style_key else None
 
 
 @st.cache_data(show_spinner=False, max_entries=4)
@@ -120,6 +127,14 @@ def show_figurine(root, library):
         st.caption('Uso la rosa ufficiale 2026/27 con i suoi sprite: per personalizzarla salvala nella Settimana.')
     logo = _logo(root, library, match)
     ctx = _context(match, fulltime, squad)
+    import figurine_style as fs
+    from crt_presets import PRESET_IDS
+    choices = [fs.FOLLOW, fs.SYNTHWAVE]+list(PRESET_IDS)
+    choice = st.selectbox('Stile', choices, key='figurine_style', format_func=lambda c: fs.label(c, fulltime),
+                          help='Lo sfondo di pagelle, figurine e album: quello del preset (TV, cassetta, Game Boy...) '
+                               'oppure la notte synthwave delle figurine. La carta resta la stessa.')
+    ctx['style'] = fs.key_for(choice, fulltime)
+    st.session_state['figurine_style_key'] = ctx['style']
     t_pag, t_card, t_album = st.tabs(['📝 Pagelle', '🃏 Figurina', '📒 Album'])
     with t_pag:
         _pagelle_tab(match, fulltime, squad, logo, ctx)
@@ -175,9 +190,11 @@ def _pagelle_tab(match, fulltime, squad, logo, ctx):
         if not voted:
             st.info('Dai almeno un voto nella tabella: le pagelle compaiono qui.')
             return
-        hd = _pagelle_png(json.dumps(voted, sort_keys=True, default=str), json.dumps(info, sort_keys=True), logo, fmt, 2)
+        hd = _pagelle_png(json.dumps(voted, sort_keys=True, default=str), json.dumps(info, sort_keys=True), logo, fmt, 2,
+                          ctx['style'])
+        st.session_state['pagelle_payload'] = {'rows': voted, 'info': info}
         st.image(hd, width='stretch')
-        signature = _sig(voted, info, fmt, track, sound, fps, scale, logo)
+        signature = _sig(voted, info, fmt, track, sound, fps, scale, logo, ctx['style'])
         a, b = st.columns(2)
         a.download_button('⬇ Pagelle PNG', hd, file_name='flamingos_pagelle.png', mime='image/png', width='stretch',
                           key='pagelle_png')
@@ -187,7 +204,8 @@ def _pagelle_tab(match, fulltime, squad, logo, ctx):
                 with tempfile.TemporaryDirectory() as folder:
                     path = Path(folder)/'pagelle.mp4'
                     pagelle.render_video(voted, info, logo, path, fps, fmt, scale, track, sound,
-                                         progress_callback=progress_with_eta(bar, 'Pagelle'))
+                                         progress_callback=progress_with_eta(bar, 'Pagelle'),
+                                         style=_style(ctx['style'], fmt, scale))
                     st.session_state['pagelle_mp4'] = {'signature': signature, 'data': path.read_bytes()}
             except Exception as exc:
                 st.error(f'Video non generato: {exc}')
@@ -289,7 +307,8 @@ def _card_tab(match, fulltime, squad, logo, ctx):
                 serial=(names.index(name)+1, len(names)))
     spec_json = json.dumps(spec, sort_keys=True, default=str)
     with preview:
-        post = _poster_png(spec_json, logo, fmt, 2, caption)
+        post = _poster_png(spec_json, logo, fmt, 2, caption, ctx['style'])
+        st.session_state['figurina_payload'] = {'spec': spec, 'caption': caption}
         st.image(post, width='stretch')
         a, b = st.columns(2)
         a.download_button('⬇ Post PNG', post, file_name=f"figurina_{member['name'].lower()}_post.png", mime='image/png',
@@ -302,14 +321,15 @@ def _card_tab(match, fulltime, squad, logo, ctx):
         if alone and alone['signature'] == card_sig:
             st.download_button('⬇ Scarica la carta PNG', alone['data'], file_name=f"figurina_{member['name'].lower()}.png",
                                mime='image/png', width='stretch', key='figurina_card_png')
-        signature = _sig(spec, caption, fmt, track, sound, fps, scale, logo)
+        signature = _sig(spec, caption, fmt, track, sound, fps, scale, logo, ctx['style'])
         if st.button('🎬 Apri la bustina (video)', type='primary', width='stretch', key='figurina_video'):
             bar = st.progress(0, text='Preparo la bustina...')
             try:
                 with tempfile.TemporaryDirectory() as folder:
                     path = Path(folder)/'figurina.mp4'
                     card_video.render_video(spec, logo, path, fps, fmt, scale, track, caption, sound,
-                                            progress_callback=progress_with_eta(bar, 'Bustina'))
+                                            progress_callback=progress_with_eta(bar, 'Bustina'),
+                                            style=_style(ctx['style'], fmt, scale))
                     st.session_state['figurina_mp4'] = {'signature': signature, 'data': path.read_bytes(),
                                                         'name': member['name'].lower()}
             except Exception as exc:
@@ -366,7 +386,7 @@ def _album_tab(squad, logo, ctx):
         if not members:
             st.info('La rosa è vuota: caricala nella Settimana.')
             return
-        hd = _album_png(members_json, logo, fmt, 2, ctx['season'], ctx['team'])
+        hd = _album_png(members_json, logo, fmt, 2, ctx['season'], ctx['team'], ctx['style'])
         st.image(hd, width='stretch')
         a, b = st.columns(2)
         a.download_button('⬇ Album PNG', hd, file_name='flamingos_album.png', mime='image/png', width='stretch',

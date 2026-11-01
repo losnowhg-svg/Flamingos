@@ -22,7 +22,13 @@ TRANSITIONS = {
     'iris': 'Cerchio (fine livello)',
     'blocks': 'Blocchi che cadono',
     'wipe': 'Tendina a scalini',
+    'carta': '✨ Diventa una figurina (si gira)',
+    'strappo': '✨ Strappo della bustina',
+    'olografica': '✨ Lampo olografico',
+    'pioggia': '✨ Pioggia di figurine',
+    'pagina': '✨ Pagina dell\'album',
 }
+SPECIAL = ('carta', 'strappo', 'olografica', 'pioggia', 'pagina')
 VARIED = ('channel', 'pixel', 'blocks', 'iris', 'glitch', 'wipe', 'rewind', 'roll')
 TRANSITION_IDS = tuple(TRANSITIONS)
 OSD_GREEN = (120, 255, 140)
@@ -268,9 +274,214 @@ def _stairs(h, w, step):
     return ((xx//step)*step+(yy//step)*step).astype(np.int32)
 
 
+# --- 3.10: transitions from the figurine collection --------------------------------------------
+
+@lru_cache(maxsize=4)
+def _stage(w, h):
+    """Dark backdrop with a pink glow, behind a frame that becomes a card."""
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    r = np.sqrt(((xx-w/2)/(w*.6))**2+((yy-h*.48)/(h*.5))**2)
+    glow = np.exp(-r*r*2.2)[..., None]
+    base = np.array((14, 10, 22), np.float32)
+    pink = np.array((242, 104, 168), np.float32)
+    return Image.fromarray((base*(1-glow*.8)+pink*glow*.55).clip(0, 255).astype(np.uint8))
+
+
+def _as_card(src, scale, radius_k, border_k, shine=None):
+    """The frame shrunk into a card: rounded corners, a metallic edge, a gloss band."""
+    from PIL import ImageDraw
+    w, h = src.size
+    cw, ch = max(4, int(w*scale)), max(4, int(h*scale))
+    card = src.resize((cw, ch), Image.Resampling.BILINEAR).convert('RGBA')
+    radius = int(min(cw, ch)*.07*radius_k)
+    if border_k > 0:
+        d = ImageDraw.Draw(card)
+        edge = max(1, int(min(cw, ch)*.028*border_k))
+        d.rounded_rectangle((0, 0, cw-1, ch-1), radius=radius, outline=(255, 214, 236, 255), width=edge)
+        d.rounded_rectangle((edge, edge, cw-1-edge, ch-1-edge), radius=max(0, radius-edge),
+                            outline=(242, 104, 168, 255), width=max(1, edge//2))
+    if shine is not None:
+        xs = np.arange(cw, dtype=np.float32)[None, :]/cw
+        ys = np.arange(ch, dtype=np.float32)[:, None]/ch
+        band = np.exp(-((xs+ys*.6-shine*1.9+.3)/.09)**2)*120
+        layer = Image.new('RGBA', (cw, ch), (255, 255, 255, 0))
+        layer.putalpha(Image.fromarray(band.astype(np.uint8)))
+        card.alpha_composite(layer)
+    mask = Image.new('L', (cw, ch), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, cw-1, ch-1), radius=radius, fill=255)
+    card.putalpha(mask)
+    return card
+
+
+def _carta(a, b, p, channel=2):
+    """The frame shrinks into a card, flips over, and the next scene is its other side, growing back."""
+    import cards
+    w, h = a.size
+    canvas = _stage(w, h).copy()
+    small = .62
+    if p < .3:
+        k = _ease(p/.3)
+        card, yaw, scale = _as_card(a, 1-(1-small)*k, k, k, k*.4), 0.0, 1.0
+    elif p < .72:
+        k = _ease((p-.3)/.42)
+        yaw = 180*k
+        src = a if yaw < 90 else b
+        card, scale = _as_card(src, small, 1, 1, .4+k*.6), 1.0
+        if yaw >= 90:
+            yaw -= 180                              # the far side, the right way round
+    else:
+        k = _ease((p-.72)/.28)
+        card, yaw, scale = _as_card(b, small+(1-small)*k, 1-k, 1-k, None), 0.0, 1.0
+    light = .55+.45*abs(math.cos(math.radians(yaw)))
+    if light < .99:
+        rgb = np.asarray(card, np.float32)
+        rgb[..., :3] *= light
+        card = Image.fromarray(rgb.astype(np.uint8), 'RGBA')
+    warped, x0, y0 = cards.warp(card, (w/2, h/2), yaw, 4*math.sin(p*math.pi), 0, scale, quality='fast')
+    if warped is not None:
+        canvas.paste(warped, (x0, y0), warped)
+    return canvas
+
+
+def _jagged(w, h, seed):
+    rng = np.random.default_rng(seed)
+    xs = np.linspace(0, w, 26)
+    ys = h*.4+rng.uniform(-1, 1, len(xs))*h*.025
+    return list(zip(xs, ys))
+
+
+def _strappo(a, b, p, channel=2):
+    """The frame tears like the top of a pack: the upper piece flies off, the lower one drops, light behind."""
+    from PIL import ImageDraw
+    w, h = a.size
+    line = _jagged(w, h, 7)
+    top_mask = Image.new('L', (w, h), 0)
+    ImageDraw.Draw(top_mask).polygon([(0, 0), (w, 0)]+line[::-1], fill=255)
+    bottom_mask = Image.eval(top_mask, lambda v: 255-v)
+    flash = max(0.0, 1-abs(p-.22)/.22)
+    base = np.asarray(b, np.float32)
+    base = base+(255-base)*flash*.6
+    canvas = Image.fromarray(base.clip(0, 255).astype(np.uint8))
+    if p < .12:                                     # the crack runs across
+        k = p/.12
+        frame = a.copy()
+        d = ImageDraw.Draw(frame)
+        n = max(2, int(len(line)*k))
+        d.line(line[:n], fill=(255, 255, 255), width=max(2, w//180))
+        return frame
+    q = _ease((p-.12)/.88)
+    top = a.convert('RGBA')
+    top.putalpha(top_mask)
+    top = top.rotate(-q*28, center=(w*.85, h*.4), resample=Image.Resampling.BILINEAR)
+    canvas.paste(top, (int(q*w*.35), int(-q*h*.75)), top)
+    bottom = a.convert('RGBA')
+    bottom.putalpha(bottom_mask)
+    canvas.paste(bottom, (0, int(q*q*h*.9)), bottom)
+    d = ImageDraw.Draw(canvas)                      # white paper fibre along the torn edge
+    edge = [(x+q*w*.35*0, y+q*q*h*.9) for x, y in line]
+    d.line(edge, fill=(255, 250, 240), width=max(2, w//200))
+    return canvas
+
+
+def _olografica(a, b, p, channel=2):
+    """A diagonal holographic band sweeps across: rainbow foil and sparkles, the next scene behind it."""
+    A, B = np.asarray(a, np.float32), np.asarray(b, np.float32)
+    h, w = A.shape[:2]
+    d = _diag(h, w)
+    width = (w+h*.6)
+    edge = -width*.15+_ease(p)*width*1.3
+    out = np.where((d < edge)[..., None], B, A)
+    band = np.exp(-((d-edge)/(w*.09))**2)[..., None]
+    hue = (d/width*2.2+p)[..., None]*6.283
+    rainbow = 127.5+127.5*np.cos(hue+np.array([0, 2.094, 4.189], np.float32))
+    out = 255-(255-out)*(1-rainbow/255*band*.85)
+    rng = np.random.default_rng(_seed(p, 3))
+    sparks = rng.random((h//4+1, w//4+1)) > .992
+    sparks = np.repeat(np.repeat(sparks, 4, 0), 4, 1)[:h, :w]
+    out[sparks & (band[..., 0] > .25)] = 255
+    return Image.fromarray(out.clip(0, 255).astype(np.uint8))
+
+
+@lru_cache(maxsize=4)
+def _diag(h, w):
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    return xx+yy*.6
+
+
+def _pioggia(a, b, p, channel=2):
+    """A shower of cards flies up over the frame; behind them the scene changes."""
+    from PIL import ImageDraw
+    w, h = a.size
+    canvas = (a if p < .5 else b).copy()
+    d = ImageDraw.Draw(canvas, 'RGBA')
+    rng = np.random.default_rng(11)
+    cw, ch = w*.3, w*.42
+    colors = ((242, 104, 168), (121, 220, 247), (255, 201, 99), (190, 140, 255))
+    for i in range(34):
+        x0 = rng.uniform(-.1, 1.1)*w
+        delay = rng.uniform(0, .35)
+        spin0, spin = rng.uniform(-40, 40), rng.uniform(-120, 120)
+        q = (p-delay)/.65
+        if not 0 <= q <= 1:
+            continue
+        y = h+ch-(h+2*ch)*q
+        x = x0+math.sin(q*3+i)*w*.04
+        ang = math.radians(spin0+spin*q)
+        ca, sa = math.cos(ang), math.sin(ang)
+        pts = [(x+ca*px-sa*py, y+sa*px+ca*py) for px, py in ((-cw/2, -ch/2), (cw/2, -ch/2), (cw/2, ch/2), (-cw/2, ch/2))]
+        col = colors[i % len(colors)]
+        d.polygon(pts, fill=(*col, 255), outline=(255, 255, 255, 255), width=max(2, int(w/160)))
+        inner = [(x+(px-x)*.78, y+(py-y)*.78) for px, py in pts]
+        d.polygon(inner, fill=(20, 14, 30, 235))
+        stripe = [(x+(px-x)*.5, y+(py-y)*.5) for px, py in pts]
+        d.polygon(stripe, fill=(*col, 160))
+    return canvas
+
+
+def _pagina(a, b, p, channel=2):
+    """The frame turns away like an album page hinged on the left, over a soft shadow."""
+    w, h = a.size
+    ang = math.radians(92*_ease(p))
+    out = np.asarray(b, np.float32).copy()
+    edge = w*math.cos(ang)
+    # Shadow cast by the page on the next scene, strongest near the turning edge.
+    xs = np.arange(w, dtype=np.float32)
+    shade = 1-.55*(1-p)*np.exp(-np.maximum(0, xs-edge)/(w*.25))
+    out *= shade[None, :, None]
+    canvas = Image.fromarray(out.clip(0, 255).astype(np.uint8))
+    if ang < math.radians(89.5):
+        dist = 3.2*w
+        pts = []
+        for x, y in ((0, 0), (w, 0), (w, h), (0, h)):
+            px, pz = x*math.cos(ang), x*math.sin(ang)
+            f = dist/(dist+pz)
+            pts.append((px*f, (y-h/2)*f+h/2))
+        import cards
+        page = np.asarray(a, np.float32)*(.55+.45*math.cos(ang))
+        img = Image.fromarray(page.clip(0, 255).astype(np.uint8)).convert('RGBA')
+        coeffs = cards._coeffs([(0, 0), (w, 0), (w, h), (0, h)], pts)
+        warped = img.transform((w, h), Image.Transform.PERSPECTIVE, tuple(coeffs), Image.Resampling.BILINEAR)
+        canvas.paste(warped, (0, 0), warped)
+    return canvas
+
+
+def special_for(previous, following):
+    """The collection transition that suits two screens of a sequence (by name)."""
+    if following == 'Figurina MVP':
+        return 'carta' if previous in ('Full Time', 'Pagelle') else 'strappo'
+    if following == 'Album' or previous == 'Album':
+        return 'pagina'
+    if following == 'Pagelle':
+        return 'olografica'
+    if previous == 'Figurina MVP':
+        return 'pioggia'
+    return 'olografica'
+
+
 FUNCTIONS = {'channel': _channel, 'poweroff': _poweroff, 'glitch': _glitch,
              'rewind': _rewind, 'roll': _roll, 'cut': _cut, 'pixel': _pixel, 'iris': _iris,
-             'blocks': _blocks, 'wipe': _wipe}
+             'blocks': _blocks, 'wipe': _wipe, 'carta': _carta, 'strappo': _strappo, 'olografica': _olografica,
+             'pioggia': _pioggia, 'pagina': _pagina}
 
 
 def varied(count, start=0):
@@ -334,6 +545,9 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
     for index, (prepared, _) in enumerate(scenes):   # pulses follow the one soundtrack, in each scene's own clock
         start = index*(hold_frames+trans_frames)/fps
         prepared[0].info['beat'] = (beat[0]*speeds[index], (beat[1]-start)*speeds[index]) if beat else None
+        prepared[0].info.update(hold=hold, seq_start=start, seq_beat=beat[0] if beat else .5)
+        if music:
+            prepared[0].info['music_track'] = track
 
     def frame_at(index, t, animated=True):
         prepared, compose = scenes[index]
@@ -356,7 +570,10 @@ def render_sequence(scenes, transitions, path, fps=24, hold=4.0, transition_seco
     try:
         for index in range(len(scenes)):
             last = None
-            if sound:   # CRT effects; the music is added once, below
+            own = scenes[index][0][0].info.get('sequence_events')
+            if sound and own:   # the figurine screens bring their own effects (tear, reveal, MVP)
+                events += [(done/fps+at, s) for at, s in own(hold)]
+            elif sound:   # CRT effects; the music is added once, below
                 from sounds import scene_events
                 events += scene_events(*scenes[index], start=done/fps, speed=speeds[index], until=done/fps+hold)
             for i in range(hold_frames):

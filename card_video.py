@@ -79,15 +79,22 @@ class Backdrop:
 
     canvas(t, power) mixes a lit and an unlit still through a light mask computed at half resolution."""
 
-    def __init__(self, size, u, centre_y, horizon, title_y, glow, sun=True, dust=46, phases=20):
+    def __init__(self, size, u, centre_y, horizon, title_y, glow, sun=True, dust=46, phases=20, style=None):
         W, H = self.size = size
         self.u, self.horizon, self.title_y, self.glow = u, horizon, title_y, glow
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-        top, mid, bottom = (np.array(c, np.float32)/255 for c in ((20, 11, 36), (34, 14, 48), (6, 4, 10)))
-        k = yy/H
-        bg = np.where((k < .62)[..., None], top+(mid-top)*(k/.62)[..., None], mid+(bottom-mid)*((k-.62)/.38)[..., None])
-        vig = np.clip(1-.55*(((xx-W/2)/(W*.75))**2+((yy-H*.45)/(H*.7))**2), .25, 1)[..., None]
-        base = bg*vig
+        if style and style.get('image') is not None:
+            # A studio preset (TV, cassette, Game Boy...): its own background instead of the synthwave night.
+            base = np.asarray(style['image'].convert('RGB').resize(size, Image.Resampling.LANCZOS), np.float32)/255
+            sun, floor = False, False
+        else:
+            top, mid, bottom = (np.array(c, np.float32)/255 for c in ((20, 11, 36), (34, 14, 48), (6, 4, 10)))
+            k = yy/H
+            bg = np.where((k < .62)[..., None], top+(mid-top)*(k/.62)[..., None], mid+(bottom-mid)*((k-.62)/.38)[..., None])
+            vig = np.clip(1-.55*(((xx-W/2)/(W*.75))**2+((yy-H*.45)/(H*.7))**2), .25, 1)[..., None]
+            base = bg*vig
+            floor = True
+        self.styled = bool(style and style.get('image') is not None)
         glow_col = np.array(glow, np.float32)/255
         self.base_img = Image.fromarray((np.clip(base, 0, 1)*255).astype(np.uint8), 'RGB')
         self.lit_img = Image.fromarray((np.clip(base+glow_col*(1-base), 0, 1)*255).astype(np.uint8), 'RGB')
@@ -106,7 +113,7 @@ class Backdrop:
         else:
             self.sun, self.stage_y = None, int(horizon)
         self.stage = []
-        for i in range(phases):
+        for i in range(phases if floor else 0):
             img = Image.new('RGBA', (W, H-self.stage_y))
             if self.sun is not None:
                 img.alpha_composite(self.sun, (self.sun_pos[0], self.sun_pos[1]-self.stage_y))
@@ -114,9 +121,20 @@ class Backdrop:
             self.stage.append(img)
         self.scan_step = max(2, int(round(1.5*u)))
         rnd = random.Random(7)
+        palette = (style or {}).get('palette') or (cards.PINK, cards.CYAN, cards.YELLOW, (255, 255, 255))
         self.dust = [(rnd.uniform(0, W), rnd.uniform(0, H), rnd.uniform(6, 22)*u, rnd.uniform(.6, 2.2)*u,
-                      rnd.uniform(0, 6.28), rnd.choice((cards.PINK, cards.CYAN, cards.YELLOW, (255, 255, 255))))
+                      rnd.uniform(0, 6.28), rnd.choice(palette))
                      for _ in range(dust)]
+
+    def plate(self, canvas, box):
+        """A dark rounded plate under the words when the background is a preset (it may be light)."""
+        if not self.styled:
+            return
+        x0, y0, x1, y1 = box
+        layer = Image.new('RGBA', (int(x1-x0), int(y1-y0)), (0, 0, 0, 0))
+        ImageDraw.Draw(layer).rounded_rectangle((0, 0, layer.width-1, layer.height-1), radius=int(14*self.u),
+                                                fill=(16, 12, 26, 205))
+        canvas.paste(layer, (int(x0), int(y0)), layer)
 
     def canvas(self, t, power):
         blades = .5+.5*np.cos(14*(self._theta_axis-t*.21))
@@ -124,8 +142,9 @@ class Backdrop:
         light = lut[self.theta_idx]*self.ray_fall+self.glow_field*(power*.62*255)
         mask = Image.fromarray(np.minimum(light, 255).astype(np.uint8), 'L').resize(self.size, Image.Resampling.BILINEAR)
         canvas = Image.composite(self.lit_img, self.base_img, mask)
-        stage = self.stage[int((t*1.6 % 1)*len(self.stage)) % len(self.stage)]
-        canvas.paste(stage, (0, self.stage_y), stage)
+        if self.stage:
+            stage = self.stage[int((t*1.6 % 1)*len(self.stage)) % len(self.stage)]
+            canvas.paste(stage, (0, self.stage_y), stage)
         d = ImageDraw.Draw(canvas, 'RGBA')
         H = self.size[1]
         for x, y, speed, r, ph, col in self.dust:
@@ -212,7 +231,8 @@ def finish(canvas, t, length, scan_step, flash=0.0):
 
 
 class Show:
-    def __init__(self, card, logo=None, format='Story 9:16', scale=2, track=None, caption='', length=LENGTH, still=False):
+    def __init__(self, card, logo=None, format='Story 9:16', scale=2, track=None, caption='', length=LENGTH, still=False,
+                 style=None, fades=True):
         self.format = format if format in LAYOUTS else 'Story 9:16'
         self.L = LAYOUTS[self.format]
         self.u = float(scale)
@@ -233,6 +253,8 @@ class Show:
         self.hints = [DROP-4*step, DROP-3*step, DROP-2*step]
         self.tear = DROP-.42
         self.still = still
+        self.style = style
+        self.fades = fades
         self._prepare()
 
     # Prepared pieces -------------------------------------------------------------------------
@@ -241,7 +263,7 @@ class Show:
         u, L, rr = self.u, self.L, self.rarity
         glow = rr['glow']
         self.backdrop = Backdrop(self.size, u, L['card']*u, L['horizon']*u, L['title']*u, glow,
-                                 phases=1 if self.still else 20)
+                                 phases=1 if self.still else 20, style=self.style)
         self.scan_step = self.backdrop.scan_step
         rnd = random.Random(7)
         # Card, back, pack.
@@ -401,6 +423,9 @@ class Show:
         canvas = self.backdrop.canvas(t, power)
         # Header.
         k = out_cubic((t-.15)/.6)
+        if self.backdrop.styled and self.title:
+            half = max(self.title.width, self.label.width if self.label else 0)/2+18*u
+            self.backdrop.plate(canvas, (cx-half, (L['label']-16)*u, cx+half, (L['title'])*u+self.title.height/2+10*u))
         if self.label:
             self._paste(canvas, self.label, cx, (L['label']-10*(1-k))*u, k)
         if self.title:
@@ -432,7 +457,7 @@ class Show:
             self._paste(canvas, self.pill, cx, (L['pill']+24*(1-k))*u, clamp((t-DROP-1.3)/.25))
         flash = (1-(t-DROP)/.25)**2*.5 if revealed and t-DROP < .25 else 0.0
         canvas = self._camera(canvas, t)
-        return finish(canvas, t, self.length, self.scan_step, flash)
+        return finish(canvas, t if self.fades else 1.0, self.length if self.fades else 1e9, self.scan_step, flash)
 
     def camera_at(self, t):
         """(zoom, dx, dy): a slow push towards the pack before the drop, a punch and a shake on it."""
@@ -682,17 +707,17 @@ def _tear(seconds=.38, sr=44100):
 POSTER_T = DROP+3.25
 
 
-def poster(card, logo=None, format='Story 9:16', scale=2, caption=''):
+def poster(card, logo=None, format='Story 9:16', scale=2, caption='', style=None):
     """The still for the post: the card mid-breath, rays, floor, caption (PIL RGB)."""
-    show = Show(card, logo, format, scale, None, caption, still=True)
+    show = Show(card, logo, format, scale, None, caption, still=True, style=style)
     return show.frame(POSTER_T, quality='high')
 
 
 def render_video(card, logo, path, fps=30, format='Story 9:16', scale=2, track=None, caption='', sound=True,
-                 volume=.8, length=LENGTH, progress_callback=None):
+                 volume=.8, length=LENGTH, progress_callback=None, style=None):
     from crt_presets import even_video_frame
     from renderer import video_writer
-    show = Show(card, logo, format, scale, track, caption, length)
+    show = Show(card, logo, format, scale, track, caption, length, style=style)
     total = int(round(show.length*fps))
     writer = video_writer(path, fps)
     try:

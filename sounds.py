@@ -153,9 +153,41 @@ def wipe(seconds):
     return _lowpass(_noise(len(t), 9), .15)*2.2*np.sin(np.linspace(0, np.pi, len(t)))**2*.35
 
 
+def _layered(seconds, parts):
+    out = np.zeros(int(seconds*SR)+1)
+    for at, sound in parts:
+        start = int(at*SR)
+        if start < len(out):
+            end = min(len(out), start+len(sound))
+            out[start:end] += sound[:end-start]
+    return out
+
+
+def card_flip(seconds):
+    return _layered(seconds, [(0, whoosh(.3)*.7), (seconds*.45, whoosh(.25)*.6), (seconds*.62, shine()*1.4)])
+
+
+def pack_tear(seconds):
+    from card_video import _tear
+    return _layered(seconds, [(0, _tear()), (seconds*.2, impact(0)*.6), (seconds*.25, whoosh(.4)*.6)])
+
+
+def holo_sweep(seconds):
+    return _layered(seconds, [(0, shine()*1.2), (seconds*.4, shine()*1.4), (seconds*.7, ding(2)*.5)])
+
+
+def card_shower(seconds):
+    return _layered(seconds, [(seconds*k/10, whoosh(.12)*.35+0) for k in range(10)]+[(seconds*.5, impact(0)*.4)])
+
+
+def page_turn(seconds):
+    return _layered(seconds, [(0, whoosh(max(.2, seconds*.7))*.8)])
+
+
 TRANSITION_SOUNDS = {'channel': channel_change, 'poweroff': power_cycle, 'glitch': glitch,
                      'rewind': rewind, 'roll': roll, 'cut': cut, 'pixel': pixelate, 'iris': iris,
-                     'blocks': blocks, 'wipe': wipe}
+                     'blocks': blocks, 'wipe': wipe, 'carta': card_flip, 'strappo': pack_tear,
+                     'olografica': holo_sweep, 'pioggia': card_shower, 'pagina': page_turn}
 
 
 def hum(seconds):

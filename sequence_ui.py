@@ -94,7 +94,38 @@ def apply_match_everywhere(match):
     return match
 
 
+def _figurine_scene(root, template, library, preset_override, scale):
+    """Pagelle, Figurina MVP or Album as a sequence scene (3.10)."""
+    import figurine_scenes
+    import figurine_style
+    import figurine_data as fd
+    match = sanitize_match(st.session_state.get('shared_match'))
+    fulltime = current_config('Full Time')
+    squad = st.session_state.get('squad') or library.get('squad') or []
+    if not squad:
+        from team_looks import OFFICIAL_SQUAD
+        squad = [dict(p) for p in OFFICIAL_SQUAD]
+    ctx = dict(fulltime=fulltime, round=match.get('round', 0), scorers=st.session_state.get('season_scorers') or [],
+               games=st.session_state.get('season_games') or [], mvps=st.session_state.get('season_mvps') or [],
+               season=fd.season_label(match.get('date')), team=match.get('our_name', 'FLAMINGOS'))
+    payload = figurine_scenes.payloads(st.session_state, squad, ctx['mvps'], ctx['scorers'], ctx)[template]
+    if payload is None:
+        raise ValueError('per le Pagelle dai prima i voti nella pagina Figurine e pagelle.')
+    if preset_override in PRESETS:
+        style = figurine_style.key_for(preset_override, fulltime)
+    else:
+        style = st.session_state.get('figurine_style_key') or figurine_style.key_for(figurine_style.FOLLOW, fulltime)
+    assets = library.get('assets', {})
+    logo_id = match.get('our_logo_id')
+    logo = assets[logo_id]['bytes'] if logo_id in assets and assets[logo_id].get('kind') == 'logo' \
+        else (root/'assets'/'flamingos_logo.jpg').read_bytes()
+    return figurine_scenes.scene(template, payload, logo, scale, style)
+
+
 def _scene(root, template, library, preset_override, scale):
+    import figurine_scenes
+    if template in figurine_scenes.EXTRA:
+        return _figurine_scene(root, template, library, preset_override, scale)
     config, home, away, font_bytes = resolve_assets(root, template, current_config(template), library['assets'])
     if preset_override in PRESETS:
         config = apply_preset(config, preset_override)
@@ -123,7 +154,7 @@ def _still(root, template, library, preset_override, format):
 def show_sequence(root: Path, library):
     st.subheader('SEQUENZA VIDEO')
     st.caption('Le grafiche una dopo l\'altra, unite da transizioni retrò: cambio canale, glitch, VHS, pixel, '
-               'cerchio, blocchi, tendina. '
+               'cerchio, blocchi, tendina, più quelle ✨ da collezione. Ci sono anche Pagelle, Figurina MVP e Album. '
                'Ogni grafica usa i dati e il preset che hai impostato nel suo editor.')
     state = st.session_state.setdefault('sequence', {
         'items': ['Matchday Screen', 'Convocati'], 'transitions': ['channel'], 'format': 'Story 9:16',
@@ -141,12 +172,31 @@ def show_sequence(root: Path, library):
             for i in range(5):
                 st.session_state.pop(f'seq_trans_{i}', None)
             st.rerun()
+        import figurine_scenes
+        from transitions import special_for
+        options = tuple(CRT_TEMPLATES)+figurine_scenes.EXTRA
+        if st.button('✨ Transizioni speciali da collezione', key='seq_special', width='stretch',
+                     help='Carta che si gira verso la figurina, strappo della bustina, lampo olografico, pioggia di '
+                          'figurine, pagina dell\'album: scelte in base alle schermate vicine.'):
+            chosen = [st.session_state.get(f'seq_item_{i}', state['items'][i] if i < len(state['items']) else options[0])
+                      for i in range(count)]
+            state['transitions'] = [special_for(chosen[i], chosen[i+1]) for i in range(count-1)]
+            for i in range(5):
+                st.session_state.pop(f'seq_trans_{i}', None)
+            st.rerun()
         items, transitions = [], []
         for i in range(count):
             current = state['items'][i] if i < len(state['items']) else CRT_TEMPLATES[i % len(CRT_TEMPLATES)]
-            items.append(st.selectbox(f'Grafica {i+1}', CRT_TEMPLATES, index=CRT_TEMPLATES.index(current), key=f'seq_item_{i}'))
+            current = current if current in options else options[0]
+            items.append(st.selectbox(f'Grafica {i+1}', options, index=options.index(current), key=f'seq_item_{i}',
+                                      format_func=lambda x: figurine_scenes.LABELS.get(x, x)))
             if i < count-1:
-                current = state['transitions'][i] if i < len(state['transitions']) else 'channel'
+                if i < len(state['transitions']):
+                    current = state['transitions'][i]
+                else:   # a new step next to a figurine screen starts with its collection transition
+                    previous = items[-1]
+                    current = special_for(previous, '') if previous in figurine_scenes.EXTRA else 'channel'
+                current = current if current in TRANSITION_IDS else 'channel'
                 transitions.append(st.selectbox(f'Transizione {i+1} > {i+2}', TRANSITION_IDS,
                     index=TRANSITION_IDS.index(current), format_func=TRANSITIONS.get, key=f'seq_trans_{i}'))
         state['items'], state['transitions'] = items, transitions
@@ -201,7 +251,8 @@ def show_sequence(root: Path, library):
             progress = st.progress(0, text='Preparo le grafiche...')
             try:
                 scenes = [_scene(root, t, library, state['preset'], state['scale']) for t in items]
-                closing = sponsor_scene(current_config(items[-1]), state['scale'])
+                closing = sponsor_scene(current_config(items[-1] if items[-1] in CRT_TEMPLATES else 'Full Time'),
+                                        state['scale'])
                 if closing:
                     scenes.append(closing)
                     transitions = list(transitions)+['channel']

@@ -67,13 +67,15 @@ def grid(n, width, height, gap=10):
     return best
 
 
-def poster(members, logo=None, format='Story 9:16', scale=2, title='LA COLLEZIONE', season='2026/27', team='FLAMINGOS'):
+def poster(members, logo=None, format='Story 9:16', scale=2, title='LA COLLEZIONE', season='2026/27', team='FLAMINGOS',
+           style=None):
     """The album page (PIL RGB)."""
     format = format if format in LAYOUTS else 'Story 9:16'
     L = LAYOUTS[format]
     u = float(scale)
     size = (int(540*u), int(L['h']*u))
-    backdrop = Backdrop(size, u, size[1]*.45, L['h']*u*.93, L['title']*u, cards.PINK, sun=False, dust=24, phases=1)
+    glow = (style or {}).get('glow') or cards.PINK
+    backdrop = Backdrop(size, u, size[1]*.45, L['h']*u*.93, L['title']*u, glow, sun=False, dust=24, phases=1, style=style)
     canvas = backdrop.canvas(0.0, .45)
     area_w, area_h = 500, L['bottom']-L['top']
     gap = 10
@@ -87,8 +89,10 @@ def poster(members, logo=None, format='Story 9:16', scale=2, title='LA COLLEZION
         slack = 0
     shift = slack*.4                      # the title comes down with the cards: one block, centred
     t = cards.text(title, 'black', 38, cards.WHITE, u, max_width=480, shadow=(0, 3, 6, 200))
-    canvas.paste(t, (int(size[0]/2-t.width/2), int((L['title']+shift)*u-t.height/2)), t)
+    backdrop.plate(canvas, (size[0]/2-t.width/2-18*u, (L['title']+shift)*u-t.height/2-10*u,
+                            size[0]/2+t.width/2+18*u, (L['sub']+shift+12)*u))
     special = sum(1 for m in members if m['rarity'] != 'base')
+    canvas.paste(t, (int(size[0]/2-t.width/2), int((L['title']+shift)*u-t.height/2)), t)
     sub = cards.text(f'FIGURINE {team}  ·  {season}  ·  {len(members)} CARTE'+(f'  ·  {special} SPECIALI' if special else ''),
                      'heavy', 10, cards.YELLOW, u, max_width=500, tracking=2)
     canvas.paste(sub, (int(size[0]/2-sub.width/2), int((L['sub']+shift)*u-sub.height/2)), sub)
@@ -111,7 +115,7 @@ def poster(members, logo=None, format='Story 9:16', scale=2, title='LA COLLEZION
     return Image.fromarray(arr, 'RGB')
 
 
-def png_bytes(members, logo=None, format='Story 9:16', scale=2, **kw):
+def png_bytes(members, logo=None, format='Story 9:16', scale=2, **kw):  # kw: title, season, team, style
     out = io.BytesIO()
     poster(members, logo, format, scale, **kw).save(out, 'PNG', compress_level=5)
     return out.getvalue()

@@ -64,7 +64,7 @@ def best(rows):
 
 class Pagelle:
     def __init__(self, rows, match=None, logo=None, format='Story 9:16', scale=2, track=None, length=LENGTH,
-                 still=False):
+                 still=False, style=None, fades=True):
         self.format = format if format in LAYOUTS else 'Story 9:16'
         self.L = LAYOUTS[self.format]
         self.u = float(scale)
@@ -75,6 +75,8 @@ class Pagelle:
         self.logo = logo
         self.length = float(length)
         self.still = still
+        self.style = style
+        self.fades = fades
         beat = None
         if track:
             import tracks
@@ -86,8 +88,9 @@ class Pagelle:
     def _prepare(self):
         W, H = self.size
         u, L = self.u, self.L
-        self.backdrop = Backdrop(self.size, u, H*.42, L['h']*u*.9, L['title']*u, cards.PINK, sun=False, dust=30,
-                                 phases=1 if self.still else 20)
+        glow = (self.style or {}).get('glow') or cards.PINK
+        self.backdrop = Backdrop(self.size, u, H*.42, L['h']*u*.9, L['title']*u, glow, sun=False, dust=30,
+                                 phases=1 if self.still else 20, style=self.style)
         self.title = cards.text(self.match.get('title') or 'LE PAGELLE', 'black', 40, cards.WHITE, u, max_width=480,
                                 shadow=(0, 3, 6, 200))
         self.line = cards.text(self.match.get('line', ''), 'black', 15, cards.YELLOW, u, max_width=480, tracking=.6)
@@ -204,6 +207,9 @@ class Pagelle:
         power = .35+.2*clamp((t-DROP)*2)+.05*pulse
         canvas = self.backdrop.canvas(t, power)
         k = out_cubic((t-.1)/.6)
+        if self.backdrop.styled and self.title:
+            half = max(self.title.width, self.line.width if self.line else 0)/2+18*u
+            self.backdrop.plate(canvas, (W/2-half, L['title']*u-self.title.height/2-10*u, W/2+half, (L['sub']+12)*u))
         self._paste(canvas, self.title, W/2, (L['title']+12*(1-k))*u, k)
         k2 = out_cubic((t-.3)/.6)
         self._paste(canvas, self.line, W/2, (L['line']+10*(1-k2))*u, k2)
@@ -232,7 +238,7 @@ class Pagelle:
                     col = cards.RARITIES['leggenda']['metal'][1]
                     d.ellipse((sx-rad, sy-rad, sx+rad, sy+rad), fill=(*col, int(230*(1-p/1.2))))
         flash = (1-(t-DROP)/.3)**2*.35 if 0 <= t-DROP < .3 else 0.0
-        return finish(canvas, t, self.length, self.scan_step, flash)
+        return finish(canvas, t if self.fades else 1.0, self.length if self.fades else 1e9, self.scan_step, flash)
 
     def _paste(self, canvas, img, x, y, alpha=1.0, scale=1.0):
         if img is None or alpha <= 0:
@@ -256,18 +262,18 @@ class Pagelle:
         return out
 
 
-def png_bytes(rows, match, logo=None, format='Story 9:16', scale=2):
+def png_bytes(rows, match, logo=None, format='Story 9:16', scale=2, style=None):
     import io
     out = io.BytesIO()
-    Pagelle(rows, match, logo, format, scale, still=True).still_frame().save(out, 'PNG', compress_level=5)
+    Pagelle(rows, match, logo, format, scale, still=True, style=style).still_frame().save(out, 'PNG', compress_level=5)
     return out.getvalue()
 
 
 def render_video(rows, match, logo, path, fps=30, format='Story 9:16', scale=2, track=None, sound=True, volume=.8,
-                 length=LENGTH, progress_callback=None):
+                 length=LENGTH, progress_callback=None, style=None):
     from crt_presets import even_video_frame
     from renderer import video_writer
-    show = Pagelle(rows, match, logo, format, scale, track, length)
+    show = Pagelle(rows, match, logo, format, scale, track, length, style=style)
     total = int(round(show.length*fps))
     writer = video_writer(path, fps)
     try:
