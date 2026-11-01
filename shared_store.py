@@ -23,6 +23,17 @@ API = 'https://api.github.com'
 FILE = 'lavoro.json'
 FOLDER = 'archivio'
 VERSION = 1
+try:                                     # Streamlit Cloud runs in UTC: the times we show are Italian
+    from zoneinfo import ZoneInfo
+    ZONE = ZoneInfo('Europe/Rome')
+except Exception:                        # no time-zone database: Italian winter time
+    ZONE = dt.timezone(dt.timedelta(hours=1))
+
+
+def now():
+    return dt.datetime.now(ZONE)
+
+
 MAX_ASSET = 4_000_000        # bytes: bigger fonts or logos stay in the browser that uploaded them
 
 # What a friend needs to carry on. Data, plus a few widget values that are safe to set before the widget exists.
@@ -90,7 +101,7 @@ def snapshot(state, page='', author='', assets=None, now=None):
                 shared[key] = encode(state[key])
             except _Skip:
                 skipped.append(key)
-    return {'version': VERSION, 'saved_at': (now or dt.datetime.now()).isoformat(timespec='seconds'),
+    return {'version': VERSION, 'saved_at': (now or globals()['now']()).isoformat(timespec='seconds'),
             'author': str(author or '')[:40], 'page': str(page or '')[:40], 'state': shared,
             'assets': dict(assets or {}), 'skipped': skipped}
 

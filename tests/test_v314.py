@@ -42,6 +42,10 @@ class Snapshot(unittest.TestCase):
         c = ss.snapshot(dict(STATE, pagelle_memory={}), 'Figurine')
         self.assertNotEqual(ss.fingerprint(a), ss.fingerprint(c))
 
+    def test_times_are_italian(self):
+        saved = dt.datetime.fromisoformat(ss.snapshot({})['saved_at'])
+        self.assertIn(saved.utcoffset(), (dt.timedelta(hours=1), dt.timedelta(hours=2)))
+
     def test_unknown_versions_restore_nothing(self):
         self.assertEqual(ss.restore({'version': 99, 'state': {'squad': []}}), {})
         self.assertEqual(ss.restore(None), {})
