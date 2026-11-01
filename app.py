@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.11 / transizioni a tema: spogliatoio, cronometro, classifica, calendario, 3-2-1')
+    st.caption('3.12 / risultati della giornata: tutto il girone in una grafica e in video')
 
 from library import show_library
 from studio_ui import show_studio
@@ -59,6 +59,7 @@ PAGES = {
     'Classifica':'Classifica - il girone',
     'Calendario':'Calendario - il mese',
     'Figurine':'🃏  Figurine e pagelle',
+    'Risultati':'📋  Risultati della giornata',
     'Sequenza video':'🎬  Video con transizioni',
     'Didascalie':'✍️  Didascalie',
     'Wrapped':'🎁  Flamingos Wrapped',
@@ -116,5 +117,8 @@ elif template == 'Instagram':
 elif template == 'Figurine':
     from figurine_ui import show_figurine
     show_figurine(root,library)
+elif template == 'Risultati':
+    from results_ui import show_results
+    show_results(root,library)
 else:
     show_studio(root,template,library)

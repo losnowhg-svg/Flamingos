@@ -1,4 +1,4 @@
-"""The figurine screens inside a video sequence (3.10): Pagelle, Figurina MVP, Album.
+"""The figurine screens inside a video sequence (3.10): Pagelle, Figurina MVP, Album (and the round results, 3.12).
 
 render_sequence() speaks (prepared, compose) like every CRT editor. Here
 prepared[0] is a 1x1 placeholder whose .info carries what the sequence sets
@@ -13,8 +13,9 @@ import math
 
 from PIL import Image
 
-EXTRA = ('Pagelle', 'Figurina MVP', 'Album')
-LABELS = {'Pagelle': '📝 Pagelle', 'Figurina MVP': '🃏 Figurina MVP (bustina)', 'Album': '📒 Album della stagione'}
+EXTRA = ('Pagelle', 'Figurina MVP', 'Album', 'Risultati')
+LABELS = {'Pagelle': '📝 Pagelle', 'Figurina MVP': '🃏 Figurina MVP (bustina)', 'Album': '📒 Album della stagione',
+          'Risultati': '📋 Risultati della giornata'}
 
 
 def _on_beat(info, fraction):
@@ -67,6 +68,13 @@ def _build(info, fmt):
             built.clear()
             built[fmt] = pagelle.Pagelle(payload['rows'], payload['info'], logo, fmt, scale, info.get('music_track'),
                                          style=style, fades=False)
+        elif info['kind'] == 'Risultati':
+            import results_round
+            built.clear()
+            built[fmt] = results_round.RoundShow(payload['rows'], payload.get('title', 'RISULTATI'),
+                                                 payload.get('subtitle', ''), payload.get('date', ''), logo,
+                                                 payload.get('ours', 'FLAMINGOS'), fmt, scale, info.get('music_track'),
+                                                 style=style, fades=False)
         else:
             import album
             built.clear()
@@ -82,6 +90,8 @@ def offset(info):
         return card_video.DROP-_on_beat(info, .38)
     if info['kind'] == 'Pagelle':
         return card_video.DROP-_on_beat(info, .55)
+    if info['kind'] == 'Risultati':
+        return card_video.DROP-_on_beat(info, .6)
     return 0.0
 
 
@@ -128,5 +138,17 @@ def payloads(state, squad, mvps, scorers, ctx):
     out['Album'] = {'members': album.members_for(squad or [], mvps, scorers, True, ctx.get('season', '2026/27'),
                                                  ctx.get('team', 'FLAMINGOS')),
                     'season': ctx.get('season', '2026/27'), 'team': ctx.get('team', 'FLAMINGOS')}
+    out['Risultati'] = state.get('results_payload') or _results_default(state.get('csi_matches'), ctx.get('team', 'FLAMINGOS'))
     del cards
     return out
+
+
+def _results_default(matches, ours):
+    """The last played round from the CSI site, when the Risultati page was not opened in this session."""
+    import results_round as rr
+    groups = rr.rounds(matches or [])
+    if not groups:
+        return None
+    group = groups[rr.default_round(groups)]
+    return {'rows': rr.rows_for(group, ours), 'title': 'RISULTATI', 'subtitle': f"{group['label']} · CSI BRESCIA",
+            'date': rr.date_line(group), 'ours': ours}

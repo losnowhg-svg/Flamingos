@@ -175,6 +175,17 @@ with tempfile.TemporaryDirectory() as folder:
 for kind in transitions.SPECIAL:
     transitions.transition_frame(kind, Image.new('RGB', (54, 96)), Image.new('RGB', (54, 96), (255, 0, 0)), .5)
 done.append('stili dei preset, sequenza con figurine e transizioni da collezione')
+import results_round
+games = [dict(home='GALBA F.C.', away='FLAMINGOS', date='2026-10-24', time='20:45', score=[2, 4], venue='', round=5),
+         dict(home='REAL BRESCIA', away='CHIARI', date='2026-10-26', time='21:00', score=None, venue='', round=5)]
+group = results_round.rounds(games)[0]
+lines = results_round.rows_for(group)
+results_round.png_bytes(lines, LOGO, 'Post 4:5', 1, figurine_style.build(style, 'Post 4:5', 540), subtitle='GIORNATA 5')
+with tempfile.TemporaryDirectory() as folder:
+    results_round.render_video(lines, LOGO, Path(folder, 'r.mp4'), 8, 'Post 1:1', .5, 'cc0_ritmo', True)
+    transitions.render_sequence([figurine_scenes.scene('Risultati', {'rows': lines}, LOGO, 1, None)], [],
+                                Path(folder, 'rs.mp4'), 8, 2.0, .5, 'Story 9:16', 1)
+done.append('risultati della giornata')
 print('OK: '+', '.join(done))
 '''
 
