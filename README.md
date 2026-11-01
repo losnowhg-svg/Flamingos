@@ -1,4 +1,28 @@
-# Flamingos Studio 3.13
+# Flamingos Studio 3.14
+
+## Novita della 3.14: lavoro condiviso tra amici
+Quello che fa uno lo ritrova l'altro. Ogni modifica si salva da sola in un repo GitHub **privato**; chi apre
+l'app (da qualsiasi telefono o computer) riprende dall'ultimo salvataggio di chiunque: partita della settimana,
+partite CSI, rosa, impostazioni di tutte le grafiche, voti delle pagelle, figurina in preparazione, sequenza video,
+didascalie, risultati, e la pagina dove si era rimasti. Anche font e loghi caricati arrivano agli altri.
+- Nella barra laterale: *Chi sta lavorando?* (il nome finisce nei salvataggi), lo stato (*✓ Salvato per tutti*) e
+  *↻ Prendi l'ultimo lavoro degli amici* per caricare subito quello che un amico sta facendo adesso.
+- Se due salvano insieme vale l'ultimo, ma nessuno perde niente: ogni salvataggio è un commit e resta nella
+  cronologia del repo. L'app avvisa se hai coperto il lavoro di un amico.
+- Video e PNG già fatti non si salvano (si rifanno con un clic).
+
+### Come attivarlo (una volta sola)
+1. Su GitHub crea un repo **privato** chiamato `Flamingos-dati` (github.com/new, *Private*, con README).
+2. Crea un token: github.com/settings/personal-access-tokens/new. Nome *Flamingos Studio*, una scadenza lunga;
+   *Repository access*: *Only select repositories* → `Flamingos-dati`; *Permissions* → *Repository permissions* →
+   *Contents*: **Read and write**. Genera e copia il token (inizia con `github_pat_`).
+3. Su share.streamlit.io, nell'app: ⋮ → *Settings* → *Secrets*, incolla e salva:
+   ```toml
+   [condivisione]
+   token = "github_pat_..."
+   repo = "losnowhg-svg/Flamingos-dati"
+   ```
+Il token resta nei Secrets di Streamlit, mai nel codice. Senza Secrets l'app funziona come prima (solo browser).
 
 ## Novita della 3.13: figurine e pagelle nello stile del preset
 Come i risultati della giornata, anche la presentazione delle figurine segue il preset scelto nel menu *Stile*

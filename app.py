@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.13 / figurine e pagelle nello stile del preset, 10 brani nuovi')
+    st.caption('3.14 / lavoro condiviso: quello che fa uno lo ritrova l\'altro')
 
 from library import show_library
 from studio_ui import show_studio
@@ -66,6 +66,10 @@ PAGES = {
     'Instagram':'📱  Squadra e copertine',
 }
 
+# 3.14: the last work saved by anyone (private repo in the secrets), before the menu and the bookmark import.
+import shared_ui
+shared_ui.start()
+
 # Girone page sent by the "Invia a Flamingos" bookmark: standings, next match, calendar.
 incoming = st.query_params.get(QUERY_KEY)
 if incoming:
@@ -74,7 +78,7 @@ if incoming:
     except ValueError as exc:
         st.session_state['standings_import_error'] = str(exc)
     st.session_state['studio_template'] = 'Settimana'
-    st.query_params.clear()
+    del st.query_params[QUERY_KEY]          # only the bookmark's data: the name (?chi=) stays
 
 def _from_phone_menu():
     st.session_state['studio_template'] = st.session_state['mobile_nav_select']
@@ -85,6 +89,7 @@ with st.sidebar:
     if st.session_state.get('studio_template') not in PAGES:
         st.session_state['studio_template'] = 'Settimana'
     template = st.radio('Vai a',list(PAGES),format_func=PAGES.get,key='studio_template')
+    shared_ui.sidebar()
 # On a phone the sidebar hides behind a button: the same menu, one tap away at the top (CSS shows it only there).
 if st.session_state.get('mobile_nav_select') != template:
     st.session_state['mobile_nav_select'] = template
@@ -99,6 +104,7 @@ import crests
 crests.register(library)        # the girone crests, next to the archive's own logos
 import sponsor
 sponsor.register(library['assets'])
+shared_ui.merge_assets(library)          # fonts and logos uploaded by friends
 restore_week(library)
 root = Path(__file__).resolve().parent
 if template == 'Settimana':
@@ -122,3 +128,5 @@ elif template == 'Risultati':
     show_results(root,library)
 else:
     show_studio(root,template,library)
+
+shared_ui.autosave(library)              # every change, saved for everyone (in the background)

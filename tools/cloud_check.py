@@ -186,6 +186,10 @@ with tempfile.TemporaryDirectory() as folder:
     transitions.render_sequence([figurine_scenes.scene('Risultati', {'rows': lines}, LOGO, 1, None)], [],
                                 Path(folder, 'rs.mp4'), 8, 2.0, .5, 'Story 9:16', 1)
 done.append('risultati della giornata')
+import shared_store, datetime as _dt
+_snap = shared_store.snapshot({'csi_matches': [{'date': _dt.date(2026, 11, 1)}], 'squad': []}, 'Figurine', 'prova')
+assert shared_store.restore(_snap)['csi_matches'][0]['date'] == _dt.date(2026, 11, 1)
+done.append('lavoro condiviso')
 print('OK: '+', '.join(done))
 '''
 
