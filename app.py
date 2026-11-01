@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.13 / figurine e pagelle nello stile del preset, risultati della giornata')
+    st.caption('3.13 / figurine e pagelle nello stile del preset, 10 brani nuovi')
 
 from library import show_library
 from studio_ui import show_studio

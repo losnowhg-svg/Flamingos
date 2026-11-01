@@ -16,19 +16,24 @@ MUSIC_TRACKS = {'auto': 'Automatica (brani veri, cambia con grafica, risultato e
                 'cc0_ritmo': 'Boom bap - Lost In The Rythm', 'cc0_sunglasses': 'R&B beat - Sunglasses',
                 'cc0_city': 'Lo-fi hip-hop - City Lights', 'cc0_funk': 'Funk - Funkeriffic',
                 'cc0_rush': 'Veloce ed energica - Rush', 'cc0_battle': 'Cinematica - Battle Ready',
+                'cc0_punk': 'Punk rock - Punk', 'cc0_snowboard': 'Rock con chitarre - Snowboard Rock',
+                'cc0_uberpunch': 'Elettronica potente - Uberpunch', 'cc0_hardmode': 'Elettronica veloce - Hard Mode',
+                'cc0_hero': 'Eroica, in crescendo - Rising Hero', 'cc0_blockbuster': 'Trailer epico - Epic Blockbuster 2',
+                'cc0_boogie': 'Disco boogie - Downtown Boogie', 'cc0_retro': 'Synthwave - Retro Synths',
+                'cc0_goodvibes': 'Positiva e rilassata - Good Vibes', 'cc0_dub': 'Reggae dub - Sunday Dub',
                 'mio': '📁 Il mio brano (caricalo qui sotto)',
                 'synthwave': 'Base sintetica: synthwave', 'house': 'Base sintetica: house', 'trap': 'Base sintetica: trap',
                 'disco': 'Base sintetica: disco funk', 'carica': 'Base sintetica: rock da stadio', 'lofi': 'Base sintetica: lo-fi',
                 'arcade': '8-bit arcade, allegra', 'epica': '8-bit epica', 'tensione': '8-bit tensione', 'festa': '8-bit festa'}
 # The automatic choice: real CC0 tracks (assets/music), rotating by round.
-AUTO_TRACKS = {'matchday': ('cc0_robots', 'cc0_club', 'cc0_battle', 'cc0_rush', 'cc0_ritmo'),
-               'big': ('cc0_battle', 'cc0_club', 'cc0_robots'),
-               'win': ('cc0_funk', 'cc0_rush', 'cc0_sunglasses', 'cc0_ritmo'),
-               'draw': ('cc0_city', 'cc0_sunglasses', 'cc0_ritmo'),
-               'loss': ('cc0_city', 'cc0_club', 'cc0_sunglasses'),
-               'convocati': ('cc0_ritmo', 'cc0_robots', 'cc0_rush', 'cc0_club', 'cc0_battle'),
-               'wrapped': ('cc0_funk', 'cc0_sunglasses', 'cc0_city'),
-               'other': ('cc0_sunglasses', 'cc0_city', 'cc0_ritmo', 'cc0_funk')}
+AUTO_TRACKS = {'matchday': ('cc0_robots', 'cc0_club', 'cc0_battle', 'cc0_rush', 'cc0_ritmo', 'cc0_uberpunch', 'cc0_hardmode', 'cc0_punk'),
+               'big': ('cc0_battle', 'cc0_club', 'cc0_robots', 'cc0_blockbuster', 'cc0_hero'),
+               'win': ('cc0_funk', 'cc0_rush', 'cc0_sunglasses', 'cc0_ritmo', 'cc0_boogie', 'cc0_snowboard', 'cc0_goodvibes'),
+               'draw': ('cc0_city', 'cc0_sunglasses', 'cc0_ritmo', 'cc0_dub', 'cc0_retro'),
+               'loss': ('cc0_city', 'cc0_club', 'cc0_sunglasses', 'cc0_retro', 'cc0_dub'),
+               'convocati': ('cc0_ritmo', 'cc0_robots', 'cc0_rush', 'cc0_club', 'cc0_battle', 'cc0_hardmode', 'cc0_punk', 'cc0_uberpunch', 'cc0_hero'),
+               'wrapped': ('cc0_funk', 'cc0_sunglasses', 'cc0_city', 'cc0_goodvibes', 'cc0_boogie', 'cc0_retro'),
+               'other': ('cc0_sunglasses', 'cc0_city', 'cc0_ritmo', 'cc0_funk', 'cc0_goodvibes', 'cc0_retro', 'cc0_boogie')}
 POSES = {'ferma': 'Ferma', 'esultanza': 'Esultanza', 'conserte': 'Braccia conserte', 'pollice': 'Pollice su',
          'palleggio': 'Palleggio', 'saluto': 'Saluto', 'guanti': 'Guanti da portiere'}
 POSE_MODES = {'variate': 'Variate (in base al ruolo)', **POSES}

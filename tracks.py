@@ -50,6 +50,27 @@ LIBRARY = {
                      bpm=150.0, drop=6.0, source='freepd.com'),
     'cc0_battle': dict(file='battle_ready.m4a', title='Battle Ready', artist='FreePD', mood='cinematica',
                        bpm=88.0, drop=6.179, source='freepd.com'),
+    # 3.13: ten more, for the genres that were missing (rock, fast electronics, epic, disco, synthwave, dub)
+    'cc0_punk': dict(file='punk.m4a', title='Punk', artist='HoliznaCC0', mood='punk rock',
+                      bpm=120.0, drop=6.0, source='freemusicarchive.org/music/holiznacc0'),
+    'cc0_snowboard': dict(file='snowboard_rock.m4a', title='Snowboard Rock', artist='Loyalty Freak Music', mood='rock',
+                           bpm=85.0, drop=6.0, source='freemusicarchive.org/music/Loyalty_Freak_Music'),
+    'cc0_uberpunch': dict(file='uberpunch.m4a', title='Uberpunch', artist='FreePD', mood='elettronica potente',
+                           bpm=150.0, drop=6.0, source='freepd.com'),
+    'cc0_hardmode': dict(file='hard_mode.m4a', title='Hard Mode', artist='HoliznaCC0', mood='elettronica veloce',
+                          bpm=150.0, drop=6.0, source='freemusicarchive.org/music/holiznacc0'),
+    'cc0_hero': dict(file='rising_hero.m4a', title='Rising Hero', artist='HoliznaCC0', mood='eroica',
+                      bpm=119.9, drop=6.0, source='freemusicarchive.org/music/holiznacc0'),
+    'cc0_blockbuster': dict(file='epic_blockbuster.m4a', title='Epic Blockbuster 2', artist='FreePD', mood='trailer epico',
+                             bpm=120.0, drop=6.0, source='freepd.com'),
+    'cc0_boogie': dict(file='downtown_boogie.m4a', title='Downtown Boogie', artist='FreePD', mood='disco boogie',
+                        bpm=105.0, drop=6.0, source='freepd.com'),
+    'cc0_retro': dict(file='retro_synths.m4a', title='Retro Synths', artist='HoliznaCC0', mood='synthwave',
+                       bpm=119.9, drop=6.0, source='freemusicarchive.org/music/holiznacc0'),
+    'cc0_goodvibes': dict(file='good_vibes.m4a', title='Good Vibes', artist='HoliznaCC0', mood='positiva, rilassata',
+                           bpm=90.0, drop=6.0, source='freemusicarchive.org/music/holiznacc0'),
+    'cc0_dub': dict(file='sunday_dub.m4a', title='Sunday Dub', artist='FreePD', mood='reggae dub',
+                     bpm=102.0, drop=6.0, source='freepd.com'),
 }
 CUSTOM = 'mio'          # the menu entry for the user's own track
 _uploads: OrderedDict = OrderedDict()     # 'mio:<hash>' -> dict(samples, drop, bpm, name)
