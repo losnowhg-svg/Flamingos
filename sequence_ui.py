@@ -124,8 +124,39 @@ def _figurine_scene(root, template, library, preset_override, scale):
     return figurine_scenes.scene(template, payload, logo, scale, style)
 
 
+REPARTI = 'Reparti'
+REPARTI_LABEL = '👥 Presentazione per reparto'
+
+
+def _reparti_scenes(root, library, preset_override, scale):
+    """3.16: the department slides of the Convocati (one screen per department), as sequence scenes."""
+    import reparti_renderer as rr
+    config, home, _, font_bytes = resolve_assets(root, 'Convocati', current_config('Convocati'), library['assets'])
+    if preset_override in PRESETS:
+        config = apply_preset(config, preset_override)
+    squad = st.session_state.get('squad') or library.get('squad') or []
+    scenes = rr.sequence_scenes(config, squad, home, font_bytes, scale)
+    if not scenes:
+        raise ValueError('per la presentazione per reparto scegli i convocati, con il ruolo, nell\'editor Convocati.')
+    return scenes
+
+
+def _group(root, template, library, preset_override, scale):
+    """The screens of one chosen item: one, or one per department."""
+    if template == REPARTI:
+        return _reparti_scenes(root, library, preset_override, scale)
+    return [_scene(root, template, library, preset_override, scale)]
+
+
+def _label(template):
+    import figurine_scenes
+    return REPARTI_LABEL if template == REPARTI else figurine_scenes.LABELS.get(template, template)
+
+
 def _scene(root, template, library, preset_override, scale):
     import figurine_scenes
+    if template == REPARTI:                      # where one screen is needed (preview, TV frame): the first department
+        return _reparti_scenes(root, library, preset_override, scale)[0]
     if template in figurine_scenes.EXTRA:
         return _figurine_scene(root, template, library, preset_override, scale)
     config, home, away, font_bytes = resolve_assets(root, template, current_config(template), library['assets'])
@@ -147,17 +178,23 @@ def sponsor_scene(base_config, scale, font_bytes=None):
     return sponsor.scene(config, None, None, font_bytes, scale), sponsor.compose
 
 
-def _still(root, template, library, preset_override, format):
-    prepared, compose = _scene(root, template, library, preset_override, 1)
+def _still(root, template, library, preset_override, format, last=False):
+    prepared, compose = _group(root, template, library, preset_override, 1)[-1 if last else 0]
     prepared[0].info['format'] = format     # frames and textures follow the sequence's format
     return output_image(compose(prepared, animated=False), format, 1)
+
+
+def _department_names(library):
+    import reparti_renderer as rr
+    squad = st.session_state.get('squad') or library.get('squad') or []
+    return [dict(rr.GROUPS)[group].title() for group, _ in rr.slides(current_config('Convocati'), squad)]
 
 
 def show_sequence(root: Path, library):
     st.subheader('SEQUENZA VIDEO')
     st.caption('Le grafiche una dopo l\'altra, unite da transizioni retrò: cambio canale, glitch, VHS, pixel, '
                'cerchio, blocchi, tendina, più quelle ✨ a tema (spogliatoio, cronometro, calendario, figurine...). '
-               'Ci sono anche Pagelle, Figurina MVP e Album. '
+               'Ci sono anche Pagelle, Figurina MVP, Album, Risultati e la presentazione per reparto. '
                'Ogni grafica usa i dati e il preset che hai impostato nel suo editor.')
     state = st.session_state.setdefault('sequence', {
         'items': ['Matchday Screen', 'Convocati'], 'transitions': ['spogliatoio'], 'format': 'Story 9:16',
@@ -177,15 +214,16 @@ def show_sequence(root: Path, library):
             st.rerun()
         import figurine_scenes
         from transitions import special_for
-        options = tuple(CRT_TEMPLATES)+figurine_scenes.EXTRA
+        options = tuple(CRT_TEMPLATES)+figurine_scenes.EXTRA+(REPARTI,)
         if st.button('✨ Transizioni a tema', key='seq_special', width='stretch',
                      help='Scelte in base alle schermate vicine: porte dello spogliatoio tra Matchday e Convocati, '
                           'cronometro verso il Full Time, righe che si aggiornano verso la Classifica, pagina del '
                           'calendario, conto alla rovescia verso il Matchday, la carta che si gira verso la figurina '
-                          'MVP, lampo olografico, pagina dell\'album.'):
+                          'MVP, lampo olografico, pagina dell\'album, spogliatoio verso la presentazione per reparto.'):
             chosen = [st.session_state.get(f'seq_item_{i}', state['items'][i] if i < len(state['items']) else options[0])
                       for i in range(count)]
-            state['transitions'] = [special_for(chosen[i], chosen[i+1]) for i in range(count-1)]
+            from transitions import themed
+            state['transitions'] = themed(chosen)
             for i in range(5):
                 st.session_state.pop(f'seq_trans_{i}', None)
             st.rerun()
@@ -194,7 +232,13 @@ def show_sequence(root: Path, library):
             current = state['items'][i] if i < len(state['items']) else CRT_TEMPLATES[i % len(CRT_TEMPLATES)]
             current = current if current in options else options[0]
             items.append(st.selectbox(f'Grafica {i+1}', options, index=options.index(current), key=f'seq_item_{i}',
-                                      format_func=lambda x: figurine_scenes.LABELS.get(x, x)))
+                                      format_func=_label))
+            if items[-1] == REPARTI:
+                names = _department_names(library)
+                st.caption(f"{len(names)} {'schermata' if len(names) == 1 else 'schermate'}, una per reparto: "
+                           f"{', '.join(names)}. Convocati, ruoli, pose e "
+                           'sfondo degli sprite si scelgono nell\'editor Convocati.' if names else
+                           'Nessun reparto: scegli i convocati, con il ruolo, nell\'editor Convocati.')
             if i < count-1:
                 if i < len(state['transitions']):
                     current = state['transitions'][i]
@@ -236,7 +280,8 @@ def show_sequence(root: Path, library):
             choices = ('own',)+PRESET_IDS
             state['preset'] = st.selectbox('Preset', choices, index=choices.index(state['preset']),
                 format_func=lambda x: 'Ognuna il suo preset' if x == 'own' else 'Tutte con '+PRESETS[x]['name'], key='seq_preset')
-        total = state['hold']*count+state['transition_seconds']*(count-1)
+        screens = count+sum(max(0, len(_department_names(library))-1) for t in items if t == REPARTI)
+        total = state['hold']*screens+state['transition_seconds']*(screens-1)
         st.caption(f'Durata totale circa {total:.1f} secondi. Reel e Storie accettano fino a 60 secondi.')
     with right:
         st.markdown('**Anteprima delle transizioni**')
@@ -246,16 +291,20 @@ def show_sequence(root: Path, library):
                 prepared, compose = _scene(root, items[0], library, state['preset'], 1)
                 st.image(tv.frame(compose(prepared, 999, False), state['format'], 1, 0), caption='Così appare sul televisore',
                          width='stretch')
-            stills = [_still(root, t, library, state['preset'], state['format']) for t in items]
+            firsts = [_still(root, t, library, state['preset'], state['format']) for t in items]
+            lasts = [_still(root, t, library, state['preset'], state['format'], last=True) if t == REPARTI else firsts[i]
+                     for i, t in enumerate(items)]
             for i, kind in enumerate(transitions):
-                st.image(preview_strip(stills[i], stills[i+1], kind, 5, 150),
-                         caption=f'{items[i]} > {items[i+1]} / {TRANSITIONS[kind]}', width='stretch')
+                st.image(preview_strip(lasts[i], firsts[i+1], kind, 5, 150),
+                         caption=f'{_label(items[i])} > {_label(items[i+1])} / {TRANSITIONS[kind]}', width='stretch')
         except Exception as exc:
             st.error(f'Anteprima non disponibile: {exc}')
         if st.button('Genera video MP4', type='primary', width='stretch', key='seq_render'):
             progress = st.progress(0, text='Preparo le grafiche...')
             try:
-                scenes = [_scene(root, t, library, state['preset'], state['scale']) for t in items]
+                from transitions import expand
+                scenes, transitions = expand([_group(root, t, library, state['preset'], state['scale']) for t in items],
+                                             transitions)
                 closing = sponsor_scene(current_config(items[-1] if items[-1] in CRT_TEMPLATES else 'Full Time'),
                                         state['scale'])
                 if closing:
