@@ -233,3 +233,8 @@ def unassigned(convocati, squad):
         if role not in ('P', 'D', 'C', 'A'):
             names.append(p['name'])
     return names
+
+
+def sequence_scenes(convocati, squad, home_logo, font_bytes=None, render_scale=2):
+    """3.16: one (prepared, compose) per department, for the Video con transizioni. [] if nobody has a role."""
+    return [(scene(slide, home_logo, None, font_bytes, render_scale), compose) for _, slide in slides(convocati, squad)]

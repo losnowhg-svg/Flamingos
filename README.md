@@ -1,4 +1,13 @@
-# Flamingos Studio 3.15.1
+# Flamingos Studio 3.16
+
+## Novita della 3.16: la presentazione per reparto nel Video con transizioni
+Nel **Video con transizioni** si può scegliere anche *👥 Presentazione per reparto*: nel video diventa una
+schermata per reparto (portieri, difensori, centrocampisti, attaccanti, staff) con gli sprite, presa dai Convocati.
+Sotto la scelta compare quante schermate aggiunge; convocati, ruoli, pose e sfondo degli sprite si scelgono come
+sempre nell'editor Convocati. Tra un reparto e l'altro le transizioni cambiano da sole; per entrare nei reparti
+*✨ Transizioni a tema* sceglie le porte dello spogliatoio (o le righe che si aggiornano, se lo spogliatoio c'è già
+appena prima: mai la stessa transizione a tema due volte di fila). Esempio: Matchday → Convocati → Presentazione
+per reparto, circa 30 secondi.
 
 ## Novita della 3.15.1: salvataggi più calmi e archivio più chiaro
 - **Un salvataggio per raffica di modifiche:** la prima modifica dopo una pausa si salva subito; quelle che

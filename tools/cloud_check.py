@@ -190,6 +190,14 @@ import shared_store, datetime as _dt
 _snap = shared_store.snapshot({'csi_matches': [{'date': _dt.date(2026, 11, 1)}], 'squad': []}, 'Figurine', 'prova')
 assert shared_store.restore(_snap)['csi_matches'][0]['date'] == _dt.date(2026, 11, 1)
 done.append('lavoro condiviso')
+import reparti_renderer
+_reparti = reparti_renderer.sequence_scenes(convocati, squad, LOGO, None, 1)
+import convocati_renderer
+_scenes, _steps = transitions.expand([[(convocati_renderer.scene(convocati, LOGO, None, None, 1), convocati_renderer.compose)],
+                                      _reparti], ['spogliatoio'])
+with tempfile.TemporaryDirectory() as folder:
+    transitions.render_sequence(_scenes[:3], _steps[:2], Path(folder, 'rp.mp4'), 8, 1.0, .4, 'Post 1:1', 1)
+done.append('reparti nella sequenza')
 print('OK: '+', '.join(done))
 '''
 

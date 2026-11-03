@@ -621,6 +621,8 @@ def special_for(previous, following):
     """The themed transition that suits two screens of a sequence (by name)."""
     if following == 'Figurina MVP':
         return 'carta' if previous in ('Full Time', 'Pagelle') else 'strappo'
+    if following == 'Reparti':                    # 3.16: into the locker room, where the departments are
+        return 'spogliatoio'
     if following == 'Album' or previous == 'Album':
         return 'pagina'
     if following == 'Pagelle':
@@ -645,6 +647,34 @@ FUNCTIONS = {'channel': _channel, 'poweroff': _poweroff, 'glitch': _glitch,
              'blocks': _blocks, 'wipe': _wipe, 'carta': _carta, 'strappo': _strappo, 'olografica': _olografica,
              'pioggia': _pioggia, 'pagina': _pagina, 'spogliatoio': _spogliatoio, 'cronometro': _cronometro,
              'righe': _righe, 'calendario': _calendario, 'countdown': _countdown}
+
+
+def themed(items):
+    """The themed transition for every step, never the same one twice in a row (3.16: Matchday > Convocati >
+    Reparti would be the locker room twice; the second becomes the rows that sort themselves out)."""
+    out = []
+    for previous, following in zip(items, items[1:]):
+        kind = special_for(previous, following)
+        if out and kind == out[-1]:
+            kind = {'spogliatoio': 'righe', 'righe': 'calendario'}.get(kind, 'olografica' if kind != 'olografica' else 'pagina')
+        out.append(kind)
+    return out
+
+
+def expand(groups, steps, inner=None):
+    """3.16: screens that come in groups (the department slides) into one flat sequence.
+
+    groups: one list of scenes per chosen item; steps: the transition between two items.
+    Inside a group the transitions are `inner(count)` (different from each other by default).
+    Returns (scenes, transitions) for render_sequence."""
+    inner = inner or (lambda count: varied(count))
+    scenes, out = [], []
+    for i, group in enumerate(groups):
+        if i:
+            out.append(steps[i-1])
+        out += inner(len(group)-1) if len(group) > 1 else []
+        scenes += list(group)
+    return scenes, out
 
 
 def varied(count, start=0):
