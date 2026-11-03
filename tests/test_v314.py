@@ -1,4 +1,4 @@
-"""3.14: lavoro condiviso, the studio's work saved in a private repo so any friend can carry on."""
+"""3.14: lavoro condiviso, the studio's work saved in a private repo so any friend can carry on (3.15: history)."""
 import datetime as dt
 import hashlib
 import json
@@ -93,6 +93,45 @@ class Store(unittest.TestCase):
         self.assertFalse(ss.shareable('stemma:galba', logo))          # built-in girone crests stay in the app
         self.assertFalse(ss.shareable(good, logo+b'x'))
         self.assertFalse(ss.shareable('font:'+hashlib.sha256(bytes(5_000_000)).hexdigest(), bytes(5_000_000)))
+
+    def test_messages_and_working_sessions(self):
+        self.assertEqual(ss.parse_message('Lavoro di LUCA (Figurine)'), ('LUCA', 'Figurine'))
+        self.assertEqual(ss.parse_message('Lavoro di qualcuno (Settimana · tornato alla versione di Luca)'), ('', 'Settimana'))
+        self.assertEqual(ss.parse_message('Initial commit'), ('', ''))
+        t = dt.datetime(2026, 11, 1, 21, 0, tzinfo=ss.ZONE)
+        m = dt.timedelta(minutes=1)
+        commits = [dict(sha='e', author='LUCA', page='Figurine', at=t),
+                   dict(sha='d', author='LUCA', page='Settimana', at=t-10*m),
+                   dict(sha='c', author='LUCA', page='Figurine', at=t-25*m),
+                   dict(sha='b', author='MARCO', page='Risultati', at=t-30*m),
+                   dict(sha='a', author='MARCO', page='Risultati', at=t-3*60*m)]       # a later session of Marco's
+        groups = ss.sessions(commits)
+        self.assertEqual([(g['sha'], g['author'], g['count']) for g in groups],
+                         [('e', 'LUCA', 3), ('b', 'MARCO', 1), ('a', 'MARCO', 1)])
+        self.assertEqual(groups[0]['pages'], ['Figurine', 'Settimana'])
+        self.assertEqual(len(ss.sessions(commits, limit=2)), 2)
+
+    def test_history_and_going_back(self):
+        fake = FakeGitHub()
+        sha, _ = store(fake).save(ss.snapshot(dict(STATE, pagelle_memory={'TEU': {'voto': '6'}}), 'Figurine', 'LUCA'))
+        store(fake).put_asset('logo:'+hashlib.sha256(b'x').hexdigest(), b'x')            # not in the work history
+        fake.step = dt.timedelta(hours=2)
+        snap = ss.snapshot(dict(STATE, pagelle_memory={'TEU': {'voto': '9'}}), 'Figurine', 'MARCO')
+        snap['event'] = 'tornato alla versione di Luca'
+        store(fake).save(snap, sha)
+        history = store(fake).history()
+        self.assertEqual([(h['author'], h['page']) for h in history], [('MARCO', 'Figurine'), ('LUCA', 'Figurine')])
+        self.assertEqual(fake.commits[-1][1], 'Lavoro di MARCO (Figurine · tornato alla versione di Luca)')
+        self.assertEqual(history[0]['at'].utcoffset(), dt.timedelta(hours=1))           # Italian time
+        old, _ = store(fake).load(ref=history[1]['sha'])
+        self.assertEqual(ss.restore(old)['pagelle_memory']['TEU']['voto'], '6')
+        self.assertEqual(ss.restore(store(fake).load()[0])['pagelle_memory']['TEU']['voto'], '9')
+        self.assertEqual(len(ss.sessions(history)), 2)                                  # two hours apart
+
+    def test_the_note_travels(self):
+        state = dict(STATE, shared_note='Pagelle fatte, manca il video', shared_note_meta={'author': 'LUCA'})
+        back = ss.restore(json.loads(json.dumps(ss.snapshot(state))))
+        self.assertEqual(back['shared_note'], 'Pagelle fatte, manca il video')
 
     def test_clear_errors(self):
         fake = FakeGitHub()

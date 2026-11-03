@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.14 / lavoro condiviso: quello che fa uno lo ritrova l\'altro')
+    st.caption('3.15 / passaggio di consegne: nota per gli amici e versioni precedenti')
 
 from library import show_library
 from studio_ui import show_studio
@@ -107,6 +107,7 @@ sponsor.register(library['assets'])
 shared_ui.merge_assets(library)          # fonts and logos uploaded by friends
 restore_week(library)
 root = Path(__file__).resolve().parent
+shared_ui.note_banner(template)          # 3.15: the note a friend left, on top of the page
 if template == 'Settimana':
     show_week(root,library)
 elif template == 'Sequenza video':

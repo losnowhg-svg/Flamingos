@@ -1,5 +1,9 @@
 """☁️ Lavoro condiviso (3.14): pick up where a friend left off, save on its own while you work.
 
+3.15, passaggio di consegne: a note for the friends ("pagelle fatte, manca il video") shown to
+whoever opens the app next, the past versions (grouped by working session) to go back to, and
+the name picked from the squad with one tap.
+
 At the start of a session the last work saved by anyone is loaded (match, CSI
 matches, squad, editors, votes, figurine, sequence, captions, the page).
 Then every change is saved in the background to the private repo set in the
@@ -102,6 +106,8 @@ def start():
         loaded = meta['loaded']
         who = loaded['author'].title() or 'un amico'
         st.toast(f"Ripreso il lavoro di {who} ({when(loaded['saved_at'])})", icon='☁️')
+        if str(st.session_state.get('shared_note') or '').strip():
+            st.toast(f"Nota di {_note_author()}: {st.session_state['shared_note'].strip()[:90]}", icon='📝')
     return meta
 
 
@@ -119,6 +125,84 @@ def reload():
     if snap:
         _apply(snap, meta)
         meta.pop('overwrote', None)
+
+
+# --- 3.15: note for the friends, past versions ------------------------------------------------
+
+def _note_author():
+    meta = st.session_state.get('shared_note_meta') or {}
+    return str(meta.get('author') or '').title() or 'un amico'
+
+
+def _note_changed():
+    note = str(st.session_state.get('shared_note') or '').strip()
+    st.session_state['shared_note_meta'] = {'author': author(), 'at': ss.now().isoformat(timespec='minutes')} if note else {}
+
+
+def _clear_note():
+    st.session_state['shared_note'] = ''
+    st.session_state['shared_note_meta'] = {}
+
+
+def note_banner(template):
+    """The note on top of the page: always on the home, once on any other page after opening the app."""
+    note = str(st.session_state.get('shared_note') or '').strip()
+    if not note or _meta().get('status') != 'on':
+        return
+    first = not st.session_state.get('shared_note_seen')
+    st.session_state['shared_note_seen'] = True
+    if template != 'Settimana' and not first:
+        return
+    meta = st.session_state.get('shared_note_meta') or {}
+    stamp = f" ({when(meta['at'])})" if meta.get('at') else ''
+    with st.container(border=True, key='note_banner'):
+        a, b = st.columns([4, 1], vertical_alignment='center')
+        a.markdown(f"📝 **Nota di {_note_author()}**{stamp}: {note}")
+        b.button('✓ Fatto', key='note_done', on_click=_clear_note, width='stretch',
+                 help='Toglie la nota per tutti (puoi scriverne una nuova nella barra laterale).')
+
+
+def session_label(group, latest=False):
+    who = group['author'].title() or 'qualcuno'
+    pages = ', '.join(group['pages'][:3])
+    count = f" · {group['count']} salvataggi" if group['count'] > 1 else ''
+    return f"{when(group['at'].isoformat())} · {who}" + (f" · {pages}" if pages else '') + count + \
+        (' (la versione di adesso)' if latest else '')
+
+
+def load_history():
+    """Button callback: the last working sessions, from the repo history."""
+    meta, conf = _meta(), settings()
+    if not conf:
+        return
+    try:
+        st.session_state['shared_history'] = ss.sessions(ss.GitHubStore(*conf).history())
+        st.session_state.pop('shared_history_pick', None)
+    except ss.StoreError as exc:
+        meta['error'] = str(exc)
+
+
+def restore_version(index):
+    """Button callback: go back to the end of a past working session; the next save makes it the current one."""
+    meta, conf = _meta(), settings()
+    groups = st.session_state.get('shared_history') or []
+    if not conf or not 0 <= index < len(groups):
+        return
+    group = groups[index]
+    try:
+        snap, _ = ss.GitHubStore(*conf).load(ref=group['sha'])     # the old file's sha is not the current one
+    except ss.StoreError as exc:
+        meta['error'] = str(exc)
+        return
+    if not snap:
+        return
+    _apply(snap, meta)
+    meta.pop('baseline', None)                           # save it now: it becomes everybody's current version
+    who = group['author'].title() or 'qualcuno'
+    meta['event'] = f"tornato alla versione di {who} {when(group['at'].isoformat())}"
+    meta['flash'] = f"Sei tornato alla versione di {who} ({when(group['at'].isoformat())}). Quella di prima " \
+                    'resta tra le versioni precedenti.'
+    st.session_state['shared_history'] = None
 
 
 def merge_squad(library):
@@ -221,12 +305,16 @@ def autosave(library):
     if mark == meta.get('hash') or not snap['state']:
         return
     meta['hash'], meta['assets'] = mark, index
+    if meta.get('event'):
+        snap['event'] = meta.pop('event')                 # e.g. 'tornato alla versione di Luca', in the commit message
     meta['pending'] = meta.get('pending', 0)+1
     _WORKER.submit(_save, conf, snap, uploads, meta)
 
 
 def _remember_author():
     name = str(st.session_state.get('shared_author') or '').strip()
+    if st.session_state.get('shared_note') and not (st.session_state.get('shared_note_meta') or {}).get('author'):
+        _note_changed()
     if name:
         st.query_params['chi'] = name[:24]
     elif 'chi' in st.query_params:
@@ -244,8 +332,15 @@ def sidebar():
         if meta.get('status') == 'error':
             st.warning(f"Non riesco a leggere i salvataggi: {meta.get('error')}")
             return
-        st.text_input('Chi sta lavorando?', key='shared_author', max_chars=24, placeholder='Il tuo nome',
-                      on_change=_remember_author, help='Compare nei salvataggi, così gli amici sanno di chi è il lavoro.')
+        names = [p['name'] for p in st.session_state.get('squad') or [] if p.get('name')]
+        current = str(st.session_state.get('shared_author') or '').strip()
+        if current and current not in names:
+            names.append(current)
+        empty = {} if 'shared_author' in st.session_state else {'index': None}   # no default next to a set value
+        st.selectbox('Chi sta lavorando?', names, **empty, key='shared_author', placeholder='Tocca e scegli il tuo nome',
+                     accept_new_options=True, format_func=lambda n: str(n).title(), on_change=_remember_author,
+                     help='Compare nei salvataggi e nelle note, così gli amici sanno di chi è il lavoro. '
+                          'Se non sei nella rosa, scrivi il nome.')
         if meta.get('error'):
             st.warning(f"Ultimo salvataggio non riuscito: {meta['error'].rstrip('.')}. Riprovo alla prossima modifica.")
         elif meta.get('pending'):
@@ -262,5 +357,27 @@ def sidebar():
             other = meta['overwrote']
             st.info(f"Anche {other['author'].title() or 'un amico'} ha salvato ({when(other['saved_at'])}): ora vale il "
                     'tuo lavoro, il suo resta nella cronologia del repo. Per prendere il suo usa il pulsante qui sotto.')
+        if meta.get('flash'):
+            st.success(meta.pop('flash'))
         st.button("↻ Prendi l'ultimo lavoro degli amici", key='shared_reload', on_click=reload, width='stretch',
                   help='Carica adesso l\'ultimo salvataggio (anche di un amico che sta lavorando in questo momento).')
+        st.text_area('📝 Nota per gli amici', key='shared_note', max_chars=280, height=90, on_change=_note_changed,
+                     placeholder='Es. Pagelle fatte, manca il video. Convocati da finire.',
+                     help='Chi apre l\'app dopo di te la vede in alto. Toglila con ✓ Fatto quando è tutto a posto.')
+        note_meta = st.session_state.get('shared_note_meta') or {}
+        if str(st.session_state.get('shared_note') or '').strip() and note_meta.get('at'):
+            st.caption(f"Scritta da {_note_author()} ({when(note_meta['at'])})")
+        with st.popover('🕘 Versioni precedenti', width='stretch'):
+            groups = st.session_state.get('shared_history')
+            if groups is None:
+                st.caption('Le ultime sessioni di lavoro di tutti. Tornare a una versione non cancella niente: '
+                           'anche quella di adesso resta qui.')
+                st.button('Mostra le versioni', key='shared_history_load', on_click=load_history, width='stretch')
+            elif not groups:
+                st.caption('Ancora nessun salvataggio.')
+            else:
+                pick = st.radio('Versione', range(len(groups)), key='shared_history_pick',
+                                format_func=lambda i: session_label(groups[i], latest=i == 0))
+                st.button('↩ Torna a questa versione', key='shared_history_go', on_click=restore_version, args=(pick,),
+                          type='primary', width='stretch', disabled=pick == 0)
+                st.button('↻ Aggiorna l\'elenco', key='shared_history_load', on_click=load_history, width='stretch')
