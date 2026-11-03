@@ -13,7 +13,7 @@
 <details id="project-details"><summary>Gestisci progetti salvati</summary><div id="projects" class="list"></div></details>
 <button id="protect" style="width:100%;margin-top:8px">Richiedi conservazione al browser</button>
 <div id="message" aria-live="polite"></div>
-<small>Font: 5 MB. Stemmi: 12 MB. Totale: 32 MB / 24 file.<br>Salvataggio su questo browser, non su un account. I file selezionati sono trasmessi all'app per il rendering. Conserva un backup e verifica la licenza dei font.</small>
+<small id="note">Font: 5 MB. Stemmi: 12 MB. Totale: 32 MB / 24 file.<br>Salvataggio su questo browser, non su un account. I file selezionati sono trasmessi all'app per il rendering. Conserva un backup e verifica la licenza dei font.</small>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
@@ -21,6 +21,10 @@ const TEMPLATES=['Starting 7','Matchday Screen','Full Time','Convocati','Classif
 const empty=()=>({schema:1,assets:{},projects:{},preferred_font:null,last_command:null});
 let vault=empty(),db=null,storageOK=false,bootSent=false,queue=Promise.resolve(),seen=new Set();
 let storageMessage='Solo sessione: archivio browser non disponibile.';
+let shared=false;    // 3.15.1: the app's lavoro condiviso is on (set by Streamlit)
+const NOTE_LOCAL="Font: 5 MB. Stemmi: 12 MB. Totale: 32 MB / 24 file.<br>Salvataggio su questo browser, non su un account. I file selezionati sono trasmessi all'app per il rendering. Conserva un backup e verifica la licenza dei font.";
+const NOTE_SHARED="I font e gli stemmi che carichi qui restano in questo browser e, fino a 4 MB l'uno, arrivano anche agli amici con il lavoro condiviso. Partita, rosa, voti e impostazioni delle grafiche sono già nel lavoro condiviso: il backup serve solo se vuoi una copia sul tuo computer. Verifica la licenza dei font.";
+const saved=()=>shared?'Salvato in questo browser e condiviso con gli amici.':'Salvato su questo browser.';
 const uid=()=>crypto.randomUUID ? crypto.randomUUID() : Date.now()+'-'+Math.random().toString(16).slice(2);
 const clone=x=>JSON.parse(JSON.stringify(x));
 function send(type,data={}){window.parent.postMessage({isStreamlitMessage:true,type,...data},'*')}
@@ -56,7 +60,7 @@ async function openStore(){
   db.onversionchange=()=>{db.close();storageOK=false;paint()};
   const stored=await transaction('readonly',store=>store.get('library'));
   if(stored)vault=checkLibrary(stored);
-  storageOK=true;storageMessage='Archivio locale pronto. Caricamenti salvati su questo browser.';
+  storageOK=true;storageMessage=shared?'Archivio pronto: quello che carichi resta qui e arriva agli amici.':'Archivio locale pronto. Caricamenti salvati su questo browser.';
  }catch(err){storageOK=false;storageMessage='Solo sessione: '+(err.message||'archivio non disponibile')+' Scarica un backup.'}
  paint();
 }
@@ -64,13 +68,14 @@ const ready=openStore();
 async function commit(next){
  checkLibrary(next);
  if(db){
-  try{await transaction('readwrite',store=>store.put(next,'library'));storageOK=true;storageMessage='Salvato su questo browser.'}
+  try{await transaction('readwrite',store=>store.put(next,'library'));storageOK=true;storageMessage=saved()}
   catch(err){storageOK=false;storageMessage='Non salvato: spazio esaurito o archivio bloccato. Scarica un backup.'}
  }
  vault=next;paint();
 }
 function paint(){
  $('status').textContent=storageMessage;$('status').className=storageOK?'':'error';
+ $('note').innerHTML=shared?NOTE_SHARED:NOTE_LOCAL;
  $('summary').textContent=Object.values(vault.assets).filter(x=>x.kind==='font').length+' font / '+Object.values(vault.assets).filter(x=>x.kind==='logo').length+' stemmi / '+(rawSize(vault)/1000000).toFixed(1)+' MB';
  const assets=$('assets');assets.replaceChildren();
  for(const [id,a] of Object.entries(vault.assets)){
@@ -107,7 +112,7 @@ async function addFiles(files,kind){
   if(kind==='font')next.preferred_font=id;
   checkLibrary(next);
  }
- await commit(next);feedback(storageOK?'Caricamento salvato. Seleziona il file nei controlli del modello.':'File disponibile solo in questa sessione. Scarica il backup.');emit();
+ await commit(next);feedback(storageOK?(shared?'Caricamento salvato: arriva anche agli amici al prossimo salvataggio. Selezionalo nei controlli del modello.':'Caricamento salvato. Seleziona il file nei controlli del modello.'):'File disponibile solo in questa sessione. Scarica il backup.');emit();
 }
 for(const [id,kind] of [['fonts','font'],['logos','logo']])$(id).onchange=e=>{const files=[...e.target.files];e.target.value='';enqueue(()=>addFiles(files,kind))};
 $('backup').onclick=()=>enqueue(async()=>{
@@ -131,6 +136,8 @@ window.addEventListener('resize',height);
 window.addEventListener('message',event=>{
  if(event.source!==window.parent||!event.data||event.data.type!=='streamlit:render')return;
  const cmd=(event.data.args||{}).command;
+ const nowShared=!!(event.data.args||{}).shared;
+ if(nowShared!==shared){shared=nowShared;if(storageOK&&storageMessage.startsWith('Archivio'))storageMessage=shared?'Archivio pronto: quello che carichi resta qui e arriva agli amici.':'Archivio locale pronto. Caricamenti salvati su questo browser.';paint()}
  enqueue(async()=>{
   if(cmd&&cmd.id&&!seen.has(cmd.id)&&vault.last_command!==cmd.id){
    try{

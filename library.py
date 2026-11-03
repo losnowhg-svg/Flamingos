@@ -12,11 +12,13 @@ VAULT = components.declare_component('flamingos_studio_library',path=str(ROOT/'l
 
 
 def show_library():
+    shared = (st.session_state.get('shared_meta') or {}).get('status') == 'on'
     with st.sidebar.expander('Archivio: font, stemmi e backup',expanded=True):
-        result = VAULT(command=st.session_state.get('vault_command'),key='studio_library_v1',default=None)
+        result = VAULT(command=st.session_state.get('vault_command'),shared=shared,key='studio_library_v1',default=None)
         if isinstance(result,dict) and result.get('event_id') != st.session_state.get('vault_event'):
             try:
                 library,messages = validate_library(result.get('library'))
+                st.session_state['vault_ids'] = set(library['assets'])     # what this browser has (not the friends')
                 st.session_state['studio_library'] = library
                 st.session_state['vault_errors'] = messages
                 st.session_state['vault_storage_ok'] = bool(result.get('storage_ok'))
@@ -33,6 +35,8 @@ def show_library():
                     st.rerun()
         for message in st.session_state.get('vault_errors',[]):
             st.warning(message)
+        if shared:
+            friends(st.session_state.get('vault_ids') or set())
         if 'studio_library' not in st.session_state:
             st.caption('Attendo il caricamento dell\'archivio browser...')
             if st.button('Continua senza archivio',key='vault_bypass'):
@@ -40,6 +44,16 @@ def show_library():
             else:
                 return None
     return st.session_state['studio_library']
+
+
+def friends(local_ids):
+    """3.15.1: the fonts and logos that came from the friends (they are not in this browser's list above)."""
+    index = (st.session_state.get('shared_meta') or {}).get('assets') or {}
+    names = [str(info.get('name') or 'File')[:40] for id_, info in index.items()
+             if id_ not in local_ids and str(id_).split(':')[0] in ('font','logo')]
+    if names:
+        shown = ', '.join(names[:6])+(f' e altri {len(names)-6}' if len(names) > 6 else '')
+        st.caption(f'☁️ Dagli amici: {shown}. Li trovi nei menu di font e stemmi come i tuoi.')
 
 
 def queue_save(name, template, config, project_id):
