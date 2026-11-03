@@ -1,4 +1,14 @@
-# Flamingos Studio 3.15
+# Flamingos Studio 3.15.1
+
+## Novita della 3.15.1: salvataggi più calmi e archivio più chiaro
+- **Un salvataggio per raffica di modifiche:** la prima modifica dopo una pausa si salva subito; quelle che
+  arrivano entro 25 secondi si uniscono nel salvataggio successivo, che parte da solo anche se smetti di toccare
+  l'app. Niente si perde e le *Versioni precedenti* restano leggibili (non più un salvataggio per ogni clic).
+  Mentre aspetta, il riquadro ☁️ dice *"Salvo per tutti tra pochi secondi..."*.
+- **Archivio: font, stemmi e backup** spiega cosa resta nel browser e cosa arriva agli amici quando il lavoro
+  condiviso è attivo (font e stemmi fino a 4 MB l'uno arrivano agli amici; partita, rosa, voti e grafiche sono
+  già condivisi, il backup serve solo per una copia sul tuo computer) e mostra i file arrivati dagli amici
+  (*☁️ Dagli amici: ...*).
 
 ## Novita della 3.15: passaggio di consegne
 Per riprendere bene il lavoro di un amico, nel riquadro ☁️ *Lavoro condiviso* della barra laterale:

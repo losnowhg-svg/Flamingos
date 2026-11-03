@@ -18,13 +18,11 @@ Without those secrets the app works as before (browser only).
 from __future__ import annotations
 
 import datetime as dt
-from concurrent.futures import ThreadPoolExecutor
 
 import streamlit as st
 
 import shared_store as ss
 
-_WORKER = ThreadPoolExecutor(max_workers=1, thread_name_prefix='flamingos-save')   # saves go out one at a time
 DAYS = ('lun', 'mar', 'mer', 'gio', 'ven', 'sab', 'dom')
 
 
@@ -41,6 +39,19 @@ def settings():
 
 def _meta():
     return st.session_state.setdefault('shared_meta', {'status': 'off'})
+
+
+def saver():
+    """This session's background saver (one save at most every ss.THROTTLE seconds)."""
+    meta = _meta()
+    if not isinstance(meta.get('saver'), ss.Saver):
+        meta['saver'] = ss.Saver(meta)
+    return meta['saver']
+
+
+def _pending():
+    found = _meta().get('saver')
+    return bool(found and found.pending)
 
 
 def when(iso):
@@ -121,6 +132,7 @@ def reload():
     except ss.StoreError as exc:
         meta['error'] = str(exc)
         return
+    saver().cancel()                                     # a change still waiting must not cover what we take
     meta['sha'] = sha
     if snap:
         _apply(snap, meta)
@@ -196,6 +208,7 @@ def restore_version(index):
         return
     if not snap:
         return
+    saver().cancel()
     _apply(snap, meta)
     meta.pop('baseline', None)                           # save it now: it becomes everybody's current version
     who = group['author'].title() or 'qualcuno'
@@ -257,26 +270,6 @@ def merge_assets(library):
             library['assets'][asset_id] = cache[asset_id]
 
 
-def _save(conf, snap, uploads, meta):
-    """In the background worker: no Streamlit calls here, only the meta dict."""
-    try:
-        store = ss.GitHubStore(*conf)
-        for asset_id, data in uploads:
-            try:
-                store.put_asset(asset_id, data)
-            except ss.StoreError:                        # one file that does not go up does not stop the save
-                snap['assets'].pop(asset_id, None)
-        sha, theirs = store.save(snap, meta.get('sha'))
-        meta.update(sha=sha, saved_at=snap['saved_at'], error=None)
-        if theirs and (theirs.get('author') or '') != snap.get('author'):     # a friend saved in the meantime
-            meta['overwrote'] = dict(author=theirs.get('author') or '', saved_at=theirs.get('saved_at') or '')
-    except Exception as exc:                          # StoreError or anything odd: shown in the sidebar, retried later
-        meta['error'] = str(exc)[:200]
-        meta['hash'] = None
-    finally:
-        meta['pending'] = max(0, meta.get('pending', 1)-1)
-
-
 def _known(asset_id):
     """An archive name (font:/logo: + sha256), not a built-in crest: the index keeps only those."""
     try:
@@ -307,8 +300,7 @@ def autosave(library):
     meta['hash'], meta['assets'] = mark, index
     if meta.get('event'):
         snap['event'] = meta.pop('event')                 # e.g. 'tornato alla versione di Luca', in the commit message
-    meta['pending'] = meta.get('pending', 0)+1
-    _WORKER.submit(_save, conf, snap, uploads, meta)
+    saver().submit(lambda: ss.GitHubStore(*conf), snap, uploads)
 
 
 def _remember_author():
@@ -343,8 +335,8 @@ def sidebar():
                           'Se non sei nella rosa, scrivi il nome.')
         if meta.get('error'):
             st.warning(f"Ultimo salvataggio non riuscito: {meta['error'].rstrip('.')}. Riprovo alla prossima modifica.")
-        elif meta.get('pending'):
-            st.caption('Salvataggio in corso...')
+        elif _pending():
+            st.caption('Salvo per tutti tra pochi secondi...')
         elif meta.get('saved_at'):
             st.caption(f"✓ Salvato per tutti ({when(meta['saved_at'])})")
         elif meta.get('loaded'):

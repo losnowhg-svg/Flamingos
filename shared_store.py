@@ -15,6 +15,8 @@ import base64
 import datetime as dt
 import hashlib
 import json
+import threading
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -44,6 +46,7 @@ SHARE_KEYS = ('studio_models', 'shared_match', 'csi_matches', 'squad', 'season_g
               'figurine_style_key', 'results_payload', 'results_title', 'results_format', 'results_style',
               'results_track', 'results_sound', 'results_fps', 'shared_note', 'shared_note_meta')
 GAP = dt.timedelta(minutes=30)      # saves by the same friend closer than this are one working session
+THROTTLE = 25.0                     # seconds: at most one save every this often; closer changes are folded in
 
 
 class StoreError(Exception):
@@ -311,3 +314,87 @@ class GitHubStore:
         if hashlib.sha256(data).hexdigest() != digest:
             raise StoreError('File dell\'archivio alterato.')
         return data
+
+
+# --- Saving in the background, at a calm pace -----------------------------------------------------
+
+class Saver:
+    """Saves one session's work in its own thread, at most one save every `throttle` seconds (3.15.1).
+
+    The first change after a quiet moment goes out at once; changes that come closer are folded into
+    the next save (the newest snapshot wins, uploads add up, an 'event' is kept), which leaves when
+    the interval is over even if nobody touches the app again. So nothing is lost and the history
+    holds one save per burst of work instead of one per click. Results go into `meta` (sha,
+    saved_at, error, overwrote, hash), the dict the sidebar reads; no Streamlit calls here.
+    """
+
+    def __init__(self, meta, throttle=None, clock=time.monotonic, sleep=time.sleep):
+        self.meta, self.throttle = meta, THROTTLE if throttle is None else float(throttle)
+        self.clock, self.sleep = clock, sleep
+        self.lock = threading.Lock()
+        self.job, self.alive, self.last, self.thread = None, False, -1e9, None
+
+    @property
+    def pending(self):
+        return self.alive
+
+    def submit(self, store_factory, snap, uploads=()):
+        uploads = list(uploads)
+        with self.lock:
+            if self.job:
+                old_snap, old_uploads, _ = self.job
+                if old_snap.get('event') and not snap.get('event'):
+                    snap['event'] = old_snap['event']
+                seen = {asset_id for asset_id, _ in uploads}
+                uploads += [u for u in old_uploads if u[0] not in seen]
+            self.job = (snap, uploads, store_factory)
+            if self.alive:
+                return
+            self.alive = True
+            self.thread = threading.Thread(target=self._run, daemon=True, name='flamingos-save')
+        self.thread.start()
+
+    def cancel(self):
+        """Forget a save that has not left yet (after taking the friends' latest work, or an old version)."""
+        with self.lock:
+            self.job = None
+
+    def wait(self, timeout=30.0):
+        """For tests: until the queue is empty."""
+        end = time.monotonic()+timeout
+        while self.alive and time.monotonic() < end:
+            time.sleep(.01)
+        return not self.alive
+
+    def _run(self):
+        while True:
+            with self.lock:                              # nothing waiting: done (pending is False right away)
+                if self.job is None:
+                    self.alive = False
+                    return
+            wait = self.last+self.throttle-self.clock()
+            if wait > 0:                                 # too soon after the last save: changes keep folding in
+                self.sleep(wait)
+            with self.lock:
+                job, self.job = self.job, None
+            if job is None:                              # cancelled while waiting
+                continue
+            self.last = self.clock()
+            self._save(*job)
+
+    def _save(self, snap, uploads, store_factory):
+        meta = self.meta
+        try:
+            store = store_factory()
+            for asset_id, data in uploads:
+                try:
+                    store.put_asset(asset_id, data)
+                except StoreError:                       # one file that does not go up does not stop the save
+                    snap['assets'].pop(asset_id, None)
+            sha, theirs = store.save(snap, meta.get('sha'))
+            meta.update(sha=sha, saved_at=snap['saved_at'], error=None)
+            if theirs and (theirs.get('author') or '') != snap.get('author'):     # a friend saved in the meantime
+                meta['overwrote'] = dict(author=theirs.get('author') or '', saved_at=theirs.get('saved_at') or '')
+        except Exception as exc:                          # shown in the sidebar, retried at the next change
+            meta['error'] = str(exc)[:200]
+            meta['hash'] = None
