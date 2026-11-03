@@ -42,7 +42,8 @@ SHARE_KEYS = ('studio_models', 'shared_match', 'csi_matches', 'squad', 'season_g
               'pagelle_payload', 'figurina_pick', 'figurina_ed', 'figurina_vote_pick', 'figurina_player',
               'figurina_edition', 'figurina_vote', 'figurina_from_pagelle', 'figurina_payload',
               'figurine_style_key', 'results_payload', 'results_title', 'results_format', 'results_style',
-              'results_track', 'results_sound', 'results_fps')
+              'results_track', 'results_sound', 'results_fps', 'shared_note', 'shared_note_meta')
+GAP = dt.timedelta(minutes=30)      # saves by the same friend closer than this are one working session
 
 
 class StoreError(Exception):
@@ -106,6 +107,38 @@ def snapshot(state, page='', author='', assets=None, now=None):
             'assets': dict(assets or {}), 'skipped': skipped}
 
 
+def parse_message(message):
+    """('LUCA', 'Figurine') from 'Lavoro di LUCA (Figurine)'; ('', '') for anything else."""
+    message = str(message or '').split('\n')[0]
+    if not message.startswith('Lavoro di ') or not message.endswith(')') or ' (' not in message:
+        return '', ''
+    who, _, rest = message[len('Lavoro di '):].partition(' (')
+    page = rest[:-1].split(' · ')[0]
+    return ('' if who == 'qualcuno' else who), page
+
+
+def sessions(commits, limit=8):
+    """Saves grouped into working sessions, newest first: one friend, saves less than GAP apart.
+
+    commits: [{'sha', 'author', 'page', 'at'}] newest first. Each session ends with its last save,
+    which is the version a restore brings back."""
+    out = []
+    for c in commits:
+        at = c['at']
+        last = out[-1] if out else None
+        if last and last['author'] == c['author'] and last['first'] - at <= GAP:
+            last['first'] = at
+            last['count'] += 1
+            if c['page'] and c['page'] not in last['pages']:
+                last['pages'].append(c['page'])
+            continue
+        if len(out) == limit:
+            break
+        out.append(dict(sha=c['sha'], author=c['author'], at=at, first=at, count=1,
+                        pages=[c['page']] if c['page'] else []))
+    return out
+
+
 def fingerprint(snap):
     """What changed, ignoring the time and the author."""
     core = {k: snap.get(k) for k in ('page', 'state', 'assets')}
@@ -155,10 +188,12 @@ class GitHubStore:
         self.repo, self.branch, self.token = repo, branch, str(token).strip()
         self.transport = transport or _urllib
 
-    def _call(self, method, path, payload=None, raw=False):
+    def _call(self, method, path, payload=None, raw=False, ref=None, query=None):
         url = f'{API}/repos/{self.repo}' + (f'/contents/{urllib.parse.quote(path)}' if path else '')
-        if method == 'GET' and path:
-            url += '?ref='+urllib.parse.quote(self.branch)
+        if query:
+            url = f'{API}/repos/{self.repo}/{query}'
+        elif method == 'GET' and path:
+            url += '?ref='+urllib.parse.quote(ref or self.branch)
         headers = {'Authorization': f'Bearer {self.token}', 'X-GitHub-Api-Version': '2022-11-28',
                    'Accept': 'application/vnd.github.raw+json' if raw else 'application/vnd.github+json',
                    'User-Agent': 'flamingos-studio'}
@@ -179,9 +214,9 @@ class GitHubStore:
             return StoreError('Repo non trovato: controlla il nome e che il token lo veda.')
         return StoreError(f'GitHub ha risposto {status}: {message[:120]}')
 
-    def read(self, path):
-        """(bytes, sha) of a file, or (None, None) if it does not exist yet."""
-        status, body = self._call('GET', path)
+    def read(self, path, ref=None):
+        """(bytes, sha) of a file (at a past commit with ref), or (None, None) if it does not exist."""
+        status, body = self._call('GET', path, ref=ref)
         if status == 404:
             return None, None
         if status != 200:
@@ -189,7 +224,7 @@ class GitHubStore:
         meta = json.loads(body)
         if meta.get('encoding') == 'base64' and meta.get('content') is not None and meta.get('size', 0) <= 1_000_000:
             return base64.b64decode(meta['content']), meta['sha']
-        status, data = self._call('GET', path, raw=True)       # files over 1 MB come raw
+        status, data = self._call('GET', path, raw=True, ref=ref)       # files over 1 MB come raw
         if status != 200:
             raise self._fail(status, data)
         return data, meta['sha']
@@ -215,9 +250,9 @@ class GitHubStore:
             raise StoreError('Il repo dei salvataggi deve essere privato.')
 
     # The work file.
-    def load(self):
-        """(snapshot dict or None, sha)."""
-        data, sha = self.read(FILE)
+    def load(self, ref=None):
+        """(snapshot dict or None, sha); with ref, the version saved in that commit."""
+        data, sha = self.read(FILE, ref)
         if data is None:
             return None, None
         try:
@@ -229,12 +264,35 @@ class GitHubStore:
         """(new sha, the snapshot that was overwritten if someone else had saved meanwhile, else None)."""
         data = json.dumps(snap, ensure_ascii=False, separators=(',', ':')).encode('utf8')
         who = snap.get('author') or 'qualcuno'
-        message = f"Lavoro di {who} ({snap.get('page') or 'studio'})"
+        page = snap.get('page') or 'studio'
+        if snap.get('event'):
+            page += ' · '+str(snap['event'])[:80]
+        message = f"Lavoro di {who} ({page})"
         try:
             return self.write(FILE, data, sha, message), None
         except Conflict:
             theirs, latest = self.load()
             return self.write(FILE, data, latest, message), theirs
+
+    def history(self, count=100):
+        """The last saves of lavoro.json, newest first: [{'sha', 'author', 'page', 'at'}]."""
+        status, body = self._call('GET', '', query=f'commits?path={FILE}&per_page={int(count)}&sha='
+                                  + urllib.parse.quote(self.branch))
+        if status == 409:                               # empty repo
+            return []
+        if status != 200:
+            raise self._fail(status, body)
+        out = []
+        for item in json.loads(body):
+            commit = item.get('commit') or {}
+            who, page = parse_message(commit.get('message'))
+            stamp = str((commit.get('author') or {}).get('date') or '').replace('Z', '+00:00')
+            try:
+                at = dt.datetime.fromisoformat(stamp).astimezone(ZONE)
+            except ValueError:
+                continue
+            out.append(dict(sha=item.get('sha', ''), author=who, page=page, at=at))
+        return out
 
     # Fonts and logos.
     def put_asset(self, asset_id, data):

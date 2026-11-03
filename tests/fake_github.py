@@ -1,5 +1,6 @@
-"""An in-memory GitHub contents API, for the shared-work tests (no network)."""
+"""An in-memory GitHub contents + commits API, for the shared-work tests (no network)."""
 import base64
+import datetime as dt
 import hashlib
 import json
 import urllib.parse
@@ -9,6 +10,16 @@ class FakeGitHub:
     def __init__(self, token='buono', repo='noi/Flamingos-dati', private=True):
         self.token, self.repo, self.private = token, repo, private
         self.files, self.commits = {}, []
+        self.log = []                                    # every commit: sha, path, message, date, data, blob
+        self.clock = dt.datetime(2026, 11, 1, 18, 0, tzinfo=dt.timezone.utc)
+        self.step = dt.timedelta(minutes=1)              # time between two commits
+
+    def _version(self, path, ref):
+        """The file as it was at commit `ref` (the branch name: as it is now)."""
+        upto = len(self.log)
+        if ref not in (None, 'main'):
+            upto = next((i+1 for i, e in enumerate(self.log) if e['sha'] == ref), 0)
+        return next((e for e in reversed(self.log[:upto]) if e['path'] == path), None)
 
     def __call__(self, method, url, headers, body=None, timeout=15):
         if headers.get('Authorization') != f'Bearer {self.token}':
@@ -16,14 +27,28 @@ class FakeGitHub:
         base = f'https://api.github.com/repos/{self.repo}'
         if not url.startswith(base):
             return 404, b'{"message":"Not Found"}'
-        rest = url[len(base):].split('?')[0]
+        rest, _, query = url[len(base):].partition('?')
+        params = dict(urllib.parse.parse_qsl(query))
         if rest == '':
             return 200, json.dumps({'private': self.private}).encode()
+        if rest == '/commits':
+            path = params.get('path')
+            items = [e for e in reversed(self.log) if not path or e['path'] == path][:int(params.get('per_page', 30))]
+            return 200, json.dumps([{'sha': e['sha'], 'commit': {'message': e['message'],
+                                    'author': {'date': e['date'].strftime('%Y-%m-%dT%H:%M:%SZ')}}}
+                                   for e in items]).encode()
         path = urllib.parse.unquote(rest[len('/contents/'):])
         if method == 'GET':
-            if path not in self.files:
-                return 404, b'{"message":"Not Found"}'
-            data, sha = self.files[path]
+            ref = params.get('ref')
+            if ref in (None, 'main'):                    # the file as it is now
+                if path not in self.files:
+                    return 404, b'{"message":"Not Found"}'
+                data, sha = self.files[path]
+            else:                                        # as it was at a past commit
+                entry = self._version(path, ref)
+                if entry is None:
+                    return 404, b'{"message":"Not Found"}'
+                data, sha = entry['data'], entry['blob']
             if 'raw' in headers.get('Accept', ''):
                 return 200, data
             big = len(data) > 1_000_000
@@ -38,7 +63,10 @@ class FakeGitHub:
         if current and 'sha' not in payload:
             return 422, b'{"message":"\\"sha\\" wasn\'t supplied."}'
         data = base64.b64decode(payload['content'])
-        sha = hashlib.sha1(data+str(len(self.commits)).encode()).hexdigest()
-        self.files[path] = (data, sha)
+        blob = hashlib.sha1(data+str(len(self.commits)).encode()).hexdigest()
+        self.files[path] = (data, blob)
         self.commits.append((path, payload['message']))
-        return (200 if current else 201), json.dumps({'content': {'sha': sha}}).encode()
+        self.clock += self.step
+        self.log.append(dict(sha=hashlib.sha1(f'commit{len(self.log)}'.encode()).hexdigest(), path=path,
+                             message=payload['message'], date=self.clock, data=data, blob=blob))
+        return (200 if current else 201), json.dumps({'content': {'sha': blob}}).encode()

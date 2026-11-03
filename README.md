@@ -1,4 +1,15 @@
-# Flamingos Studio 3.14
+# Flamingos Studio 3.15
+
+## Novita della 3.15: passaggio di consegne
+Per riprendere bene il lavoro di un amico, nel riquadro ☁️ *Lavoro condiviso* della barra laterale:
+- **📝 Nota per gli amici:** scrivi cosa hai fatto e cosa manca ("Pagelle fatte, manca il video"). Chi apre l'app
+  dopo di te la trova in alto (sempre nella home, una volta sulle altre pagine) con chi l'ha scritta e quando;
+  **✓ Fatto** la toglie per tutti.
+- **🕘 Versioni precedenti:** le ultime sessioni di lavoro di tutti (chi, quando, su quali pagine, quanti
+  salvataggi). *↩ Torna a questa versione* rimette tutto com'era alla fine di quella sessione; la versione di
+  adesso non si perde, resta nell'elenco. Utile se qualcuno combina un pasticcio.
+- **Chi sta lavorando?** ora si sceglie con un tocco dalla rosa (o si scrive, se non sei nella rosa): i salvataggi
+  non sono più firmati "qualcuno".
 
 ## Novita della 3.14: lavoro condiviso tra amici
 Quello che fa uno lo ritrova l'altro. Ogni modifica si salva da sola in un repo GitHub **privato**; chi apre
