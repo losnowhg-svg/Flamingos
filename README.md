@@ -1,4 +1,15 @@
-# Flamingos Studio 3.17
+# Flamingos Studio 3.18
+
+## Novita della 3.18: più fluida e più robusta
+- **Una pagina che si inceppa non perde niente.** Se una pagina incontra un errore (un file strano, un dato
+  inatteso) compare un messaggio breve con *↻ Riprova* (i dettagli tecnici sono chiusi in un riquadro, da
+  mandare a Claude) invece del riquadro rosso; e il lavoro condiviso e la stagione si salvano lo stesso.
+- **La memoria non si riempie.** Video e ZIP fatti restano in memoria solo i tre più recenti (e non oltre
+  90 MB per persona): Streamlit gratuito ha un solo limite di memoria per tutta l'app e con più amici che fanno
+  video poteva chiuderla per tutti. Un video più vecchio si rifà con un tocco.
+- **Niente più "Salva" da ricordare.** La rosa, le partite e i marcatori della stagione (Wrapped) e la collezione
+  degli MVP (album) si salvano da sole mentre scrivi (*✓ Salvata*). Restano i pulsanti dove sono una scelta vera
+  (l'avatar che stai disegnando, i progetti delle grafiche).
 
 ## Novita della 3.17: integrazione tra schermate
 Quello che scrivi in una schermata lo usano le altre, senza riscriverlo:
