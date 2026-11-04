@@ -198,6 +198,12 @@ _scenes, _steps = transitions.expand([[(convocati_renderer.scene(convocati, LOGO
 with tempfile.TemporaryDirectory() as folder:
     transitions.render_sequence(_scenes[:3], _steps[:2], Path(folder, 'rp.mp4'), 8, 1.0, .4, 'Post 1:1', 1)
 done.append('reparti nella sequenza')
+import integration, datetime as _dt
+_ft = dict(defaults('Full Time'), away_name='UNITED FLERO', date='01/11/2026', home_score=3, away_score=1, home_scorers="TEU 12'")
+_res, _ = integration.fulltime_result(_ft, today=_dt.date(2026, 11, 4))
+_state = {}
+assert integration.record(_state, _res) and _state['season_scorers'] == [{'name': 'TEU', 'goals': 1}]
+done.append('integrazione tra schermate')
 print('OK: '+', '.join(done))
 '''
 

@@ -59,7 +59,9 @@ def show_results(root, library):
                '(segnalibro o pagina incollata nella Settimana); qui puoi correggere o completare.')
     match = sanitize_match(st.session_state.get('shared_match'))
     ours = match.get('our_name', 'FLAMINGOS')
-    groups = rr.rounds(st.session_state.get('csi_matches') or [])
+    import integration_ui
+    matches, from_fulltime = integration_ui.round_matches()     # 3.17: our score from the Full Time if the site lacks it
+    groups = rr.rounds(matches)
     preview, controls = st.columns([1, 1.15], gap='large')
     with controls:
         if groups:
@@ -69,6 +71,8 @@ def show_results(root, library):
             group = groups[index]
             rows = rr.rows_for(group, ours)
             label, date = group['label'], rr.date_line(group)
+            if from_fulltime and any(m.get('from_fulltime') for m in group['matches']):
+                st.caption('⚽ Il nostro risultato viene dal Full Time: il sito CSI non l\'ha ancora.')
         else:
             st.info('Nessuna partita dal sito CSI: aggiornale nella Settimana (① Aggiorna dal sito CSI), oppure '
                     'scrivile qui sotto.')

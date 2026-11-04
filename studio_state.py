@@ -462,6 +462,12 @@ def apply_match(template, config, raw_match, event_theme=None):
     match = sanitize_match(raw_match)
     output = copy.deepcopy(config)
     ours, other = match['our_name'], match['opponent']
+    if template == 'Full Time':
+        # 3.17: a different match starts from 0-0, so last week's score never lands on the new opponent
+        # (the played one is already in the season, see integration.py)
+        was = (str(config.get('date', '')), str(config.get('away_name' if config.get('our_side') == 'Casa' else 'home_name', '')))
+        if was != (match['date'], other):
+            output.update(home_score=0, away_score=0, home_scorers='', away_scorers='', show_penalties=False)
     if template in ('Matchday Screen', 'Full Time'):
         home = match['our_side'] == 'Casa'
         output.update(home_name=ours if home else other, away_name=other if home else ours,
