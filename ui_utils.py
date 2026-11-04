@@ -66,3 +66,35 @@ def countdown(match, today=None):
     if days >= -3:
         return f'📣 Partita giocata contro {rival}: inserisci il risultato nel Full Time e aggiorna la classifica.'
     return None
+
+
+def auto_table(name, rows, save, rows_after=None, clean=None, **editor_kw):
+    """3.18: a table that saves by itself (no "Salva" button to forget). Returns (records, saved_now).
+
+    rows: the table as the stored data looks now; save(records) stores an edit, called only when the
+    cleaned records really change; rows_after(): the table as it will look from the stored data after a
+    save (by default: the records themselves). The editor keeps its own starting rows and starts again
+    only when the data changes from outside (a friend's work, the official squad...): reloading it from
+    what was just saved would apply the edits a second time (rows added twice)."""
+    import hashlib
+    import json
+    import streamlit as st
+
+    def fp(value):
+        return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
+
+    clean = clean or (lambda value: value)
+    table = st.session_state.setdefault('_tables', {}).setdefault(name, {'ver': 0})
+    now = fp(rows)
+    if table.get('base') is None or now not in (table.get('base_fp'), table.get('own_fp')):
+        table.update(base=[dict(r) for r in rows], base_fp=now, own_fp=None, ver=table['ver']+1)
+        table['last'] = fp(clean(table['base']))
+    edited = st.data_editor(table['base'], key=f"{name}_{table['ver']}", **editor_kw)
+    records = edited.to_dict('records') if hasattr(edited, 'to_dict') else list(edited)
+    mark = fp(clean(records))
+    if mark == table['last']:
+        return records, False
+    save(records)
+    table['last'] = mark
+    table['own_fp'] = fp(rows_after() if rows_after else records)
+    return records, True

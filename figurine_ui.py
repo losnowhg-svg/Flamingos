@@ -364,20 +364,31 @@ def _album_tab(squad, logo, ctx):
         rows = [dict(data=m.get('date', ''), giocatore=m['name'], avversari=m.get('opp', ''),
                      voto=cards.vote_text(m['vote']) if m.get('vote') is not None else '') for m in mvps] \
             or [dict(data='', giocatore='', avversari='', voto='')]
-        edited = st.data_editor(rows, num_rows='dynamic', hide_index=True, width='stretch', key='album_mvps',
-                                column_config={'data': st.column_config.TextColumn('Data', max_chars=10),
-                                               'giocatore': st.column_config.SelectboxColumn(
-                                                   'MVP', options=[p['name'] for p in squad]),
-                                               'avversari': st.column_config.TextColumn('Avversari', max_chars=40),
-                                               'voto': st.column_config.SelectboxColumn('Voto', options=fd.VOTE_OPTIONS)})
-        edited = edited.to_dict('records') if hasattr(edited, 'to_dict') else list(edited)
-        if st.button('Salva la collezione', key='album_save', width='stretch'):
+        from ui_utils import auto_table
+
+        def mvp_list(records):
+            return fd.sanitize_mvps([dict(name=r.get('giocatore') or '', date=r.get('data') or '', opp=r.get('avversari') or '',
+                                          vote=r.get('voto')) for r in records])
+
+        def store_mvps(records):
             from week_ui import save_week
-            clean = fd.sanitize_mvps([dict(name=r.get('giocatore') or '', date=r.get('data') or '', opp=r.get('avversari') or '',
-                                           vote=r.get('voto')) for r in edited])
-            st.session_state['season_mvps'] = clean
+            st.session_state['season_mvps'] = mvp_list(records)
             save_week()
-            st.rerun()
+
+        def mvp_rows():
+            saved = st.session_state.get('season_mvps') or []
+            return [dict(data=m.get('date', ''), giocatore=m['name'], avversari=m.get('opp', ''),
+                         voto=cards.vote_text(m['vote']) if m.get('vote') is not None else '') for m in saved] \
+                or [dict(data='', giocatore='', avversari='', voto='')]
+
+        edited, saved_now = auto_table('album_mvps', rows, store_mvps, rows_after=mvp_rows, clean=mvp_list,
+                                       num_rows='dynamic', hide_index=True, width='stretch',
+                                       column_config={'data': st.column_config.TextColumn('Data', max_chars=10),
+                                                      'giocatore': st.column_config.SelectboxColumn(
+                                                          'MVP', options=[p['name'] for p in squad]),
+                                                      'avversari': st.column_config.TextColumn('Avversari', max_chars=40),
+                                                      'voto': st.column_config.SelectboxColumn('Voto', options=fd.VOTE_OPTIONS)})
+        st.caption('✓ Salvata.' if saved_now else 'Si salva da sola mentre scrivi.')
         staff = st.checkbox('Anche il mister', True, key='album_staff')
         fmt = st.selectbox('Formato', FORMATS, key='album_format', index=1)
     members = album.members_for(squad, mvps, ctx['scorers'], staff, ctx['season'], ctx['team'])

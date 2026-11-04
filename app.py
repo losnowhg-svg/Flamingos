@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.17 / integrazione tra schermate: il Full Time arriva in stagione, risultati e classifica')
+    st.caption('3.18 / più fluida e più robusta: niente Salva da ricordare, niente crash')
 
 from library import show_library
 from studio_ui import show_studio
@@ -108,28 +108,39 @@ shared_ui.merge_assets(library)          # fonts and logos uploaded by friends
 restore_week(library)
 root = Path(__file__).resolve().parent
 shared_ui.note_banner(template)          # 3.15: the note a friend left, on top of the page
-if template == 'Settimana':
-    show_week(root,library)
-elif template == 'Sequenza video':
-    show_sequence(root,library)
-elif template == 'Didascalie':
-    from caption_ui import show_captions
-    show_captions(library)
-elif template == 'Wrapped':
-    from wrapped_ui import show_wrapped
-    show_wrapped(root,library)
-elif template == 'Instagram':
-    from instagram_ui import show_instagram
-    show_instagram(root,library)
-elif template == 'Figurine':
-    from figurine_ui import show_figurine
-    show_figurine(root,library)
-elif template == 'Risultati':
-    from results_ui import show_results
-    show_results(root,library)
-else:
-    show_studio(root,template,library)
-
-import integration_ui
-integration_ui.sync()                    # 3.17: a played Full Time result goes into the season by itself
-shared_ui.autosave(library)              # every change, saved for everyone (in the background)
+import robust
+try:                                     # 3.18: a page error shows a short message, and the work below is still saved
+    if template == 'Settimana':
+        show_week(root,library)
+    elif template == 'Sequenza video':
+        show_sequence(root,library)
+    elif template == 'Didascalie':
+        from caption_ui import show_captions
+        show_captions(library)
+    elif template == 'Wrapped':
+        from wrapped_ui import show_wrapped
+        show_wrapped(root,library)
+    elif template == 'Instagram':
+        from instagram_ui import show_instagram
+        show_instagram(root,library)
+    elif template == 'Figurine':
+        from figurine_ui import show_figurine
+        show_figurine(root,library)
+    elif template == 'Risultati':
+        from results_ui import show_results
+        show_results(root,library)
+    else:
+        show_studio(root,template,library)
+except Exception as exc:
+    if robust.is_control(exc):
+        raise
+    robust.page_error(exc, template)
+finally:
+    import integration_ui
+    try:
+        integration_ui.sync()            # 3.17: a played Full Time result goes into the season by itself
+    except Exception as exc:             # never let the season block the shared save
+        if robust.is_control(exc):
+            raise
+    shared_ui.autosave(library)          # every change, saved for everyone (in the background)
+    robust.trim_outputs()                # 3.18: only the newest videos/ZIPs stay in memory

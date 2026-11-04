@@ -60,17 +60,21 @@ def show_wrapped(root: Path, library):
     with st.expander(f'📋 Partite della stagione ({len(games)})', expanded=not games):
         st.caption('Arrivano dal sito CSI (segnalibro o pagina incollata). Puoi correggere, aggiungere righe con il + '
                    'o scrivere quelle che mancano. Data GG/MM/AAAA, Casa spuntato se giocavamo in casa.')
-        edited = st.data_editor(_rows(games), num_rows='dynamic', hide_index=True, width='stretch', key='wrapped_games',
-                                column_config={'data': st.column_config.TextColumn('Data', max_chars=10),
-                                               'avversari': st.column_config.TextColumn('Avversari', max_chars=40),
-                                               'casa': st.column_config.CheckboxColumn('Casa'),
-                                               'noi': st.column_config.NumberColumn('Noi', min_value=0, max_value=99, step=1),
-                                               'loro': st.column_config.NumberColumn('Loro', min_value=0, max_value=99, step=1)})
-        rows = edited.to_dict('records') if hasattr(edited, 'to_dict') else list(edited)
-        if st.button('Salva le partite', key='wrapped_save_games'):
-            st.session_state['season_games'] = _parse(rows)
+        from ui_utils import auto_table
+
+        def store_games(records):
+            st.session_state['season_games'] = _parse(records)
             save_week()
-            st.rerun()
+
+        rows, saved_now = auto_table('wrapped_games', _rows(games), store_games,
+                                     rows_after=lambda: _rows(_games_from_sources(ours)), clean=_parse,
+                                     num_rows='dynamic', hide_index=True, width='stretch',
+                                     column_config={'data': st.column_config.TextColumn('Data', max_chars=10),
+                                                    'avversari': st.column_config.TextColumn('Avversari', max_chars=40),
+                                                    'casa': st.column_config.CheckboxColumn('Casa'),
+                                                    'noi': st.column_config.NumberColumn('Noi', min_value=0, max_value=99, step=1),
+                                                    'loro': st.column_config.NumberColumn('Loro', min_value=0, max_value=99, step=1)})
+        st.caption('✓ Salvate.' if saved_now else 'Si salvano da sole mentre scrivi.')
     games = _parse(rows) if rows else games
 
     with st.expander('⚽ Marcatori della stagione', expanded=False):
@@ -78,16 +82,26 @@ def show_wrapped(root: Path, library):
         players = [p['name'] for p in squad if p.get('role') not in ('ALL', 'DIR')]
         base = [dict(nome=n, gol=int(known.get(n, 0))) for n in players]+[dict(nome=n, gol=g) for n, g in known.items()
                                                                            if n not in players]
-        scorer_rows = st.data_editor(base or [dict(nome='', gol=0)], num_rows='dynamic', hide_index=True, width='stretch',
-                                     key='wrapped_scorers',
-                                     column_config={'nome': st.column_config.TextColumn('Giocatore', max_chars=27),
-                                                    'gol': st.column_config.NumberColumn('Gol', min_value=0, max_value=999, step=1)})
-        scorer_rows = scorer_rows.to_dict('records') if hasattr(scorer_rows, 'to_dict') else list(scorer_rows)
-        if st.button('Salva i marcatori', key='wrapped_save_scorers'):
-            st.session_state['season_scorers'] = [dict(name=str(r['nome']).strip().upper(), goals=int(r.get('gol') or 0))
-                                                  for r in scorer_rows if str(r.get('nome') or '').strip()]
+        def scorer_list(records):
+            return [dict(name=str(r['nome']).strip().upper(), goals=int(r.get('gol') or 0))
+                    for r in records if str(r.get('nome') or '').strip() and int(r.get('gol') or 0)]
+
+        def store_scorers(records):
+            st.session_state['season_scorers'] = scorer_list(records)
             save_week()
-            st.rerun()
+
+        def scorer_table():
+            known = {s['name']: s['goals'] for s in st.session_state.get('season_scorers') or []}
+            return [dict(nome=n, gol=int(known.get(n, 0))) for n in players]+[dict(nome=n, gol=g) for n, g in known.items()
+                                                                              if n not in players]
+
+        scorer_rows, saved_now = auto_table('wrapped_scorers', base or [dict(nome='', gol=0)], store_scorers,
+                                            rows_after=lambda: scorer_table() or [dict(nome='', gol=0)], clean=scorer_list,
+                                            num_rows='dynamic', hide_index=True, width='stretch',
+                                            column_config={'nome': st.column_config.TextColumn('Giocatore', max_chars=27),
+                                                           'gol': st.column_config.NumberColumn('Gol', min_value=0, max_value=999, step=1)})
+        st.caption('✓ Salvati. Quelli del Full Time arrivano da soli.' if saved_now else
+                   'Si salvano da soli mentre scrivi; i gol del Full Time arrivano da soli a partita giocata.')
     scorers = [(str(r['nome']).strip().upper(), int(r.get('gol') or 0)) for r in scorer_rows if str(r.get('nome') or '').strip()]
 
     a, b, c = st.columns(3)
