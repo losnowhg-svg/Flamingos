@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.16 / la presentazione per reparto anche nel video con transizioni')
+    st.caption('3.17 / integrazione tra schermate: il Full Time arriva in stagione, risultati e classifica')
 
 from library import show_library
 from studio_ui import show_studio
@@ -130,4 +130,6 @@ elif template == 'Risultati':
 else:
     show_studio(root,template,library)
 
+import integration_ui
+integration_ui.sync()                    # 3.17: a played Full Time result goes into the season by itself
 shared_ui.autosave(library)              # every change, saved for everyone (in the background)

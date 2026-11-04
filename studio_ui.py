@@ -300,6 +300,8 @@ def show_studio(root: Path, template: str, library: dict):
                     st.warning('Il risultato prima dei rigori non e pari: la riga dei rigori non viene esportata.')
                 elif config['home_penalties'] == config['away_penalties']:
                     st.warning('I rigori sono ancora in parita.')
+            import integration_ui
+            integration_ui.season_box(config)            # 3.17: the result and our scorers, into the season
             with st.expander('Partita, titolo e competizione'):
                 a, b = st.columns(2)
                 with a: text('home_name', 'Casa', 42)
@@ -422,6 +424,8 @@ def show_studio(root: Path, template: str, library: dict):
             if wrong: st.warning('V + N + P non torna con le giocate per: '+', '.join(wrong[:4])+'.')
             if not any(k.is_ours(x['team'], config['our_team']) for x in active):
                 st.info('La tua squadra non e in tabella: controlla il nome qui sotto.')
+            import integration_ui
+            integration_ui.provisional_box(template, config)   # 3.17: our Full Time result before the CSI site
             st.divider()
             section('Testi e zone')
             a, b = st.columns(2)

@@ -138,14 +138,19 @@ def payloads(state, squad, mvps, scorers, ctx):
     out['Album'] = {'members': album.members_for(squad or [], mvps, scorers, True, ctx.get('season', '2026/27'),
                                                  ctx.get('team', 'FLAMINGOS')),
                     'season': ctx.get('season', '2026/27'), 'team': ctx.get('team', 'FLAMINGOS')}
-    out['Risultati'] = state.get('results_payload') or _results_default(state.get('csi_matches'), ctx.get('team', 'FLAMINGOS'))
+    out['Risultati'] = state.get('results_payload') or _results_default(state.get('csi_matches'), ctx.get('team', 'FLAMINGOS'),
+                                                                        ctx.get('fulltime'))
     del cards
     return out
 
 
-def _results_default(matches, ours):
-    """The last played round from the CSI site, when the Risultati page was not opened in this session."""
+def _results_default(matches, ours, fulltime=None):
+    """The last played round from the CSI site, when the Risultati page was not opened in this session
+    (3.17: with our Full Time score if the site does not have it yet)."""
+    import integration as ig
     import results_round as rr
+    if fulltime:
+        matches, _ = ig.with_fulltime(matches or [], ig.fulltime_result(fulltime, ours)[0], ours)
     groups = rr.rounds(matches or [])
     if not groups:
         return None

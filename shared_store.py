@@ -44,7 +44,8 @@ SHARE_KEYS = ('studio_models', 'shared_match', 'csi_matches', 'squad', 'season_g
               'pagelle_payload', 'figurina_pick', 'figurina_ed', 'figurina_vote_pick', 'figurina_player',
               'figurina_edition', 'figurina_vote', 'figurina_from_pagelle', 'figurina_payload',
               'figurine_style_key', 'results_payload', 'results_title', 'results_format', 'results_style',
-              'results_track', 'results_sound', 'results_fps', 'shared_note', 'shared_note_meta')
+              'results_track', 'results_sound', 'results_fps', 'shared_note', 'shared_note_meta',
+              'season_ledger', 'season_ledger_skip', 'classifica_backup')
 GAP = dt.timedelta(minutes=30)      # saves by the same friend closer than this are one working session
 THROTTLE = 25.0                     # seconds: at most one save every this often; closer changes are folded in
 

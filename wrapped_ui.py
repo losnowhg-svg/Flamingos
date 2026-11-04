@@ -23,10 +23,9 @@ from week_ui import save_week
 
 def _games_from_sources(ours):
     """CSI calendar results merged with the games typed in this page."""
-    games = {(g['date'], g['opp'].upper()): g for g in ss.our_games(st.session_state.get('csi_matches') or [], ours)}
-    for g in st.session_state.get('season_games') or []:
-        games[(g['date'], g['opp'].upper())] = dict(g)
-    return sorted(games.values(), key=lambda g: g['date'])
+    import integration as ig        # 3.17: the same match spelled differently (CSI / Full Time) counts once
+    return ig.merge_games(ss.our_games(st.session_state.get('csi_matches') or [], ours),
+                          st.session_state.get('season_games') or [])
 
 
 def _rows(games):

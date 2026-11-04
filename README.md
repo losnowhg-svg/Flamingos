@@ -1,4 +1,22 @@
-# Flamingos Studio 3.16
+# Flamingos Studio 3.17
+
+## Novita della 3.17: integrazione tra schermate
+Quello che scrivi in una schermata lo usano le altre, senza riscriverlo:
+- **Full Time → stagione.** A partita giocata (data passata, avversario vero) il risultato e i nostri marcatori
+  entrano da soli nella stagione: *Partite* e *Marcatori* del Wrapped, album e figurine. Se correggi il Full Time,
+  la stagione si corregge della differenza (la stessa partita non conta mai due volte); sotto i marcatori un riquadro
+  dice cosa è stato registrato, con *Togli* / *Rimetti*. Un 0-0 senza marcatori aspetta un tocco su *Aggiungi*
+  (potrebbe essere l'editor non ancora toccato). Se il calendario CSI ha già la partita, vale la sua; la stessa partita
+  scritta in modo diverso ("A.S.D. United Flero" / "UNITED FLERO") conta una volta sola.
+- **Nuova partita, Full Time da 0-0.** Quando la partita della settimana cambia (avversario o data), il Full Time
+  riparte da 0-0 senza marcatori: il risultato vecchio non finisce sulla partita nuova (quello giocato è già nella
+  stagione).
+- **Full Time → Risultati della giornata.** Finché il sito CSI non ha il nostro risultato, la grafica usa quello del
+  Full Time (c'è scritto sotto la scelta della giornata): si pubblica la sera stessa.
+- **Full Time → Classifica provvisoria.** Nell'editor Classifica, se il CSI non ha ancora la nostra partita,
+  *Aggiungi* mette i nostri punti e quelli degli avversari (giocate, V/N/P, gol), riordina la tabella e scrive
+  *GIORNATA 6 · PROVVISORIA*; nel video si vede la risalita. *Togli* torna a quella di prima; quando arriva la
+  classifica dal CSI torna da sola quella ufficiale.
 
 ## Novita della 3.16: la presentazione per reparto nel Video con transizioni
 Nel **Video con transizioni** si può scegliere anche *👥 Presentazione per reparto*: nel video diventa una
