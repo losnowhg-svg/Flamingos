@@ -204,6 +204,15 @@ _res, _ = integration.fulltime_result(_ft, today=_dt.date(2026, 11, 4))
 _state = {}
 assert integration.record(_state, _res) and _state['season_scorers'] == [{'name': 'TEU', 'goals': 1}]
 done.append('integrazione tra schermate')
+import intro
+_texts = intro.texts_for(dict(our_name='FLAMINGOS', opponent='CASTE UNITED', our_side='Casa', date='12/11/2026', kickoff='21:00',
+                              venue='VIA FORNACI, 82', round=7))
+_crest = Path(__ROOT__, 'assets', 'stemmi', 'caste_united.png').read_bytes()
+intro.poster_png(_texts, _crest, 'Post 4:5', 1)
+_show = intro.Intro(_texts, None, 'Story 9:16', 1)
+for _t in (1.0, 3.3, intro.DROP, 6.8, 8.4):
+    _show.frame(_t)
+done.append('intro della partita')
 print('OK: '+', '.join(done))
 '''
 
