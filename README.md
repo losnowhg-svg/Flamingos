@@ -1,4 +1,21 @@
-# Flamingos Studio 3.18
+# Flamingos Studio 3.19
+
+## Novita della 3.19: intro della partita
+Nuova pagina **🎞 Intro della partita**: un'intro animata in pixel di 11,5 secondi che finisce sulla locandina,
+costruita da sola con la partita della settimana (l'intro fatta a mano per Caste United, resa automatica per
+qualsiasi avversario).
+1. Lo schermo si accende; il **fenicottero al neon** (ritagliato dal nostro stemma) si accende tremolando e
+   compare il nostro nome.
+2. Lo **stemma avversario, ridisegnato in pixel**, entra rotolando con una scia nei suoi colori (presi dallo
+   stemma); compare il suo nome. Senza stemma: uno scudo con le iniziali.
+3. **Faccia a faccia** in diagonale; il **VS cade sul drop** della musica; l'immagine si sgretola.
+4. La **locandina si monta**: barre che si caricano, nomi (la squadra di casa a sinistra e per prima), ora,
+   poi la fascia con giorno, ora, campo, campionato e giornata.
+- Le scritte sono solo informative e tutte modificabili; niente slogan (regola delle locandine).
+- Formati storia e 4:5; fenicottero rosa, bianco o sagoma al neon (di serie cambia a ogni partita); stemma
+  automatico dal girone o scelto dall'archivio.
+- **Locandina PNG** in HD e **video** (30 o 60 fps, 1080 px) con brano ed effetti; scarica e condividi.
+- Tutto in Python (Pillow e NumPy): gira su Streamlit Cloud, il video in 1080p in circa 20-30 secondi.
 
 ## Novita della 3.18: più fluida e più robusta
 - **Una pagina che si inceppa non perde niente.** Se una pagina incontra un errore (un file strano, un dato

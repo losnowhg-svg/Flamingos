@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.18 / più fluida e più robusta: niente Salva da ricordare, niente crash')
+    st.caption('3.19 / intro della partita: l\'animazione in pixel che finisce sulla locandina')
 
 from library import show_library
 from studio_ui import show_studio
@@ -60,6 +60,7 @@ PAGES = {
     'Calendario':'Calendario - il mese',
     'Figurine':'🃏  Figurine e pagelle',
     'Risultati':'📋  Risultati della giornata',
+    'Intro':'🎞  Intro della partita',
     'Sequenza video':'🎬  Video con transizioni',
     'Didascalie':'✍️  Didascalie',
     'Wrapped':'🎁  Flamingos Wrapped',
@@ -129,6 +130,9 @@ try:                                     # 3.18: a page error shows a short mess
     elif template == 'Risultati':
         from results_ui import show_results
         show_results(root,library)
+    elif template == 'Intro':
+        from intro_ui import show_intro
+        show_intro(root,library)
     else:
         show_studio(root,template,library)
 except Exception as exc:
