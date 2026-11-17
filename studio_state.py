@@ -40,6 +40,7 @@ MATCH_DEFAULT = dict(
     home_clear_white=True, away_clear_white=True, pink='#F268A8', cyan='#79DCF7', yellow='#FFC963', white='#F6F4FC',
     font_choice='Sans Bold', home_logo_id='default', away_logo_id='none',
     export_format='Post 1:1', duration=8, fps=24, video_scale=2, png_quality='Fine',
+    show_form=True, opponent_form='',
     positions={k:list(v) for k,v in matchday.DEFAULT_POSITIONS.items()},
 )
 CRT_DEFAULT = dict(preset_id='crt',rotation_mode='Manuale',season_round=1,scanlines=16,brightness=DEFAULT_BRIGHTNESS,
@@ -137,7 +138,7 @@ for _model in RANGES.values():
     _model['volume'] = (0,100)
 MODULES = {'Starting 7':starting,'Matchday Screen':matchday,'Full Time':fulltime,'Convocati':convocati,
            'Classifica':classifica,'Calendario':calendario}
-TEXT_LIMITS = dict(team_name=50,headline=60,footer=80,formation_text=80,title=36,date=24,home_name=42,away_name=42,kickoff=14,venue=72,kickoff_label=40,venue_label=22,competition=42,home_scorers=1200,away_scorers=1200,opponent=42,meeting_time=14,
+TEXT_LIMITS = dict(opponent_form=16,team_name=50,headline=60,footer=80,formation_text=80,title=36,date=24,home_name=42,away_name=42,kickoff=14,venue=72,kickoff_label=40,venue_label=22,competition=42,home_scorers=1200,away_scorers=1200,opponent=42,meeting_time=14,
                    group=48,round_label=36,our_team=34,source_url=300,
                    promo_label=20,playoff_label=20,month_label=30,sponsor_name=24,sponsor_logo_id=80)
 

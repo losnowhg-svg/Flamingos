@@ -20,10 +20,17 @@ from crt_common import compose, export_png, export_video
 POSITIONS = {'logo': (118, 346), 'title': (294, 337), 'subtitle': (294, 360), 'big': (270, 478),
              'label': (270, 545), 'bar': (270, 588), 'line1': (270, 626), 'line2': (270, 651),
              'left': (178, 520), 'right': (362, 520), 'list': (270, 530)}
-SLIDES = ('intro', 'partite', 'gol', 'piu_bella', 'serie', 'casa_trasferta', 'bomber', 'classifica', 'outro')
+SLIDES = ('intro', 'partite', 'gol', 'piu_bella', 'serie', 'casa_trasferta', 'bomber', 'classifica', 'andamento', 'outro')
 SLIDE_NAMES = {'intro': 'Intro', 'partite': 'Partite', 'gol': 'Gol', 'piu_bella': 'La più bella', 'serie': 'La serie',
-               'casa_trasferta': 'Casa e trasferta', 'bomber': 'Bomber', 'classifica': 'Classifica', 'outro': 'Finale'}
+               'casa_trasferta': 'Casa e trasferta', 'bomber': 'Bomber', 'classifica': 'Classifica',
+               'andamento': 'Andamento in classifica', 'outro': 'Finale'}
 WIN, DRAW, LOSS = (91, 230, 164), (255, 201, 99), (255, 107, 120)
+
+
+def is_own_goal(name):
+    """'AUTOGOL', 'AUTORETE', 'AUTOGOAL': a goal, not a player (3.21: never in the bomber ranking)."""
+    import re
+    return bool(re.fullmatch(r'AUTO ?(GOL|GOAL|RETE|RETI)S?', str(name or '').strip().upper()))
 
 
 def normalized_positions(config):
@@ -90,6 +97,39 @@ def _scorer_list(config, scorers, squad, font_bytes, s):
     return img
 
 
+def _trend(config, history, teams, font_bytes, s, width=360, height=150):
+    """3.21: our place round by round, 1st at the top; the last point is today."""
+    white = rgb(config.get('white', '#F6F4FC')); yellow = rgb(config.get('yellow', '#FFC963'))
+    pink = rgb(config.get('pink', '#F268A8')); cyan = rgb(config.get('cyan', '#79DCF7'))
+    img = Image.new('RGBA', (width*s, height*s))
+    dr = ScaledDraw(img, s)
+    left, right, top, bottom = 30, width-16, 8, height-22
+    teams = max(teams, max(h['pos'] for h in history), 2)
+    n = len(history)
+    x_of = lambda i: left+(right-left)*(i/(n-1) if n > 1 else .5)
+    y_of = lambda pos: top+(bottom-top)*(pos-1)/(teams-1)
+    for pos in sorted({1, (teams+1)//2, teams}):      # guide lines: 1st, middle, last
+        y = y_of(pos)
+        dr.line((left, y, right, y), fill=(*white, 50), width=1)
+        mark = _txt(config, str(pos), 10, white, 30, font_bytes, s)
+        if mark:
+            img.alpha_composite(mark, (0, max(0, round((y-6)*s))))
+    points = [(x_of(i), y_of(h['pos'])) for i, h in enumerate(history)]
+    if n > 1:
+        dr.line(points, fill=(*pink, 255), width=3)
+    step = max(1, (n+7)//8)                              # at most ~8 round labels
+    for i, ((x, y), h) in enumerate(zip(points, history)):
+        last = i == n-1
+        r = 6 if last else 4
+        dr.ellipse((x-r, y-r, x+r, y+r), fill=(*(yellow if last else cyan), 255))
+        if i % step == 0 or last:
+            label = _txt(config, f"G{h['round']}", 10, white, 40, font_bytes, s)
+            if label:
+                img.alpha_composite(label, (max(0, min(img.width-label.width, round(x*s-label.width/2))),
+                                            round((bottom+8)*s)))
+    return img
+
+
 def get_layers(config, home_logo, away_logo=None, font_bytes=None, render_scale=1):
     s = checked_scale(render_scale)
     slide = config.get('slide', {})
@@ -131,6 +171,8 @@ def get_layers(config, home_logo, away_logo=None, font_bytes=None, render_scale=
         left, right = slide['columns']
         layers.append(Layer('left', 'Casa', _column(config, 'CASA', left, font_bytes, s)))
         layers.append(Layer('right', 'Trasferta', _column(config, 'TRASFERTA', right, font_bytes, s)))
+    if slide.get('trend'):
+        layers.append(Layer('list', 'Andamento', _trend(config, slide['trend'], slide.get('teams', 0), font_bytes, s)))
     if slide.get('scorers'):
         layers.append(Layer('list', 'Marcatori', _scorer_list(config, slide['scorers'], config.get('squad', []), font_bytes, s)))
     return layers
@@ -160,7 +202,7 @@ def _title(value):
                     for w in str(value).split())
 
 
-def slides(numbers, label, base_config, scorers=None, standings_row=None, squad=None, chosen=SLIDES):
+def slides(numbers, label, base_config, scorers=None, standings_row=None, squad=None, chosen=SLIDES, positions=None):
     """[(slide id, config)] for the slides that have something to say."""
     out = []
     n = numbers
@@ -196,7 +238,7 @@ def slides(numbers, label, base_config, scorers=None, standings_row=None, squad=
     if n['home']['played'] and n['away']['played']:
         add('casa_trasferta', title='CASA / TRASFERTA', subtitle=label, columns=(n['home'], n['away']))
     if scorers:
-        top = sorted([s for s in scorers if s[1] > 0], key=lambda s: -s[1])
+        top = sorted([s for s in scorers if s[1] > 0 and not is_own_goal(s[0])], key=lambda s: -s[1])
         if top:
             add('bomber', title='BOMBER', subtitle=label, scorers=top)
     if standings_row:
@@ -205,6 +247,13 @@ def slides(numbers, label, base_config, scorers=None, standings_row=None, squad=
             add('classifica', title='CLASSIFICA', subtitle=label, big=str(pos), big_size=96,
                 label='POSTO IN CLASSIFICA', line1=f"{int(standings_row.get('pt', 0))} PUNTI",
                 line2='E NON È FINITA' if pos > 1 else 'PRIMI. PUNTO.')
+    if positions and len(positions) >= 2:
+        first, now = positions[0]['pos'], positions[-1]['pos']
+        best = min(p['pos'] for p in positions)
+        teams = int(base_config.get('team_count', 0) or 0)
+        add('andamento', title='ANDAMENTO', subtitle=label, trend=[dict(p) for p in positions], teams=teams,
+            line1=f'DAL POSTO {first} AL POSTO {now}' if first != now else f'SEMPRE AL POSTO {now}',
+            line2=f'MIGLIOR POSIZIONE: {best}')
     add('outro', title='GAME SAVED', subtitle=label, big='GRAZIE', big_size=48, label='SEE YOU NEXT LEVEL',
         line1='A CHI HA GIOCATO, TIFATO, ASPETTATO', line2='FORZA FLAMINGOS')
     return out

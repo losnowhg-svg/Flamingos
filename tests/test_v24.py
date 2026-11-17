@@ -73,7 +73,8 @@ class SeasonTests(unittest.TestCase):
 class WrappedTests(unittest.TestCase):
     def test_slides_and_render(self):
         base = dict(defaults('Classifica'), theme='none')
-        slides = wr.slides(ss.stats(GAMES), 'STAGIONE 2026/27', base, [('TEU', 5), ('CAVA', 0)], dict(pos=2, pt=17), [])
+        slides = wr.slides(ss.stats(GAMES), 'STAGIONE 2026/27', base, [('TEU', 5), ('CAVA', 0)], dict(pos=2, pt=17), [],
+                           positions=[dict(round=1, pos=4, pt=3), dict(round=2, pos=2, pt=6)])   # 3.21: andamento
         self.assertEqual([k for k, _ in slides], list(wr.SLIDES))
         for key, config in slides:
             prepared = wr.scene(config, LOGO, None, None, 1)

@@ -1,4 +1,16 @@
-# Flamingos Studio 3.20.1
+# Flamingos Studio 3.21
+
+## Novita della 3.21: i risultati del CSI lavorano anche per le grafiche
+- **La classifica sale da sola.** Dai risultati l'app ricostruisce la classifica giornata per giornata: se
+  alla giornata scorsa eravamo quinti e ora quarti, la Classifica mostra già il passaggio dal 5° al 4° posto
+  (nessun numero da scrivere; si può sempre correggere a mano nell'editor).
+- **Andamento nel Wrapped.** Nuova slide *Andamento in classifica*: la nostra posizione giornata per
+  giornata, dal primo turno a oggi, con la miglior posizione.
+- **Scheda avversario nel Matchday.** Ultime 5 partite dell'avversario (quadratini V/N/P), il suo posto in
+  classifica e, al ritorno, com'è finita all'andata. Si compila da sola dal sito CSI; si spegne nell'editor.
+- **Avviso se il CSI sposta la partita.** Se cambiano data, orario o campo, in cima all'app compare
+  "Il CSI ha spostato la partita..." per tutti, finché qualcuno tocca *Ok, visto*.
+- Gli autogol contano nei gol della stagione ma non entrano nella classifica dei bomber.
 
 ## Novita della 3.20.1: la classifica uguale a CSI LIVE
 - Il sito risultati del CSI riceve da CSI LIVE anche i risultati non ancora convalidati, ma non li mostra e

@@ -36,7 +36,7 @@ ROW_STEP = .17
 
 TIMELINES = {
     'matchday': {'title': .2, 'date': .6, 'home_logo': 1.25, 'away_logo': 1.25, 'vs': 1.72,
-                 'home_name': 2.4, 'away_name': 2.7, 'kickoff': 3.2, 'venue': 3.55},
+                 'home_name': 2.4, 'away_name': 2.7, 'form': 2.95, 'kickoff': 3.2, 'venue': 3.55},
     'fulltime': {'title': .2, 'details': .6, 'home_logo': 1.0, 'away_logo': 1.25, 'home_name': 1.6,
                  'away_name': 1.8, 'score': 2.1, 'penalties': 3.6, 'result': 3.7,
                  'home_scorers': 4.0, 'away_scorers': 4.3},

@@ -17,11 +17,13 @@ ROOT = Path(__file__).resolve().parent
 DEFAULT_POSITIONS = {
     'title': (270, 348), 'date': (270, 376), 'home_logo': (166, 475),
     'away_logo': (374, 475), 'vs': (270, 481), 'home_name': (166, 579),
-    'away_name': (374, 579), 'kickoff': (270, 629), 'venue': (270, 652),
+    'away_name': (374, 579), 'kickoff': (270, 629), 'venue': (270, 652), 'form': (270, 606),
 }
 LAYER_NAMES = {'title': 'Titolo', 'date': 'Data', 'home_logo': 'Stemma Flamingos',
                'away_logo': 'Stemma avversari', 'vs': 'VS', 'home_name': 'Nome Flamingos',
-               'away_name': 'Nome avversari', 'kickoff': 'Orario inizio', 'venue': 'Campo'}
+               'away_name': 'Nome avversari', 'kickoff': 'Orario inizio', 'venue': 'Campo',
+               'form': 'Scheda avversario'}
+FORM_COLORS = {'V': (91, 230, 164), 'N': (255, 201, 99), 'P': (255, 107, 120)}
 FEED_CROP = (0, 210, 540, 750)
 
 
@@ -117,6 +119,67 @@ def _unknown_shield(s=1):
     return image
 
 
+# 3.21: in these layouts the opponent strip goes inside the bottom box, above kick-off and pitch
+FORM_ROOM = {'classica': {'form': (270, 622), 'kickoff': (270, 641), 'venue': (270, 661)},
+             'duello': {'form': (270, 625), 'kickoff': (270, 643), 'venue': (270, 662)}}
+
+
+def _room_for_form(config, positions):
+    """Make room for the strip, only where the positions are still the layout's own (a moved text stays put)."""
+    import layouts
+    layout = config.get('layout', 'classica')
+    room = FORM_ROOM.get(layout)
+    if not room:
+        return positions
+    defaults = layouts.default_positions('Matchday Screen', layout)
+    if any(tuple(positions.get(k, ())) != tuple(defaults.get(k, ())) for k in room):
+        return positions
+    return dict(positions, **room)
+
+
+def form_strip(config, style, font_bytes, s=1):
+    """3.21: the opponent's last five (coloured squares), their place and our first-leg result, in one line."""
+    import opponent_form
+    data = opponent_form.decode(config.get('opponent_form'))
+    if not data or not config.get('show_form', True):
+        return None
+    cyan = rgb(config.get('cyan', '#79DCF7'), (121, 220, 247)); white = rgb(config.get('white', '#F6F4FC'), DEFAULT_WHITE)
+    yellow = rgb(config.get('yellow', '#FFC963'), (255, 201, 99))
+    size = max(10, min(13, config.get('info_size', 16)-4))
+    pieces = []
+    if data['last']:
+        pieces.append(text_image('ULTIME', style, size, cyan, 90, font_bytes, s, size+4))
+        box = round((size+1)*s)
+        squares = Image.new('RGBA', (len(data['last'])*(box+round(3*s)), box))
+        dr = ScaledDraw(squares, s)
+        for i, result in enumerate(data['last']):
+            x = i*(size+4)
+            dr.rectangle((x, 0, x+size, size), fill=(*FORM_COLORS[result], 255))
+            dr.rectangle((x, 0, x+size, size), outline=(10, 10, 18, 255), width=1)
+            letter = text_image(result, style, max(8, size-4), (12, 12, 20), size, font_bytes, s, size)
+            if letter:
+                squares.alpha_composite(letter, (round(x*s)+(box-letter.width)//2, (box-letter.height)//2))
+        pieces.append(squares)
+    if data['pos']:
+        pieces.append(text_image(f"POSTO {data['pos']}", style, size, yellow, 110, font_bytes, s, size+4))
+    if data['first_leg']:
+        pieces.append(text_image(f"ANDATA {data['first_leg']}", style, size, white, 120, font_bytes, s, size+4))
+    pieces = [p for p in pieces if p is not None]
+    if not pieces:
+        return None
+    gap = round(9*s)
+    width = sum(p.width for p in pieces)+gap*(len(pieces)-1)
+    height = max(p.height for p in pieces)
+    out = Image.new('RGBA', (width, height))
+    x = 0
+    for piece in pieces:
+        out.alpha_composite(piece, (x, (height-piece.height)//2))
+        x += piece.width+gap
+    if out.width > round(340*s):
+        out.thumbnail((round(340*s), out.height*4), Image.Resampling.LANCZOS)
+    return _decorate_text(out, s)
+
+
 def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
     s = checked_scale(render_scale)
     style = config.get('text_style',config.get('font_choice','Sans Bold'))
@@ -153,6 +216,9 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
     ]:
         image = _decorate_text(text_runs(parts,style,config.get('info_size',16),328,font_bytes,s,19),s)
         if image: layers.append(Layer(id_,LAYER_NAMES[id_],image))
+    strip = form_strip(config, style, font_bytes, s)
+    if strip:
+        layers.append(Layer('form', LAYER_NAMES['form'], strip))
     return layers
 
 
@@ -162,7 +228,11 @@ def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     from crt_presets import background as preset_background
     config = themes.effective(config)
     import layouts
-    prepared = preset_background(config,layouts.panel_key('matchday','Matchday Screen',config),s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config)
+    layers = get_layers(config,home_logo,away_logo,font_bytes,s)
+    positions = normalized_positions(config)
+    if any(l.id == 'form' for l in layers):
+        positions = _room_for_form(config, positions)
+    prepared = preset_background(config,layouts.panel_key('matchday','Matchday Screen',config),s),layers,positions
     from crt_common import finish
     return finish(prepared,config,'matchday')
 
@@ -175,7 +245,7 @@ def compose(prepared,t=999,animated=True):
     canvas = base.copy()
     animations.particles(canvas,prepared,t,animated)
     timeline = {'title':.2,'date':.6,'home_logo':1.25,'away_logo':1.55,'vs':2.05,
-                'home_name':2.6,'away_name':2.9,'kickoff':3.4,'venue':3.75}
+                'home_name':2.6,'away_name':2.9,'form':3.15,'kickoff':3.4,'venue':3.75}
     for layer in layers:
         a = progress(t,timeline.get(layer.id,0),.46) if animated else 1
         drop = (1-a)*(24 if layer.id in ('home_logo','away_logo') else 11)

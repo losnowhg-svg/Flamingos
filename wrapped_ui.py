@@ -118,7 +118,8 @@ def show_wrapped(root: Path, library):
     label = ss.period_label(period, month, chosen_games)
     table = current_config('Classifica')
     mine = next((r for r in table['standings'][:table['team_count']] if ours.upper() in str(r['team']).upper()), None)
-    slides_all = wr.slides(numbers, label, table, scorers, mine if period != 'mese' else None, squad)
+    slides_all = wr.slides(numbers, label, table, scorers, mine if period != 'mese' else None, squad,
+                           positions=st.session_state.get('season_positions') if period != 'mese' else None)
     keys = [k for k, _ in slides_all]
     picked = st.multiselect('Slide', keys, default=keys, format_func=wr.SLIDE_NAMES.get, key='wrapped_slides')
     slides = [(k, cfg) for k, cfg in slides_all if k in picked]

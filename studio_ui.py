@@ -242,6 +242,12 @@ def show_studio(root: Path, template: str, library: dict):
             with b: text('kickoff', 'Orario', 14)
             with d: select('our_side', 'Noi siamo', ('Casa', 'Ospiti'))
             text('venue', 'Campo / indirizzo', 72)
+            import opponent_form
+            card = opponent_form.decode(config.get('opponent_form'))
+            check('show_form', 'Scheda avversario: ultime 5, posizione, andata')
+            st.caption(('Dal sito CSI: ' + ''.join(card['last']) + (f" · {card['pos']}° in classifica" if card['pos'] else '')
+                        + (f" · andata {card['first_leg']}" if card['first_leg'] else '') + '.') if card else
+                       'Si compila da sola quando la partita arriva dal sito CSI.')
             with st.expander('Titolo ed etichette'):
                 title_field()
                 a, b = st.columns(2)
@@ -436,11 +442,13 @@ def show_studio(root: Path, template: str, library: dict):
             a, b = st.columns(2)
             with a: text('round_label', 'Giornata', 36)
             with b: text('our_team', 'La nostra squadra', 34)
-            number('prev_pos', 'Posizione della settimana scorsa (anima la classifica nel video)', 0, 30)
+            number('prev_pos', 'Posizione della giornata prima (anima la classifica nel video)', 0, 30)
             ours_now = next((int(x.get('pos', i+1)) for i, x in enumerate(active) if k.is_ours(x['team'], config['our_team'])), None)
             if not config['prev_pos']:
-                st.caption('Con 0 non c\'e animazione. Si compila da sola quando aggiorni la classifica dal CSI '
-                           '(se quella vecchia era vera); altrimenti scrivila qui.')
+                history = st.session_state.get('season_positions') or []
+                st.caption((f"Siamo {history[-1]['pos']}° come alla giornata prima: niente animazione. "
+                            if len(history) >= 2 and history[-1]['pos'] == history[-2]['pos'] else 'Con 0 non c\'e animazione. ')
+                           + 'Si mette da sola dai risultati del CSI (dove eravamo prima dell\'ultima giornata).')
             elif ours_now:
                 change = config['prev_pos']-ours_now
                 st.caption(f"Nel video: dal {config['prev_pos']}° al {ours_now}° "
