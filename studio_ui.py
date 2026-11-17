@@ -32,7 +32,7 @@ from render_utils import layout_warnings
 from studio_state import BUILTIN_FONTS, MODULES, defaults, sanitize_config
 from crt_presets import PANEL_STYLES, PRESETS, PRESET_IDS, FORMATS, CROPS, apply_preset, preset_for_round
 from ui_utils import file_stem, progress_with_eta
-from week_ui import CSI_GIRONE, data_status, go, player_label, save_week, squad
+from week_ui import data_status, go, player_label, save_week, squad
 
 ROOT = Path(__file__).resolve().parent
 EDITOR = components.declare_component('flamingos_studio_editor', path=str(ROOT/'frontend'))
@@ -374,8 +374,6 @@ def show_studio(root: Path, template: str, library: dict):
             section('Dati della classifica')
             if st.session_state.get('standings_message'):
                 st.success(st.session_state.pop('standings_message'))
-            if st.session_state.get('standings_import_error'):
-                st.error('Il segnalibro ha inviato una pagina senza classifica leggibile: '+st.session_state.pop('standings_import_error'))
 
             def load_rows(rows, message):
                 st.session_state['standings_message'] = message
@@ -386,10 +384,17 @@ def show_studio(root: Path, template: str, library: dict):
 
             site, paste, manual = st.tabs(['Dal sito CSI', 'Incolla', 'A mano'])
             with site:
-                st.markdown('Apri il girone e tocca il segnalibro **Invia a Flamingos**, oppure incolla la pagina intera '
-                            'nella Settimana: arrivano anche prossima partita e calendario.')
-                st.link_button('Apri il Girone D su CSI LIVE', CSI_GIRONE, type='primary', width='stretch')
-                st.button('Vai ad Aggiorna dal sito CSI (Settimana)', key=key('to_week'), on_click=go, args=('Settimana',), width='stretch')
+                import csi_brescia
+                from week_ui import _refresh, _when
+                ok_at = (st.session_state.get('csi_sync') or {}).get('ok_at')
+                st.markdown('La classifica arriva da sola dal sito risultati del CSI Brescia quando apri l\'app'
+                            + (f' (ultimo aggiornamento: {_when(ok_at)}).' if ok_at else '.'))
+                message = st.session_state.pop('csi_message', None)
+                if message:
+                    (st.success if message[0] == 'ok' else st.error)(message[1])
+                a, b = st.columns(2)
+                a.button('↻ Aggiorna ora', key=key('csi_refresh'), on_click=_refresh, type='primary', width='stretch')
+                b.link_button('Apri il girone sul sito', csi_brescia.page_url(), width='stretch')
             with paste:
                 pasted = st.text_area('Testo della classifica', height=150, key=key('paste'),
                                       placeholder='Seleziona la tabella dalla prima squadra all\'ultima, copia e incolla qui.')

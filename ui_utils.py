@@ -45,8 +45,9 @@ def file_stem(template, config):
 DAYS = ('lunedi', 'martedi', 'mercoledi', 'giovedi', 'venerdi', 'sabato', 'domenica')
 
 
-def countdown(match, today=None):
-    """One line about the next match, or None when the date is not set."""
+def countdown(match, today=None, score=None):
+    """One line about the next match, or None when the date is not set.
+    score: (home, away) already in the Full Time editor for this match (3.20: it arrives from the CSI site)."""
     import themes
     when = themes.parse_date(match.get('date'))
     if not when:
@@ -63,6 +64,8 @@ def countdown(match, today=None):
         return f'⚽ Domani si gioca: vs {rival}{at}. Ultimo giro di Convocati!'
     if days == 0:
         return f'🔥 Oggi si gioca: vs {rival}{at}. In bocca al lupo!'
+    if days >= -3 and score and any(score):
+        return f'📣 Partita giocata contro {rival}: il {score[0]}-{score[1]} è già nel Full Time, pubblicalo!'
     if days >= -3:
         return f'📣 Partita giocata contro {rival}: inserisci il risultato nel Full Time e aggiorna la classifica.'
     return None

@@ -166,7 +166,8 @@ class PagesTests(unittest.TestCase):
         self.assertNotIn('Dal server', ui)
         self.assertNotIn('fetch_standings', ui)
         week = (ROOT/'week_ui.py').read_text()
-        self.assertIn('Incolla la pagina', week)
+        self.assertIn('update_from_csi', week)          # 3.20: from the CSI site by itself, no paste box
+        self.assertNotIn('Incolla la pagina', week)
 
 
 if __name__ == '__main__':

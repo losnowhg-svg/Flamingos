@@ -42,14 +42,13 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.18 / più fluida e più robusta: niente Salva da ricordare, niente crash')
+    st.caption('3.20 / classifica, partite e risultati arrivano da soli dal sito CSI')
 
 from library import show_library
 from studio_ui import show_studio
 from sequence_ui import show_sequence, apply_match_everywhere
-from week_ui import show_week, restore_week, import_csi
+from week_ui import show_week, restore_week, auto_update
 from classifica_data import QUERY_KEY
-from csi_page import decode_payload
 
 PAGES = {
     'Settimana':'🏠  La tua settimana',
@@ -66,19 +65,13 @@ PAGES = {
     'Instagram':'📱  Squadra e copertine',
 }
 
-# 3.14: the last work saved by anyone (private repo in the secrets), before the menu and the bookmark import.
+# 3.14: the last work saved by anyone (private repo in the secrets), before the menu.
 import shared_ui
 shared_ui.start()
 
-# Girone page sent by the "Invia a Flamingos" bookmark: standings, next match, calendar.
-incoming = st.query_params.get(QUERY_KEY)
-if incoming:
-    try:
-        st.session_state['standings_message'] = import_csi(decode_payload(incoming))
-    except ValueError as exc:
-        st.session_state['standings_import_error'] = str(exc)
-    st.session_state['studio_template'] = 'Settimana'
-    del st.query_params[QUERY_KEY]          # only the bookmark's data: the name (?chi=) stays
+# 3.20: the old "Invia a Flamingos" bookmark is not needed any more; its data in the address is just dropped.
+if st.query_params.get(QUERY_KEY):
+    del st.query_params[QUERY_KEY]
 
 def _from_phone_menu():
     st.session_state['studio_template'] = st.session_state['mobile_nav_select']
@@ -106,6 +99,7 @@ import sponsor
 sponsor.register(library['assets'])
 shared_ui.merge_assets(library)          # fonts and logos uploaded by friends
 restore_week(library)
+auto_update()                            # 3.20: the girone from the CSI site, if older than an hour
 root = Path(__file__).resolve().parent
 shared_ui.note_banner(template)          # 3.15: the note a friend left, on top of the page
 import robust
