@@ -28,6 +28,25 @@ class Reading(unittest.TestCase):
                          (8, 10, 7, 3, 1, 3, 20, 24))
         self.assertEqual([r['pos'] for r in rows], list(range(1, 14)))
 
+    def test_the_same_table_as_csi_live(self):
+        # CSI LIVE, 17/11/2026 evening: the site's table plus the five results of round 8 it does not show yet
+        live = [('UMC', 18, 8, 5, 3, 0, 31, 17), ('FC MUSTANGS', 15, 8, 5, 0, 3, 38, 21),
+                ('SPORTING LENO', 15, 7, 5, 0, 2, 33, 21), ('GSO PONCARALE', 14, 7, 4, 2, 1, 29, 16),
+                ('UNITED FLERO', 13, 7, 4, 1, 2, 39, 31), ('CASTE UNITED', 12, 7, 3, 3, 1, 36, 22),
+                ('PIRATI', 12, 8, 4, 0, 4, 35, 38), ('AS ARDENS 2002', 10, 7, 3, 1, 3, 34, 26),
+                ('FLAMINGOS', 10, 8, 3, 1, 4, 25, 32), ('LIONS 25', 6, 7, 2, 0, 5, 30, 45),
+                ('GALBA F.C.', 6, 8, 2, 0, 6, 28, 46), ('CASTEL MELLA', 4, 7, 1, 1, 5, 13, 28),
+                ('GSO VEROLAN', 3, 7, 1, 0, 6, 18, 46)]
+        rows = cb.read(PAGES, 'FLAMINGOS', TODAY)['standings']
+        self.assertEqual([(r['team'], r['pt'], r['g'], r['v'], r['n'], r['p'], r['gf'], r['gs']) for r in rows], live)
+        self.assertEqual([r['pos'] for r in rows], list(range(1, 14)))
+
+    def test_a_result_the_site_counts_is_not_added_twice(self):
+        matches = cb.parse_results(PAGES['risultati'])
+        rows = cb.parse_standings(PAGES['classifiche'])
+        shown_only = cb.with_pending(rows, [dict(m, pending=False) for m in matches])
+        self.assertEqual({r['team']: r['pt'] for r in shown_only}, {r['team']: r['pt'] for r in rows})
+
     def test_no_table_is_a_clear_error(self):
         with self.assertRaises(cb.CSIError):
             cb.parse_standings('<html>Manutenzione</html>')
@@ -42,7 +61,12 @@ class Reading(unittest.TestCase):
         self.assertEqual(red['score'], (9, 2))                      # "ufficioso": shown, and counted by the site
         self.assertFalse(red['official'])
         hidden = next(m for m in matches if m['code'] == '2026102DA0806')
-        self.assertIsNone(hidden['score'])                           # typed by a team, not shown yet: left out
+        self.assertEqual(hidden['score'], (8, 5))                    # 3.20.1: from CSI LIVE, not published yet
+        self.assertTrue(hidden['pending'])
+        self.assertFalse(hidden['official'])
+        self.assertFalse(first['pending'])
+        later = next(m for m in matches if m['code'] == '2026102DA0901')
+        self.assertIsNone(later['score'])                            # "importato = -": not played
         nxt = next(m for m in matches if m['code'] == '2026102DA0901')
         self.assertEqual(nxt['venue'], 'ORATORIO FORNACI BRESCIA FORNACI 82 - BRESCIA BS')
         self.assertEqual([m['date'] for m in matches], sorted(m['date'] for m in matches))
@@ -67,7 +91,7 @@ class Reading(unittest.TestCase):
         from csi_page import fixtures_for_month
         november = fixtures_for_month(page['matches'], 'FLAMINGOS', 2026, 11, 8)
         self.assertEqual([(f['date'], f['opponent'], f['side'], f['score']) for f in november],
-                         [('05/11', 'CASTE UNITED', 'C', '2-5'), ('14/11', 'LIONS 25', 'T', ''),
+                         [('05/11', 'CASTE UNITED', 'C', '2-5'), ('14/11', 'LIONS 25', 'T', '8-5'),
                           ('19/11', 'AS ARDENS 2002', 'C', '')])
 
 

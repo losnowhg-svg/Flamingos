@@ -5,8 +5,9 @@ risultati.csi.brescia.it fills its "Risultati / Classifiche / Squadre" tabs with
 into the shapes the app already uses (csi_page.read_page): standings rows, matches, team cards,
 our next match and its fields for the "Partita della settimana" panel.
 
-Only the scores the site shows count (official, or "ufficiosi" in red, which the site's own table
-already counts); a result typed by a team and still hidden on the site is left out, like the site does.
+3.20.1: the site also has the results that came from CSI LIVE but are not published yet (in a comment
+of the page). They count too (pending=True), in the matches and in the table, which is then the same
+as the one on CSI LIVE.
 """
 from __future__ import annotations
 
@@ -154,17 +155,23 @@ def parse_results(text):
             clock = re.search(r'(\d{1,2})[:.](\d{2})', _text(_cell(row, 'ora')))
             code = _text(_cell(row, 'codice'))
             parts = CODE.search(code)
-            score = None
+            score, pending = None, False
             shown = re.search(r'class="text-result"[^>]*>\s*(\d{1,2})\s*-\s*(\d{1,2})', row)
             if shown:
                 score = (int(shown.group(1)), int(shown.group(2)))
+            else:                                        # 3.20.1: arrived from CSI LIVE, not published here yet
+                hidden = re.search(r'Risultato LIVE = (\d{1,2}) - (\d{1,2})', row) or \
+                    re.search(r'Risultato importato = (\d{1,2}) - (\d{1,2})', row)
+                if hidden:
+                    score, pending = (int(hidden.group(1)), int(hidden.group(2))), True
             venue = re.search(r'<img[^>]*alt="Vai al dettaglio Campo"[^>]*title="([^"]*)"', row, re.I) or \
                 re.search(r'<img[^>]*title="([^"]*)"[^>]*alt="Vai al dettaglio Campo"', row, re.I)
             matches.append(dict(home=teams[0], away=teams[1], date=date,
                                 time=f'{int(clock.group(1)):02d}:{clock.group(2)}' if clock else '',
                                 score=score, venue=_text(venue.group(1)) if venue else '',
                                 round=int(parts.group(5)) if parts else current, leg=parts.group(4) if parts else leg,
-                                official=score is not None and 'ufficiosa' not in attrs.lower(), code=code))
+                                official=score is not None and not pending and 'ufficiosa' not in attrs.lower(),
+                                pending=pending, code=code))
     first_leg = max([m['round'] or 0 for m in matches if m['leg'] == 'A'] or [0])
     for m in matches:                                    # ritorno: round 14, 15... after a 13-round andata
         if m['leg'] == 'R' and m['round']:
@@ -196,11 +203,41 @@ def parse_teams(text):
     return cards
 
 
+def with_pending(rows, matches):
+    """The site's table plus the results it already has from CSI LIVE but does not show yet: the same
+    table as CSI LIVE. Whatever the site already counts (penalties, forfeits) stays as it is."""
+    from integration import same_team
+    rows = [dict(r) for r in rows]
+    for m in matches:
+        if not m.get('pending') or m.get('score') is None:
+            continue
+        sides = [next((r for r in rows if same_team(r['team'], name)), None) for name in (m['home'], m['away'])]
+        if None in sides or sides[0] is sides[1]:
+            continue
+        for row, (scored, conceded) in zip(sides, (m['score'], m['score'][::-1])):
+            row['g'] += 1
+            row['gf'] += scored
+            row['gs'] += conceded
+            if scored > conceded:
+                row['v'] += 1
+                row['pt'] += 3
+            elif scored == conceded:
+                row['n'] += 1
+                row['pt'] += 1
+            else:
+                row['p'] += 1
+    order = {r['team']: i for i, r in enumerate(rows)}
+    rows.sort(key=lambda r: (-r['pt'], -(r['gf']-r['gs']), -r['gf'], order[r['team']]))
+    for i, r in enumerate(rows, 1):
+        r['pos'] = i
+    return rows
+
+
 def read(pages, ours='FLAMINGOS', today=None):
     """Same shape as csi_page.read_page: standings, matches, cards, next, fields, url."""
     from csi_page import match_fields, next_match
-    standings = parse_standings(pages.get('classifiche'))
     matches = parse_results(pages.get('risultati'))
+    standings = with_pending(parse_standings(pages.get('classifiche')), matches)
     cards = parse_teams(pages.get('squadre'))
     upcoming = next_match(matches, ours, today)
     return dict(standings=standings, matches=matches, cards=cards, next=upcoming,
