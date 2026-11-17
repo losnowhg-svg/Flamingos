@@ -1,4 +1,10 @@
-# Flamingos Studio 3.20
+# Flamingos Studio 3.20.1
+
+## Novita della 3.20.1: la classifica uguale a CSI LIVE
+- Il sito risultati del CSI riceve da CSI LIVE anche i risultati non ancora convalidati, ma non li mostra e
+  non li conta. Ora l'app li legge e li aggiunge alla classifica del sito: viene la stessa di CSI LIVE (provata
+  il 17/11: punti, partite, gol e ordine identici). Gli stessi risultati vanno anche nel Full Time, nei
+  risultati della giornata e nella stagione.
 
 ## Novita della 3.20: il girone arriva da solo dal sito CSI
 - **Niente più segnalibro né pagina da incollare.** Quando qualcuno apre l'app, se i dati hanno più di un'ora,
@@ -12,8 +18,7 @@
   (se non hai già scritto un punteggio diverso a mano) e il risultato entra nella stagione.
 - **Due giorni per pubblicare il Full Time.** Dopo la partita le grafiche restano su quella giocata per due
   giorni, poi passano da sole alla prossima (nella Settimana c'è *Passa ora alla prossima partita* per farlo
-  prima). Contano solo i risultati che il sito mostra (anche quelli in rosso, ufficiosi): uno inserito dalla
-  squadra ma non ancora pubblicato arriva quando il CSI lo pubblica.
+  prima).
 - Il vecchio segnalibro *Invia a Flamingos* non serve più: si può cancellare dai preferiti.
 
 ## Novita della 3.18: più fluida e più robusta

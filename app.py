@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.20 / classifica, partite e risultati arrivano da soli dal sito CSI')
+    st.caption('3.20.1 / classifica, partite e risultati arrivano da soli dal sito CSI, come su CSI LIVE')
 
 from library import show_library
 from studio_ui import show_studio
