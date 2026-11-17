@@ -1,4 +1,12 @@
-# Flamingos Studio 3.21
+# Flamingos Studio 3.22
+
+## Novita della 3.22: salvataggi uniti
+- **Due amici sull'app nello stesso momento non si cancellano più il lavoro.** Prima l'ultimo che salvava
+  copriva il salvataggio dell'altro. Ora i due salvataggi si uniscono: ognuno tiene quello che ha cambiato
+  (grafiche diverse, partite diverse della stagione, impostazioni diverse); solo se entrambi cambiano la
+  stessa identica cosa vale l'ultimo. Il lavoro dell'amico arriva anche nella tua sessione, con l'avviso
+  "Unito con il lavoro di ...".
+- *Torna a questa versione* (cronologia) continua invece a rimettere la versione scelta per tutti.
 
 ## Novita della 3.21: i risultati del CSI lavorano anche per le grafiche
 - **La classifica sale da sola.** Dai risultati l'app ricostruisce la classifica giornata per giornata: se

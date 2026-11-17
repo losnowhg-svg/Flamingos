@@ -143,6 +143,41 @@ def sessions(commits, limit=8):
     return out
 
 
+# --- 3.22: two friends saving at the same time: the work is joined, not covered -----------------------
+
+_MISSING = object()
+
+
+def merge_values(base, mine, theirs):
+    """Three-way join of two saved values that started from `base`.
+
+    Whoever changed something wins on that thing; if both changed the same thing, this save (the newer)
+    wins. Dicts are joined key by key (all the way down), so two friends working on different graphics,
+    different matches of the season or different settings keep both their work."""
+    if mine == theirs:
+        return mine
+    if mine == base:
+        return theirs
+    if theirs == base:
+        return mine
+    if all(isinstance(v, dict) or v is _MISSING for v in (base, mine, theirs)) and \
+            isinstance(mine, dict) and isinstance(theirs, dict):
+        base = base if isinstance(base, dict) else {}
+        out = {}
+        for key in list(mine)+[k for k in theirs if k not in mine]:
+            value = merge_values(base.get(key, _MISSING), mine.get(key, _MISSING), theirs.get(key, _MISSING))
+            if value is not _MISSING:
+                out[key] = value
+        return out
+    return mine
+
+
+def merge_state(base, mine, theirs):
+    """The encoded shared state (snapshot['state']) of this save joined with a friend's newer one."""
+    joined = merge_values(dict(base or {}), dict(mine or {}), dict(theirs or {}))
+    return {k: v for k, v in joined.items() if k in SHARE_KEYS}
+
+
 def fingerprint(snap):
     """What changed, ignoring the time and the author."""
     core = {k: snap.get(k) for k in ('page', 'state', 'assets')}
@@ -264,19 +299,33 @@ class GitHubStore:
         except ValueError as exc:
             raise StoreError('lavoro.json non è leggibile.') from exc
 
-    def save(self, snap, sha=None):
-        """(new sha, the snapshot that was overwritten if someone else had saved meanwhile, else None)."""
-        data = json.dumps(snap, ensure_ascii=False, separators=(',', ':')).encode('utf8')
+    def save(self, snap, sha=None, base=None):
+        """(new sha, the friend's snapshot if someone else had saved meanwhile, else None).
+
+        3.22: with `base` (the shared state this session started from) a friend's newer save is joined
+        with this one (snap['state'] is updated in place); without it, this save covers theirs (going back
+        to an old version)."""
         who = snap.get('author') or 'qualcuno'
         page = snap.get('page') or 'studio'
         if snap.get('event'):
             page += ' · '+str(snap['event'])[:80]
         message = f"Lavoro di {who} ({page})"
+        encode_snap = lambda: json.dumps(snap, ensure_ascii=False, separators=(',', ':')).encode('utf8')
         try:
-            return self.write(FILE, data, sha, message), None
+            return self.write(FILE, encode_snap(), sha, message), None
         except Conflict:
-            theirs, latest = self.load()
-            return self.write(FILE, data, latest, message), theirs
+            for _ in range(3):                           # a friend saved meanwhile: join and try again
+                theirs, latest = self.load()
+                if base is not None and theirs:
+                    snap['state'] = merge_state(base, snap['state'], theirs.get('state') or {})
+                    snap['assets'] = dict(theirs.get('assets') or {}, **(snap.get('assets') or {}))
+                    base = dict(theirs.get('state') or {})
+                    message = message.replace('Lavoro di', 'Lavoro unito di', 1)
+                try:
+                    return self.write(FILE, encode_snap(), latest, message), theirs
+                except Conflict:
+                    continue
+            raise StoreError('Troppi salvataggi insieme: riprovo alla prossima modifica.')
 
     def history(self, count=100):
         """The last saves of lavoro.json, newest first: [{'sha', 'author', 'page', 'at'}]."""
@@ -392,9 +441,19 @@ class Saver:
                     store.put_asset(asset_id, data)
                 except StoreError:                       # one file that does not go up does not stop the save
                     snap['assets'].pop(asset_id, None)
-            sha, theirs = store.save(snap, meta.get('sha'))
+            mine = json.loads(json.dumps(snap['state']))
+            base = meta.get('base')
+            sha, theirs = store.save(snap, meta.get('sha'), base)
             meta.update(sha=sha, saved_at=snap['saved_at'], error=None)
-            if theirs and (theirs.get('author') or '') != snap.get('author'):     # a friend saved in the meantime
+            if base is not None:
+                meta['base'] = snap['state']             # what everybody has now: the next join starts here
+            if theirs and snap['state'] != mine:         # 3.22: the friend's work, to bring into this session
+                incoming = dict(meta.get('incoming') or {})
+                incoming.update({k: (mine.get(k), v) for k, v in snap['state'].items() if mine.get(k) != v})
+                meta['incoming'] = incoming
+                meta['merged'] = dict(author=theirs.get('author') or '', saved_at=theirs.get('saved_at') or '')
+                meta['hash_after'] = fingerprint(snap)
+            elif theirs and base is None and (theirs.get('author') or '') != snap.get('author'):
                 meta['overwrote'] = dict(author=theirs.get('author') or '', saved_at=theirs.get('saved_at') or '')
         except Exception as exc:                          # shown in the sidebar, retried at the next change
             meta['error'] = str(exc)[:200]

@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.21 / classifica che sale da sola, andamento, scheda avversario e avviso se la partita si sposta')
+    st.caption('3.22 / se lavorate in due insieme, i salvataggi si uniscono: non si perde niente')
 
 from library import show_library
 from studio_ui import show_studio
@@ -68,6 +68,7 @@ PAGES = {
 # 3.14: the last work saved by anyone (private repo in the secrets), before the menu.
 import shared_ui
 shared_ui.start()
+shared_ui.pull_merged()                  # 3.22: a friend's work joined with ours while saving
 
 # 3.20: the old "Invia a Flamingos" bookmark is not needed any more; its data in the address is just dropped.
 if st.query_params.get(QUERY_KEY):

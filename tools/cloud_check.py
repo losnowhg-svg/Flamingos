@@ -215,6 +215,8 @@ from studio_state import sanitize_config as _sc, defaults as _df
 assert opponent_form.decode(opponent_form.encode(opponent_form.form(_girone['matches'], _girone['standings'], 'AS ARDENS 2002')))
 assert _mdr.png_bytes(_sc('Matchday Screen', dict(_df('Matchday Screen'), opponent_form='PVPNV|8|3-3|N')), LOGO, None, None, 'Story 9:16', 1, 1)
 done.append('scheda avversario e andamento')
+assert shared_store.merge_state({'shared_note': ''}, {'shared_note': 'a'}, {'shared_note': '', 'squad': []}) == {'shared_note': 'a', 'squad': []}
+done.append('salvataggi uniti')
 print('OK: '+', '.join(done))
 '''
 
