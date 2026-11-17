@@ -42,7 +42,7 @@ h4{margin-bottom:.2rem!important}
 </style>''',unsafe_allow_html=True)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.20.1 / classifica, partite e risultati arrivano da soli dal sito CSI, come su CSI LIVE')
+    st.caption('3.21 / classifica che sale da sola, andamento, scheda avversario e avviso se la partita si sposta')
 
 from library import show_library
 from studio_ui import show_studio
@@ -102,6 +102,8 @@ restore_week(library)
 auto_update()                            # 3.20: the girone from the CSI site, if older than an hour
 root = Path(__file__).resolve().parent
 shared_ui.note_banner(template)          # 3.15: the note a friend left, on top of the page
+import week_ui
+week_ui.moved_banner()                   # 3.21: the CSI moved our match
 import robust
 try:                                     # 3.18: a page error shows a short message, and the work below is still saved
     if template == 'Settimana':

@@ -112,6 +112,27 @@ def _set_calendar(models, revisions, fixtures, label):
     st.session_state.pop('png_Calendario', None)
 
 
+def _climb(models, revisions, page, sync, force):
+    """3.21: our place before the latest round, from the results: the Classifica shows the move by itself."""
+    import standings_history as sh
+    ours = sanitize_match(st.session_state.get('shared_match'))['our_name']
+    history = sh.positions(page['matches'], page['standings'], ours)
+    st.session_state['season_positions'] = history
+    if not history:
+        return
+    prev = sh.previous(history) or 0
+    config = sanitize_config('Classifica', models.get('Classifica', defaults('Classifica')))
+    if prev == history[-1]['pos']:
+        prev = 0                                         # same place as last round: nothing to animate
+    if force or prev != sync.get('prev_pos'):         # a new table, or a new round: otherwise a hand edit stays
+        if config.get('prev_pos') != prev:
+            config['prev_pos'] = prev
+            models['Classifica'] = sanitize_config('Classifica', config)
+            revisions['Classifica'] = revisions.get('Classifica', 0)+1
+            st.session_state.pop('png_Classifica', None)
+        sync['prev_pos'] = prev
+
+
 def apply_page(page, sync, force=False, today=None):
     """Put the girone into the app; only what changed on the site since last time. Returns what changed."""
     import csi_sync as cs
@@ -122,10 +143,12 @@ def apply_page(page, sync, force=False, today=None):
     parts = []
     st.session_state['csi_matches'] = page['matches']
     rows_sig = cs.signature(page['standings'])
-    if force or rows_sig != sync.get('standings'):
+    new_table = bool(force or rows_sig != sync.get('standings'))
+    if new_table:
         _set_standings(models, revisions, page['standings'])
         sync['standings'] = rows_sig
         parts.append(f"classifica ({len(page['standings'])} squadre)")
+    _climb(models, revisions, page, sync, new_table)
     current = sanitize_match(st.session_state.get('shared_match'))
     step, fields = cs.match_step(current, page['fields'], sync.get('next'), today)
     if step == 'hold' and force == 'match':
@@ -136,6 +159,9 @@ def apply_page(page, sync, force=False, today=None):
         sync['next'] = dict(page['fields'])
         parts.append(f"prossima partita: vs {fields['opponent']} il {fields['date']} alle {fields['kickoff']}")
     elif step == 'update':
+        moved = cs.moved(current, fields, sync.get('next'))
+        if moved:                                        # 3.21: the CSI moved our match: everyone must know
+            sync['moved'] = dict(opponent=current['opponent'], changes=moved, at=_now().isoformat(timespec='minutes'))
         apply_match_everywhere(dict(current, **fields))
         sync['next'] = dict(page['fields'])
         parts.append('partita aggiornata ('+', '.join(fields)+')')
@@ -162,9 +188,33 @@ def apply_page(page, sync, force=False, today=None):
         st.session_state.pop('png_Full Time', None)
         sync['fulltime'] = list(score)
         parts.append(f'risultato nel Full Time ({score[0]}-{score[1]})')
+    from sequence_ui import refresh_opponent_form
+    refresh_opponent_form()
     st.session_state['week_restored'] = True
     save_week()
     return parts
+
+
+MOVED_LABELS = {'date': 'data', 'kickoff': 'orario', 'venue': 'campo'}
+
+
+def _dismiss_moved():
+    sync = dict(st.session_state.get('csi_sync') or {})
+    sync['moved'] = None
+    st.session_state['csi_sync'] = sync
+
+
+def moved_banner():
+    """3.21: on top of every page, until someone taps Ok: the CSI moved our match."""
+    moved = (st.session_state.get('csi_sync') or {}).get('moved')
+    if not moved:
+        return
+    what = '; '.join(f"{MOVED_LABELS.get(k, k)} {old} → **{new}**" for k, (old, new) in moved['changes'].items())
+    with st.container(border=True):
+        a, b = st.columns([5, 1], vertical_alignment='center')
+        a.warning(f"📢 **Il CSI ha spostato la partita con {str(moved['opponent']).title()}**: {what}. "
+                  'Le grafiche sono già aggiornate: se avevi pubblicato Matchday o Convocati, rifalli.', icon=None)
+        b.button('Ok, visto', key='csi_moved_ok', on_click=_dismiss_moved, width='stretch')
 
 
 def _now():
@@ -211,7 +261,9 @@ def auto_update():
         if robust.is_control(exc):
             raise
         parts, error = [], f'errore inatteso ({type(exc).__name__})'
-    if parts:
+    if (st.session_state.get('csi_sync') or {}).get('moved') and any(p.startswith('partita aggiornata') for p in parts):
+        st.toast('Il CSI ha spostato la nostra partita: guarda l\'avviso in alto.', icon='📢')
+    elif parts:
         st.toast('Dal sito CSI: '+'; '.join(parts)+'.', icon='📡')
     elif error:
         st.toast(f'Sito CSI non raggiunto: {error}.', icon='⚠️')

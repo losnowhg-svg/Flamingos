@@ -91,7 +91,27 @@ def apply_match_everywhere(match):
         models[template] = apply_match(template, current_config(template), match, event)
         revisions[template] = revisions.get(template, 0)+1
         st.session_state.pop('png_'+template, None)
+    refresh_opponent_form()
     return match
+
+
+def refresh_opponent_form():
+    """3.21: the opponent's last five, place and first leg on the Matchday, from the CSI results."""
+    import opponent_form
+    match = sanitize_match(st.session_state.get('shared_match'))
+    models = st.session_state.setdefault('studio_models', {})
+    if 'Matchday Screen' not in models:
+        return
+    table = models.get('Classifica') or {}
+    rows = table.get('standings', [])[:table.get('team_count', 0)]
+    text = opponent_form.encode(opponent_form.form(st.session_state.get('csi_matches') or [], rows,
+                                                   match['opponent'], match['our_name'], match['date']))
+    config = models['Matchday Screen']
+    if config.get('opponent_form', '') != text:
+        models['Matchday Screen'] = dict(config, opponent_form=text)
+        revisions = st.session_state.setdefault('studio_revisions', {})
+        revisions['Matchday Screen'] = revisions.get('Matchday Screen', 0)+1
+        st.session_state.pop('png_Matchday Screen', None)
 
 
 def _figurine_scene(root, template, library, preset_override, scale):

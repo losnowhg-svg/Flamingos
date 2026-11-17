@@ -24,14 +24,14 @@ LAYOUTS = {
             panels=((112, 322, 428, 390, ''), (214, 425, 449, 463, ''), (91, 548, 326, 586, ''), (93, 612, 448, 672, '')),
             positions={'title': (270, 344), 'date': (270, 370), 'home_logo': (146, 446), 'home_name': (331, 444),
                        'vs': (270, 503), 'away_name': (208, 567), 'away_logo': (394, 560),
-                       'kickoff': (270, 631), 'venue': (270, 655)},
+                       'kickoff': (270, 631), 'venue': (270, 655), 'form': (222, 601)},
             sizes={'home_logo_size': 76, 'away_logo_size': 76}),
         'locandina': dict(
             label='Locandina', description='Stemmi grandi in alto, la data in evidenza nel riquadro sotto.',
             panels=((108, 322, 432, 362, ''), (91, 500, 242, 538, ''), (297, 500, 449, 538, ''), (93, 550, 448, 672, '')),
             positions={'title': (270, 342), 'home_logo': (158, 430), 'away_logo': (382, 430), 'vs': (270, 432),
-                       'home_name': (166, 519), 'away_name': (374, 519), 'date': (270, 580),
-                       'kickoff': (270, 621), 'venue': (270, 648)},
+                       'home_name': (166, 519), 'away_name': (374, 519), 'date': (270, 576),
+                       'kickoff': (270, 622), 'venue': (270, 648), 'form': (270, 600)},
             sizes={'home_logo_size': 86, 'away_logo_size': 86, 'title_size': 24}),
     },
     'Full Time': {

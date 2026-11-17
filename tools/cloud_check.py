@@ -210,6 +210,11 @@ _girone = csi_brescia.read(_pages, 'FLAMINGOS', _dt.date(2026, 11, 17))
 assert _girone['standings'][0]['team'] == 'UMC' and _girone['fields']['opponent'] == 'AS ARDENS 2002'
 assert csi_sync.match_step({}, _girone['fields'], None, _dt.date(2026, 11, 17))[0] == 'apply'
 done.append('girone dal sito CSI')
+import standings_history, opponent_form, matchday_renderer as _mdr
+from studio_state import sanitize_config as _sc, defaults as _df
+assert opponent_form.decode(opponent_form.encode(opponent_form.form(_girone['matches'], _girone['standings'], 'AS ARDENS 2002')))
+assert _mdr.png_bytes(_sc('Matchday Screen', dict(_df('Matchday Screen'), opponent_form='PVPNV|8|3-3|N')), LOGO, None, None, 'Story 9:16', 1, 1)
+done.append('scheda avversario e andamento')
 print('OK: '+', '.join(done))
 '''
 

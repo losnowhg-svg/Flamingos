@@ -67,6 +67,9 @@ def match_step(current, fields, last, today, hold_days=HOLD_DAYS):
         return ('update', changed) if changed else ('keep', {})
     if last and _same_match(last, fields):
         return 'keep', {}                                # the site has not moved on: a friend chose another match
+    if rescheduled(current, fields, last, today):        # same match, new day: only what the site changed
+        changed = {k: fields[k] for k in FIELDS if k in fields and last.get(k) != fields[k] and current.get(k) != fields[k]}
+        return ('update', changed) if changed else ('keep', {})
     date = parse_date(current.get('date'))
     real =str(current.get('opponent') or '').strip().upper() not in ('', 'AVVERSARI')
     if real and date and date <= today <= date+dt.timedelta(days=hold_days):
@@ -109,3 +112,22 @@ def fulltime_score(fulltime, matches, ours='FLAMINGOS', last=None):
             return wanted
         return None
     return None
+
+
+def rescheduled(current, fields, last, today):
+    """The match the site gave last time (still ahead, and still ours in the app) has a new date."""
+    from integration import same_team
+    if not last or not fields or not _same_match(last, current) or not same_team(last.get('opponent'), fields.get('opponent')):
+        return False
+    before = parse_date(last.get('date'))
+    return bool(before) and before >= today and before != parse_date(fields.get('date'))
+
+
+def moved(current, fields, last):
+    """{field: (before, now)} when the site moved the same match (date, time or pitch) since last time;
+    {} the first time the app sees the match from the site (nothing was announced before)."""
+    from integration import same_team
+    if not last or not _same_match(last, current) or not same_team(last.get('opponent'), fields.get('opponent', last.get('opponent'))):
+        return {}
+    return {k: (last.get(k), fields[k]) for k in ('date', 'kickoff', 'venue')
+            if k in fields and last.get(k) != fields[k] and current.get(k) != fields[k]}
