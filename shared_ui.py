@@ -89,6 +89,8 @@ def _apply(snap, meta):
     for key in [k for k in st.session_state if str(k).startswith('png_') or str(k).endswith(('_mp4', '_zip'))]:
         st.session_state.pop(key, None)                 # renders of the old state
     meta['assets'] = dict(snap.get('assets') or {})
+    meta['base'] = dict(snap.get('state') or {})        # 3.22: what this session starts from (for joining saves)
+    meta.pop('incoming', None)
     meta['loaded'] = dict(author=snap.get('author') or '', saved_at=snap.get('saved_at') or '', page=page or '')
     meta['baseline'] = True                              # the first run after loading only sets the reference
 
@@ -111,7 +113,7 @@ def start():
     except ss.StoreError as exc:
         meta.update(status='error', error=str(exc))
         return meta
-    meta.update(status='on', sha=sha, assets={}, error=None)
+    meta.update(status='on', sha=sha, assets={}, error=None, base={})
     if snap:
         _apply(snap, meta)
         loaded = meta['loaded']
@@ -120,6 +122,38 @@ def start():
         if str(st.session_state.get('shared_note') or '').strip():
             st.toast(f"Nota di {_note_author()}: {st.session_state['shared_note'].strip()[:90]}", icon='📝')
     return meta
+
+
+def pull_merged():
+    """3.22, at the start of every run: a friend saved while we were saving, the two were joined; bring
+    their part into this session (only what we have not changed again in the meantime)."""
+    meta = _meta()
+    incoming = meta.pop('incoming', None)
+    if not incoming:
+        return
+    taken = []
+    for key, (was, value) in incoming.items():
+        if key not in ss.SHARE_KEYS:
+            continue
+        try:
+            now = ss.encode(st.session_state[key]) if key in st.session_state else None
+        except Exception:
+            continue
+        if now == was:                                   # untouched since that save: take the joined value
+            st.session_state[key] = ss.decode(value)
+            taken.append(key)
+    if not taken:
+        return
+    if 'studio_models' in taken:
+        revisions = st.session_state.setdefault('studio_revisions', {})
+        for template in list(st.session_state.get('studio_models') or {}):
+            revisions[template] = revisions.get(template, 0)+1
+        for key in [k for k in st.session_state if str(k).startswith('png_')]:
+            st.session_state.pop(key, None)
+    if meta.get('hash_after'):
+        meta['hash'] = meta.pop('hash_after')            # the joined work is already saved: no second save
+    who = (meta.get('merged') or {}).get('author', '').title() or 'un amico'
+    st.toast(f'Unito con il lavoro di {who}: avete salvato insieme, non si è perso niente.', icon='🤝')
 
 
 def reload():
@@ -137,6 +171,7 @@ def reload():
     if snap:
         _apply(snap, meta)
         meta.pop('overwrote', None)
+        meta.pop('merged', None)
 
 
 # --- 3.15: note for the friends, past versions ------------------------------------------------
@@ -210,6 +245,7 @@ def restore_version(index):
         return
     saver().cancel()
     _apply(snap, meta)
+    meta['base'] = None                                  # going back covers the newer saves, it does not join them
     meta.pop('baseline', None)                           # save it now: it becomes everybody's current version
     who = group['author'].title() or 'qualcuno'
     meta['event'] = f"tornato alla versione di {who} {when(group['at'].isoformat())}"
@@ -345,6 +381,9 @@ def sidebar():
                        'Ogni modifica si salva da sola.')
         else:
             st.caption('Ogni modifica si salva da sola per tutti.')
+        if meta.get('merged'):
+            other = meta['merged']
+            st.caption(f"🤝 Unito con il lavoro di {other['author'].title() or 'un amico'} ({when(other['saved_at'])}).")
         if meta.get('overwrote'):
             other = meta['overwrote']
             st.info(f"Anche {other['author'].title() or 'un amico'} ha salvato ({when(other['saved_at'])}): ora vale il "
