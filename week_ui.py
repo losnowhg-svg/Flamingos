@@ -9,10 +9,9 @@ from pathlib import Path
 
 import streamlit as st
 import themes
-import streamlit.components.v1 as components
 
 import renderer as r
-from classifica_data import bookmarklet, with_rows
+from classifica_data import with_rows
 from crt_presets import output_image
 from library import queue_save
 from sequence_ui import apply_match_everywhere, current_config, resolve_assets, show_kit
@@ -28,8 +27,6 @@ STEPS = (
     ('Classifica', 'Classifica', 'Il girone'),
     ('Calendario', 'Calendario', 'Il mese'),
 )
-CSI_GIRONE = ('https://live.centrosportivoitaliano.it/26/Calcio-a-7/Lombardia/Brescia/C102/'
-              '?j=NEU9REZJJjRGPVBOSyY0Rz1FREYmNEg9RCY0ST1RJjRMPURGSSY0Mj1l')
 EXAMPLE_NAMES = {p['name'] for p in defaults('Starting 7')['players']}
 from team_looks import OFFICIAL_SQUAD
 ROLE_HELP = 'P portiere / D difensore / C centrocampista / A attaccante / ALL allenatore / DIR dirigente.'
@@ -95,43 +92,145 @@ def restore_week(library):
     st.session_state['week_saved'] = week['updated']
 
 
-# --- CSI import: bookmark or pasted page --------------------------------------
+# --- CSI import: straight from the CSI Brescia results site (3.20) --------------
 
-def import_csi(payload):
-    """Standings, next match and month calendar from a girone page; returns the message."""
-    from classifica_data import with_rows as _with_rows
-    from csi_page import read_page, fixtures_for_month, month_name
-    from calendario_renderer import empty_fixture
-    page = read_page(payload, sanitize_match(st.session_state.get('shared_match'))['our_name'])
-    if not page['standings']:
-        raise ValueError('nessuna classifica nella pagina.')
-    models = st.session_state.setdefault('studio_models', {})
-    revisions = st.session_state.setdefault('studio_revisions', {})
+def _set_standings(models, revisions, rows):
     current = sanitize_config('Classifica', models.get('Classifica', defaults('Classifica')))
-    models['Classifica'] = sanitize_config('Classifica', _with_rows(current, page['standings']))
+    models['Classifica'] = sanitize_config('Classifica', with_rows(current, rows))
     revisions['Classifica'] = revisions.get('Classifica', 0)+1
     st.session_state.pop('png_Classifica', None)
-    parts = [f"classifica ({len(page['standings'])} squadre)"]
+
+
+def _set_calendar(models, revisions, fixtures, label):
+    from calendario_renderer import empty_fixture
+    cal_config = sanitize_config('Calendario', models.get('Calendario', defaults('Calendario')))
+    cal_config['fixtures'] = fixtures+[empty_fixture() for _ in range(len(fixtures), 8)]
+    cal_config['fixture_count'] = len(fixtures)
+    cal_config['month_label'] = label
+    models['Calendario'] = sanitize_config('Calendario', cal_config)
+    revisions['Calendario'] = revisions.get('Calendario', 0)+1
+    st.session_state.pop('png_Calendario', None)
+
+
+def apply_page(page, sync, force=False, today=None):
+    """Put the girone into the app; only what changed on the site since last time. Returns what changed."""
+    import csi_sync as cs
+    from csi_page import fixtures_for_month, month_name
+    today = today or _now().date()
+    models = st.session_state.setdefault('studio_models', {})
+    revisions = st.session_state.setdefault('studio_revisions', {})
+    parts = []
     st.session_state['csi_matches'] = page['matches']
-    if page['fields']:
-        match = dict(sanitize_match(st.session_state.get('shared_match')), **page['fields'])
-        apply_match_everywhere(match)
-        parts.append(f"prossima partita: vs {page['fields']['opponent']} il {page['fields']['date']} alle {page['fields']['kickoff']}")
-        when = page['next']['date']
+    rows_sig = cs.signature(page['standings'])
+    if force or rows_sig != sync.get('standings'):
+        _set_standings(models, revisions, page['standings'])
+        sync['standings'] = rows_sig
+        parts.append(f"classifica ({len(page['standings'])} squadre)")
+    current = sanitize_match(st.session_state.get('shared_match'))
+    step, fields = cs.match_step(current, page['fields'], sync.get('next'), today)
+    if step == 'hold' and force == 'match':
+        step = 'apply'
+    sync['held'] = None
+    if step == 'apply':
+        apply_match_everywhere(dict(current, **fields))
+        sync['next'] = dict(page['fields'])
+        parts.append(f"prossima partita: vs {fields['opponent']} il {fields['date']} alle {fields['kickoff']}")
+    elif step == 'update':
+        apply_match_everywhere(dict(current, **fields))
+        sync['next'] = dict(page['fields'])
+        parts.append('partita aggiornata ('+', '.join(fields)+')')
+    elif step == 'hold':
+        sync['held'] = dict(fields)
+    elif page['fields']:
+        sync['next'] = dict(page['fields']) if cs._same_match(current, page['fields']) else sync.get('next')
+    match = sanitize_match(st.session_state.get('shared_match'))
+    when = cs.parse_date(match['date']) or (page['next']['date'] if page['next'] else None)
+    if when:
         fixtures = fixtures_for_month(page['matches'], match['our_name'], when.year, when.month, 8)
-        if fixtures:
-            cal_config = sanitize_config('Calendario', models.get('Calendario', defaults('Calendario')))
-            cal_config['fixtures'] = fixtures+[empty_fixture() for _ in range(len(fixtures), 8)]
-            cal_config['fixture_count'] = len(fixtures)
-            cal_config['month_label'] = f'{month_name(when.month)} {when.year}'
-            models['Calendario'] = sanitize_config('Calendario', cal_config)
-            revisions['Calendario'] = revisions.get('Calendario', 0)+1
+        label = f'{month_name(when.month)} {when.year}'
+        cal_sig = cs.signature([fixtures, label])
+        if fixtures and (force or cal_sig != sync.get('calendar')):
+            _set_calendar(models, revisions, fixtures, label)
+            sync['calendar'] = cal_sig
             parts.append(f'calendario di {month_name(when.month).lower()}')
-    elif page['matches']:
-        parts.append(f"{len(page['matches'])} partite (nessuna prossima gara dei Flamingos trovata)")
+    fulltime = sanitize_config('Full Time', models.get('Full Time', defaults('Full Time')))
+    score = cs.fulltime_score(fulltime, page['matches'], match['our_name'], sync.get('fulltime'))
+    if score:
+        fulltime.update(home_score=score[0], away_score=score[1])
+        models['Full Time'] = sanitize_config('Full Time', fulltime)
+        revisions['Full Time'] = revisions.get('Full Time', 0)+1
+        st.session_state.pop('png_Full Time', None)
+        sync['fulltime'] = list(score)
+        parts.append(f'risultato nel Full Time ({score[0]}-{score[1]})')
     st.session_state['week_restored'] = True
     save_week()
-    return 'Dal sito CSI: '+'; '.join(parts)+'. Salvato nel browser.'
+    return parts
+
+
+def _now():
+    from shared_store import now
+    return now()
+
+
+def update_from_csi(force=False):
+    """Download the girone and apply it. force=True: everything again; force='match': also move on
+    to the next match. Returns (changes, error)."""
+    import csi_brescia
+    sync = dict(st.session_state.get('csi_sync') or {})
+    sync['tried_at'] = _now().isoformat(timespec='seconds')
+    ours = sanitize_match(st.session_state.get('shared_match'))['our_name']
+    try:
+        page = csi_brescia.download(ours, _now().date())
+    except Exception as exc:                             # unreachable site, or a page we cannot read
+        import robust
+        if robust.is_control(exc):
+            raise
+        exc = exc if isinstance(exc, csi_brescia.CSIError) else f'pagina del sito non leggibile ({type(exc).__name__})'
+        sync['error'] = str(exc)
+        st.session_state['csi_sync'] = sync
+        return [], str(exc)
+    sync.update(error=None, ok_at=sync['tried_at'])
+    parts = apply_page(page, sync, force)
+    st.session_state['csi_sync'] = sync
+    return parts, None
+
+
+def auto_update():
+    """Once per session, on opening: if the girone is older than an hour, take it again (a few seconds)."""
+    import csi_sync as cs
+    if st.session_state.get('csi_auto_done'):
+        return
+    st.session_state['csi_auto_done'] = True
+    if not cs.due(st.session_state.get('csi_sync'), _now()):
+        return
+    import robust
+    try:
+        with st.spinner('Aggiorno classifica e partite dal sito CSI...'):
+            parts, error = update_from_csi()
+    except Exception as exc:                             # never let the update stop the app from opening
+        if robust.is_control(exc):
+            raise
+        parts, error = [], f'errore inatteso ({type(exc).__name__})'
+    if parts:
+        st.toast('Dal sito CSI: '+'; '.join(parts)+'.', icon='📡')
+    elif error:
+        st.toast(f'Sito CSI non raggiunto: {error}.', icon='⚠️')
+
+
+def _move_on():
+    parts, error = update_from_csi(force='match')
+    if error:
+        st.session_state['csi_message'] = ('error', f'Non riesco a raggiungere il sito CSI: {error}.')
+    else:
+        st.session_state['csi_message'] = ('ok', 'Dal sito CSI: '+('; '.join(parts) or 'tutto già aggiornato')+'.')
+
+
+def _refresh():
+    parts, error = update_from_csi(force=True)
+    if error:
+        st.session_state['csi_message'] = ('error', f'Non riesco a raggiungere il sito CSI: {error}. Riprova tra poco.')
+    else:
+        st.session_state['csi_message'] = ('ok', 'Dal sito CSI: '+('; '.join(parts) or 'tutto già aggiornato')+'.')
 
 
 # --- Squad register ----------------------------------------------------------
@@ -209,50 +308,44 @@ def thumbnail(root, template, library):
 
 # --- Page --------------------------------------------------------------------
 
+def _when(stamp):
+    """'oggi alle 22:41' / 'ieri alle 9:05' / '15/11 alle 18:00' from an ISO time."""
+    try:
+        at = dt.datetime.fromisoformat(str(stamp))
+    except ValueError:
+        return ''
+    days = (_now().date()-at.date()).days
+    day = 'oggi' if days == 0 else 'ieri' if days == 1 else at.strftime('%d/%m')
+    return f"{day} alle {at.hour}:{at.minute:02d}"
+
+
 def show_csi(library):
+    import csi_brescia
+    import csi_sync as cs
     with st.container(border=True):
-        st.markdown('#### ① Aggiorna dal sito CSI')
-        saved = st.session_state.get('week_saved')
-        st.caption(('Ultimo aggiornamento: '+saved.replace('T', ' alle ')) if saved else
-                   'Nessun aggiornamento in questa settimana.')
-        st.markdown('Arrivano classifica, prossima partita e calendario del mese, in tutte le grafiche.')
-        st.link_button('Apri il Girone D su CSI LIVE', CSI_GIRONE, type='primary', width='stretch')
-        mark, paste = st.tabs(['🔖 Con il segnalibro', '📋 Incolla la pagina'])
-        with mark:
-            st.caption('Sulla pagina del girone tocca il segnalibro **Invia a Flamingos**: torni qui con tutto aggiornato.')
-            with st.expander('Installa o aggiorna il segnalibro'):
-                code = bookmarklet()
-                components.html('''<style>a{display:inline-block;padding:10px 18px;border-radius:9px;background:#e95396;color:#110d14;
-                    font:600 15px system-ui,sans-serif;text-decoration:none;cursor:grab}p{color:#bca9c5;font:13px system-ui,sans-serif;margin:8px 0 0}</style>
-                    <a href="'''+code.replace('"', '&quot;')+'''" onclick="return false">Invia a Flamingos</a>
-                    <p>Computer: trascina il pulsante nella barra dei preferiti (Safari, Chrome, Edge, Firefox).</p>''', height=86)
-                st.markdown(
-                    '**Mac:** in Safari o Chrome mostra la barra dei preferiti (*Vista > Mostra barra dei preferiti*, '
-                    'oppure Cmd+Maiusc+B) e trascinaci il pulsante rosa.\n\n'
-                    '**Windows (Chrome, Edge, Firefox):** mostra la barra dei preferiti con **Ctrl+Maiusc+B** e '
-                    'trascinaci il pulsante rosa. Se il trascinamento non va: tasto destro sulla barra > *Aggiungi '
-                    'pagina* (Chrome) o *Aggiungi preferito* (Edge, Firefox), nome *Invia a Flamingos*, e come indirizzo '
-                    'incolla il codice qui sotto.\n\n'
-                    '**iPhone / iPad:** aggiungi un segnalibro qualsiasi chiamato *Invia a Flamingos*, poi in '
-                    '*Modifica* sostituisci l\'indirizzo con il codice qui sotto. Sulla pagina del girone aprilo dai '
-                    'Preferiti.\n\n'
-                    '**Android (Chrome):** aggiungi la pagina ai preferiti (stellina nel menu ⋮), poi in *Preferiti* > '
-                    '*Modifica* chiamalo *Invia a Flamingos* e come URL incolla il codice qui sotto. Per usarlo, sulla '
-                    'pagina del girone **scrivi Invia a Flamingos nella barra degli indirizzi** e tocca il segnalibro che '
-                    'compare tra i suggerimenti (aprirlo dall\'elenco dei preferiti non funziona).')
-                st.code(code, language=None, wrap_lines=True)
-        with paste:
-            st.caption('Apri il girone, tieni premuto sul testo > **Seleziona tutto** > **Copia**, poi incolla qui sotto. '
-                       'Va bene anche solo la tabella della classifica.')
-            pasted = st.text_area('Pagina del girone', height=130, key='csi_paste', label_visibility='collapsed',
-                                  placeholder='Incolla qui il testo della pagina del girone')
-            if st.button('Leggi la pagina', key='csi_paste_read', type='primary', width='stretch', disabled=not pasted.strip()):
-                try:
-                    st.session_state['standings_message'] = import_csi({'u': '', 't': '', 'x': pasted})
-                except ValueError as exc:
-                    st.error(f'Non riesco a leggere la pagina: {exc} Copia di nuovo, partendo dalla classifica.')
-                else:
-                    st.rerun()
+        st.markdown('#### ① Dal sito CSI')
+        sync = st.session_state.get('csi_sync') or {}
+        if sync.get('ok_at'):
+            st.caption(f"Ultimo aggiornamento: {_when(sync['ok_at'])}. Classifica, partite e calendario si "
+                       "aggiornano da soli quando apri l'app (se sono passati più di 60 minuti).")
+        else:
+            st.caption("Classifica, partite e calendario arrivano da soli dal sito risultati del CSI Brescia "
+                       "quando apri l'app.")
+        message = st.session_state.pop('csi_message', None)
+        if message:
+            (st.success if message[0] == 'ok' else st.error)(message[1], icon='📡' if message[0] == 'ok' else None)
+        elif sync.get('error'):
+            st.warning(f"L'ultimo tentativo non è andato: {sync['error']}. Riprova con il pulsante qui sotto.")
+        held = sync.get('held')
+        if held:
+            until = cs.held_until(sanitize_match(st.session_state.get('shared_match')))
+            st.info(f"**Prossima partita sul sito:** vs {held['opponent'].title()}, {held['date']} alle "
+                    f"{held['kickoff']}. Le grafiche restano sulla partita appena giocata per il Full Time"
+                    + (f" fino al {until.strftime('%d/%m')}, poi passano da sole alla prossima." if until else '.'))
+            st.button('Passa ora alla prossima partita', key='csi_move_on', on_click=_move_on, width='stretch')
+        a, b = st.columns(2)
+        a.button('↻ Aggiorna ora', key='csi_refresh', on_click=_refresh, type='primary', width='stretch')
+        b.link_button('Apri il girone sul sito', csi_brescia.page_url(), width='stretch')
 
 
 def show_match_form(library):
@@ -262,7 +355,7 @@ def show_match_form(library):
     label = lambda x: {'default': 'Flamingos - incluso', 'none': 'Scudo con ?'}.get(x, assets.get(x, {}).get('name', x))
     with st.container(border=True):
         st.markdown('#### ② Partita della settimana')
-        st.caption('Arriva dal segnalibro; puoi correggerla qui. Va in tutte le grafiche, senza toccare stile e posizioni.')
+        st.caption('Arriva dal sito CSI; puoi correggerla qui. Va in tutte le grafiche, senza toccare stile e posizioni.')
         with st.form('shared_match_form', border=False):
             values = {}
             a, b = st.columns([3, 2])
@@ -541,13 +634,13 @@ def show_after_match(root, library):
 def show_week(root: Path, library):
     st.subheader('LA TUA SETTIMANA')
     st.caption('Tutto in ordine: aggiorna dal CSI, controlla la partita, poi apri le grafiche una alla volta.')
-    line = countdown(sanitize_match(st.session_state.get('shared_match')))
+    fulltime = current_config('Full Time')
+    line = countdown(sanitize_match(st.session_state.get('shared_match')), _now().date(),
+                     (fulltime.get('home_score'), fulltime.get('away_score')))
     if line:
         st.info(line)
     if st.session_state.get('standings_message'):
         st.success(st.session_state.pop('standings_message'), icon='📡')
-    if st.session_state.get('standings_import_error'):
-        st.error('Il segnalibro ha inviato una pagina senza classifica leggibile: '+st.session_state.pop('standings_import_error'))
     left, right = st.columns(2, gap='large')
     with left:      # on a phone the columns stack: CSI, match, then the squad (done once) and sponsor
         show_csi(library)

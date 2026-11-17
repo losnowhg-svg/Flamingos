@@ -1,4 +1,20 @@
-# Flamingos Studio 3.18
+# Flamingos Studio 3.20
+
+## Novita della 3.20: il girone arriva da solo dal sito CSI
+- **Niente più segnalibro né pagina da incollare.** Quando qualcuno apre l'app, se i dati hanno più di un'ora,
+  classifica, risultati, calendario e prossima partita arrivano da soli in pochi secondi dal sito risultati del
+  CSI Brescia (risultati.csi.brescia.it, la fonte ufficiale: nessun account). Nella Settimana c'è anche
+  *↻ Aggiorna ora*; se il sito non risponde compare un avviso e il resto dell'app funziona come sempre.
+- **Si cambia solo quello che è cambiato sul sito.** Se un amico corregge il ritrovo o il campo della partita,
+  l'aggiornamento non lo copre; se il CSI sposta l'orario, l'orario si aggiorna. Una partita scelta a mano
+  (un'amichevole) resta finché sul sito non arriva la giornata dopo.
+- **Il risultato va nel Full Time da solo.** Quando il CSI pubblica il nostro risultato, il Full Time lo prende
+  (se non hai già scritto un punteggio diverso a mano) e il risultato entra nella stagione.
+- **Due giorni per pubblicare il Full Time.** Dopo la partita le grafiche restano su quella giocata per due
+  giorni, poi passano da sole alla prossima (nella Settimana c'è *Passa ora alla prossima partita* per farlo
+  prima). Contano solo i risultati che il sito mostra (anche quelli in rosso, ufficiosi): uno inserito dalla
+  squadra ma non ancora pubblicato arriva quando il CSI lo pubblica.
+- Il vecchio segnalibro *Invia a Flamingos* non serve più: si può cancellare dai preferiti.
 
 ## Novita della 3.18: più fluida e più robusta
 - **Una pagina che si inceppa non perde niente.** Se una pagina incontra un errore (un file strano, un dato
@@ -99,8 +115,7 @@ Le carte restano le stesse, così la collezione si riconosce. La notte synthwave
 
 ## Novita della 3.12: risultati della giornata
 Nuova pagina **📋 Risultati della giornata**: tutte le partite del girone in una grafica, da pubblicare ogni
-settimana. Le partite arrivano già dal sito CSI (segnalibro *Invia a Flamingos* o pagina incollata nella
-Settimana): di serie la pagina apre l'ultima giornata con almeno un risultato.
+settimana. Le partite arrivano già dal sito CSI (dalla 3.20 da sole): di serie la pagina apre l'ultima giornata con almeno un risultato.
 - Chi vince è in grassetto bianco, chi perde più spento; **la nostra partita è rosa** e arriva per ultima, sul drop
   della musica. Le partite non ancora giocate mostrano giorno e ora.
 - Stemmi del girone dall'archivio (o le iniziali), il nostro logo per noi.

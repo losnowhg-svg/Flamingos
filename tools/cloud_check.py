@@ -204,6 +204,12 @@ _res, _ = integration.fulltime_result(_ft, today=_dt.date(2026, 11, 4))
 _state = {}
 assert integration.record(_state, _res) and _state['season_scorers'] == [{'name': 'TEU', 'goals': 1}]
 done.append('integrazione tra schermate')
+import csi_brescia, csi_sync
+_pages = {k: Path(__ROOT__, 'tests', 'fixtures', 'csi_brescia', k+'.html').read_text(encoding='utf-8') for k in csi_brescia.KINDS}
+_girone = csi_brescia.read(_pages, 'FLAMINGOS', _dt.date(2026, 11, 17))
+assert _girone['standings'][0]['team'] == 'UMC' and _girone['fields']['opponent'] == 'AS ARDENS 2002'
+assert csi_sync.match_step({}, _girone['fields'], None, _dt.date(2026, 11, 17))[0] == 'apply'
+done.append('girone dal sito CSI')
 print('OK: '+', '.join(done))
 '''
 
