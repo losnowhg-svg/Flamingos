@@ -105,7 +105,6 @@ sponsor.register(library['assets'])
 shared_ui.merge_assets(library)          # fonts and logos uploaded by friends
 restore_week(library)
 perf.mark('stemmi+settimana')
-auto_update()                            # 3.20: the girone from the CSI site, if older than an hour
 root = Path(__file__).resolve().parent
 shared_ui.note_banner(template)          # 3.15: the note a friend left, on top of the page
 import week_ui
@@ -152,3 +151,6 @@ finally:
     robust.trim_outputs()                # 3.18: only the newest videos/ZIPs stay in memory
     perf.mark('stagione+salvataggio')
     perf.stop('Altro' if st.session_state.get('phone_more') else template)
+# 3.20: the girone from the CSI site, if older than an hour. 3.24: after the page, so it shows at once;
+# when something changed, one more run shows it.
+auto_update()

@@ -18,6 +18,17 @@ def button(data, filename: str = '', mime: str = '', label: str = '📲 Condivid
     files = [f for f in files if f[0]]
     if not files or sum(len(f[0]) for f in files) > LIMIT:
         return
+    import hashlib
+    import streamlit as st
+    # 3.24: the file travels to the phone only when asked (inside the page it was 2-3 MB at every tap)
+    mark = hashlib.sha1(b''.join(f[0][:200000] for f in files)+str(sum(len(f[0]) for f in files)).encode()).hexdigest()
+    flag = 'share_open_'+(key or mark[:12])
+    if st.session_state.get(flag) != mark:
+        if st.button(label, key='ask_'+flag, width='stretch'):
+            st.session_state[flag] = mark
+            st.rerun()
+        return
+    label = '📲 Tocca qui per aprire la condivisione'
     import streamlit.components.v1 as components
     payload = json.dumps([{'name': name, 'type': kind, 'data': base64.b64encode(blob).decode()} for blob, name, kind in files])
     html = f"""<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
