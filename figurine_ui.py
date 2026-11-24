@@ -193,7 +193,8 @@ def _pagelle_tab(match, fulltime, squad, logo, ctx):
         hd = _pagelle_png(json.dumps(voted, sort_keys=True, default=str), json.dumps(info, sort_keys=True), logo, fmt, 2,
                           ctx['style'])
         st.session_state['pagelle_payload'] = {'rows': voted, 'info': info}
-        st.image(hd, width='stretch')
+        import app_shell
+        st.image(app_shell.preview(hd), width='stretch')
         signature = _sig(voted, info, fmt, track, sound, fps, scale, logo, ctx['style'])
         a, b = st.columns(2)
         a.download_button('⬇ Pagelle PNG', hd, file_name='flamingos_pagelle.png', mime='image/png', width='stretch',
@@ -309,7 +310,8 @@ def _card_tab(match, fulltime, squad, logo, ctx):
     with preview:
         post = _poster_png(spec_json, logo, fmt, 2, caption, ctx['style'])
         st.session_state['figurina_payload'] = {'spec': spec, 'caption': caption}
-        st.image(post, width='stretch')
+        import app_shell
+        st.image(app_shell.preview(post), width='stretch')
         a, b = st.columns(2)
         a.download_button('⬇ Post PNG', post, file_name=f"figurina_{member['name'].lower()}_post.png", mime='image/png',
                           width='stretch', key='figurina_post_png')
@@ -398,7 +400,8 @@ def _album_tab(squad, logo, ctx):
             st.info('La rosa è vuota: caricala nella Settimana.')
             return
         hd = _album_png(members_json, logo, fmt, 2, ctx['season'], ctx['team'], ctx['style'])
-        st.image(hd, width='stretch')
+        import app_shell
+        st.image(app_shell.preview(hd), width='stretch')
         a, b = st.columns(2)
         a.download_button('⬇ Album PNG', hd, file_name='flamingos_album.png', mime='image/png', width='stretch',
                           key='album_png')

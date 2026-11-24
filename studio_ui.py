@@ -815,7 +815,7 @@ def show_studio(root: Path, template: str, library: dict):
                 import share
                 share.button(png, basename+'.png', 'image/png', key='png_'+template)
                 if is_crt and config['mockup']:
-                    st.image(png, width='stretch')
+                    st.image(app_shell.preview(png), width='stretch')
                 else:
                     with st.expander('Guarda il PNG finale'):
                         if is_crt and safezone.applies(config['export_format']) and st.toggle(
@@ -824,7 +824,7 @@ def show_studio(root: Path, template: str, library: dict):
                             import io as _io
                             st.image(safezone.mock(_Image.open(_io.BytesIO(png))), width='stretch')
                         else:
-                            st.image(png, width='stretch')
+                            st.image(app_shell.preview(png), width='stretch')
                 st.divider()
                 if is_squad:
                     from reparti_ui import show_departments

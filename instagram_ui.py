@@ -64,7 +64,8 @@ def show_instagram(root, library):
             pose = a.selectbox('Pose', list(variety.POSE_MODES), format_func=variety.POSE_MODES.get, key='team_pose')
             scene = b.selectbox('Sfondo', list(variety.SCENE_MODES), format_func=variety.SCENE_MODES.get, key='team_scene')
             data = team_photo_png(squad, look, logo, size, pose, scene)
-            st.image(data, width='stretch')
+            import app_shell
+            st.image(app_shell.preview(data), width='stretch')
             st.download_button('⬇ Scarica foto di squadra', data, file_name=f'flamingos_squadra_{look}.png',
                                mime='image/png', type='primary', width='stretch', key='team_download')
             import share
