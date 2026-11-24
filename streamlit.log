@@ -1,0 +1,67 @@
+
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+
+2026-11-24 23:31:48.800 Uvicorn server started on :::8501
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://10.1.0.21:8501
+  External URL: http://4.154.85.167:8501
+
+[perf] archivio in attesa 549ms | avvio=184 import=327 condiviso+menu=4 archivio=34
+[perf] Settimana 4569ms | avvio=1 import=1 condiviso+menu=3 archivio=1 stemmi+settimana=14 csi+avvisi=1851 pagina=2694 stagione+salvataggio=5
+2026-11-24 23:32:09.354 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Matchday Screen 3707ms | avvio=1 import=1 condiviso+menu=5 archivio=3 stemmi+settimana=0 csi+avvisi=2 pagina=3692 stagione+salvataggio=3
+2026-11-24 23:32:16.065 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Full Time 2864ms | avvio=1 import=1 condiviso+menu=5 archivio=2 stemmi+settimana=0 csi+avvisi=0 pagina=2846 stagione+salvataggio=8
+2026-11-24 23:32:22.320 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Classifica 2903ms | avvio=0 import=1 condiviso+menu=2 archivio=1 stemmi+settimana=0 csi+avvisi=1 pagina=2894 stagione+salvataggio=4
+[perf] Altro 13ms | avvio=1 import=1 condiviso+menu=3 archivio=1 stemmi+settimana=0 csi+avvisi=1 pagina=4 stagione+salvataggio=2
+[perf] Settimana 80ms | avvio=1 import=1 condiviso+menu=5 archivio=2 stemmi+settimana=0 csi+avvisi=0 pagina=68 stagione+salvataggio=2
+2026-11-24 23:32:40.997 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Matchday Screen 279ms | avvio=1 import=1 condiviso+menu=3 archivio=2 stemmi+settimana=0 csi+avvisi=0 pagina=270 stagione+salvataggio=2
+2026-11-24 23:32:42.106 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Full Time 271ms | avvio=1 import=1 condiviso+menu=3 archivio=2 stemmi+settimana=0 csi+avvisi=0 pagina=262 stagione+salvataggio=2
+2026-11-24 23:32:43.129 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Classifica 268ms | avvio=0 import=1 condiviso+menu=2 archivio=1 stemmi+settimana=0 csi+avvisi=1 pagina=259 stagione+salvataggio=4
+[perf] Altro 11ms | avvio=1 import=1 condiviso+menu=3 archivio=2 stemmi+settimana=0 csi+avvisi=0 pagina=4 stagione+salvataggio=2
+[perf] Settimana 66ms | avvio=1 import=1 condiviso+menu=3 archivio=1 stemmi+settimana=0 csi+avvisi=1 pagina=58 stagione+salvataggio=1
+2026-11-24 23:32:55.832 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Matchday Screen 250ms | avvio=1 import=1 condiviso+menu=4 archivio=2 stemmi+settimana=0 csi+avvisi=0 pagina=240 stagione+salvataggio=2
+2026-11-24 23:33:24.879 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Convocati 3050ms | avvio=1 import=1 condiviso+menu=3 archivio=1 stemmi+settimana=0 csi+avvisi=0 pagina=3041 stagione+salvataggio=3
+2026-11-24 23:33:33.323 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Full Time 279ms | avvio=0 import=1 condiviso+menu=2 archivio=2 stemmi+settimana=0 csi+avvisi=1 pagina=270 stagione+salvataggio=3
+2026-11-24 23:33:59.553 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Classifica 309ms | avvio=0 import=1 condiviso+menu=2 archivio=1 stemmi+settimana=0 csi+avvisi=0 pagina=299 stagione+salvataggio=4
+2026-11-24 23:34:25.773 Please replace `st.components.v1.html` with `st.iframe`.
+
+`st.components.v1.html` will be removed after 2026-06-01.
+[perf] Calendario 586ms | avvio=0 import=1 condiviso+menu=2 archivio=1 stemmi+settimana=0 csi+avvisi=0 pagina=577 stagione+salvataggio=4
+[perf] Sequenza video 792ms | avvio=1 import=1 condiviso+menu=3 archivio=2 stemmi+settimana=0 csi+avvisi=0 pagina=784 stagione+salvataggio=2
+[perf] Didascalie 47ms | avvio=0 import=1 condiviso+menu=2 archivio=1 stemmi+settimana=0 csi+avvisi=1 pagina=40 stagione+salvataggio=1
+[perf] Wrapped 549ms | avvio=1 import=1 condiviso+menu=3 archivio=1 stemmi+settimana=0 csi+avvisi=1 pagina=540 stagione+salvataggio=2
+[perf] Instagram 3458ms | avvio=1 import=1 condiviso+menu=2 archivio=2 stemmi+settimana=0 csi+avvisi=0 pagina=3451 stagione+salvataggio=2
+[perf] archivio in attesa 6ms | avvio=1 import=2 condiviso+menu=3 archivio=1
+[perf] Settimana 2295ms | avvio=1 import=2 condiviso+menu=3 archivio=1 stemmi+settimana=0 csi+avvisi=1535 pagina=753 stagione+salvataggio=1

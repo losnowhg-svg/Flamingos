@@ -1,0 +1,73 @@
+TEMPO apertura: 6.47s, 6.23 MB
+shot 00_apertura
+barra in basso visibile: True
+TEMPO giro 1 Matchday: 4.62s, 6.28 MB (pagina 1.85 MB, file 4.43 MB)
+    file 1.29 MB 200 http://localhost:8501/media/268bcbe9bdbd940b56b3ce80b006f749.jpg
+    file 0.11 MB 200 http://localhost:8501/static/js/ColorPicker.BT_lfayY.js
+    file 0.19 MB 200 http://localhost:8501/media/1aaaeef8b2b66f36561f1f90841b867d.jpg
+    file 0.97 MB 200 http://localhost:8501/media/009eb8fc536afd9d5fc98d593f3ac0f6.png
+    file 0.26 MB 200 http://localhost:8501/media/339d69e0bd4b7175a62b64c03f029acb.jpg
+    file 1.56 MB 200 http://localhost:8501/static/js/StreamlitSyntaxHighlighter.BUgbX-5b.js
+shot barra_Matchday
+TEMPO giro 1 Full Time: 3.13s, 2.75 MB (pagina 1.52 MB, file 1.23 MB)
+    file 0.17 MB 200 http://localhost:8501/media/69e37341b4c8c8fddd5b5f33b67ec4d5.jpg
+    file 0.82 MB 200 http://localhost:8501/media/5494f740620fe45b8589ad61acb56877.png
+    file 0.22 MB 200 http://localhost:8501/media/22397244883b4e42d6fd4463c879cf68.jpg
+shot barra_Full_Time
+TEMPO giro 1 Classifica: 3.13s, 2.41 MB (pagina 1.27 MB, file 1.14 MB)
+    file 0.14 MB 200 http://localhost:8501/media/86820f279b6fd1cb2059da15df16d273.jpg
+    file 0.72 MB 200 http://localhost:8501/media/cdf92e268b92dbb042c1a05e401a0667.png
+    file 0.26 MB 200 http://localhost:8501/media/11a1ae1dfa3cb34673662c591e01d77f.jpg
+shot barra_Classifica
+TEMPO giro 1 Altro: 1.01s, 0.02 MB (pagina 0.02 MB, file 0.00 MB)
+shot barra_Altro
+TEMPO giro 1 Home: 0.39s, 0.62 MB (pagina 0.07 MB, file 0.55 MB)
+    file 0.10 MB 200 http://localhost:8501/media/74f13c8a4ba46566ad84a3369bfb724b.jpg
+    file 0.10 MB 200 http://localhost:8501/media/c516d30a5f714534bb579a42355c6516.jpg
+    file 0.09 MB 200 http://localhost:8501/media/1b196961a486068267cdac9dbe15933b.jpg
+    file 0.09 MB 200 http://localhost:8501/media/61f80bcbfa9a8f3a7c93611492aff110.jpg
+    file 0.08 MB 200 http://localhost:8501/media/b672e18adee39cc9250538c6b8f2b4ca.jpg
+    file 0.09 MB 200 http://localhost:8501/media/95dd0048237d2bb7c7514d1d1979b6ab.png
+shot barra_Home
+TEMPO giro 2 Matchday: 0.72s, 3.22 MB (pagina 1.80 MB, file 1.43 MB)
+    file 0.19 MB 200 http://localhost:8501/media/1aaaeef8b2b66f36561f1f90841b867d.jpg
+    file 0.97 MB 200 http://localhost:8501/media/009eb8fc536afd9d5fc98d593f3ac0f6.png
+    file 0.26 MB 200 http://localhost:8501/media/339d69e0bd4b7175a62b64c03f029acb.jpg
+TEMPO giro 2 Full Time: 0.63s, 2.74 MB (pagina 1.52 MB, file 1.22 MB)
+    file 0.17 MB 200 http://localhost:8501/media/69e37341b4c8c8fddd5b5f33b67ec4d5.jpg
+    file 0.82 MB 200 http://localhost:8501/media/5494f740620fe45b8589ad61acb56877.png
+    file 0.22 MB 200 http://localhost:8501/media/22397244883b4e42d6fd4463c879cf68.jpg
+TEMPO giro 2 Classifica: 0.58s, 2.15 MB (pagina 1.27 MB, file 0.87 MB)
+    file 0.14 MB 200 http://localhost:8501/media/86820f279b6fd1cb2059da15df16d273.jpg
+    file 0.72 MB 200 http://localhost:8501/media/cdf92e268b92dbb042c1a05e401a0667.png
+TEMPO giro 2 Altro: 0.19s, 0.02 MB (pagina 0.02 MB, file 0.00 MB)
+TEMPO giro 2 Home: 0.33s, 0.07 MB (pagina 0.07 MB, file 0.00 MB)
+TEMPI Matchday: 4.62s / 0.72s
+TEMPI Full Time: 3.13s / 0.63s
+TEMPI Classifica: 3.13s / 0.58s
+TEMPI Altro: 1.01s / 0.19s
+TEMPI Home: 0.39s / 0.33s
+shot 01_menu_aperto
+shot 02_La_tua_settimana
+shot 03_Matchday
+TEMPO Matchday > Stile: 1.03s, 0.00 MB
+shot 03_Matchday_Stile
+TEMPO Matchday > Esporta: 1.01s, 0.00 MB
+shot 03_Matchday_Esporta
+shot 04_Convocati
+shot 05_Full_Time
+TEMPO Full Time > Stile: 1.01s, 0.00 MB
+shot 05_Full_Time_Stile
+TEMPO Full Time > Esporta: 1.01s, 0.00 MB
+shot 05_Full_Time_Esporta
+shot 06_Classifica
+TEMPO Classifica > Stile: 1.03s, 0.00 MB
+shot 06_Classifica_Stile
+TEMPO Classifica > Esporta: 1.01s, 0.00 MB
+shot 06_Classifica_Esporta
+shot 07_Calendario
+shot 08_Video_con_transizioni
+shot 09_Didascalie
+shot 10_Wrapped
+shot 11_Squadra_e_copertine
+shot computer_home
