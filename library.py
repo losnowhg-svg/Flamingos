@@ -15,7 +15,25 @@ def show_library():
     shared = (st.session_state.get('shared_meta') or {}).get('status') == 'on'
     with st.sidebar.expander('Archivio: font, stemmi e backup',expanded=True):
         result = VAULT(command=st.session_state.get('vault_command'),shared=shared,key='studio_library_v1',default=None)
-        if isinstance(result,dict) and result.get('event_id') != st.session_state.get('vault_event'):
+        if isinstance(result,dict) and result.get('event_id') != st.session_state.get('vault_event') and result.get('ack') \
+                and 'studio_library' in st.session_state:
+            # 3.24: a saved project is confirmed without the whole archive coming back from the phone
+            pending = st.session_state.get('vault_command')
+            if pending and result.get('command_id') == pending['id'] and not result.get('error'):
+                st.session_state['studio_library'].setdefault('projects', {})[pending['project_id']] = dict(pending['project'])
+            result = dict(result, library=None)
+        if isinstance(result,dict) and result.get('event_id') != st.session_state.get('vault_event') and result.get('ack'):
+            st.session_state['vault_event'] = result.get('event_id')
+            st.session_state['vault_storage_ok'] = bool(result.get('storage_ok'))
+            pending = st.session_state.get('vault_command')
+            if pending and result.get('command_id') == pending['id']:
+                st.session_state.pop('vault_command',None)
+                if result.get('error'):
+                    st.session_state['vault_errors'] = [str(result['error'])]
+                flush_backlog()
+                if st.session_state.get('vault_command'):
+                    st.rerun()
+        elif isinstance(result,dict) and result.get('event_id') != st.session_state.get('vault_event'):
             try:
                 library,messages = validate_library(result.get('library'))
                 st.session_state['vault_ids'] = set(library['assets'])     # what this browser has (not the friends')
@@ -57,7 +75,12 @@ def friends(local_ids):
 
 
 def queue_save(name, template, config, project_id):
-    """Ask the browser archive to store a project on this run. False if one is pending."""
+    """Ask the browser archive to store a project on this run. False if one is pending.
+
+    3.24: with the shared work on, the week and the squad are already saved for everyone: no copy in the
+    browser (each copy was a round trip with the whole archive and one more run of the page)."""
+    if (st.session_state.get('shared_meta') or {}).get('status') == 'on':
+        return True
     if st.session_state.get('vault_command'):
         st.session_state.setdefault('vault_backlog', {})[project_id] = (name, template, config)
         return False

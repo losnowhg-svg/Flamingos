@@ -199,6 +199,16 @@ CSS = '''<style class="fs-css">
 
 # --- Streamlit -----------------------------------------------------------------------------------------
 
+def is_phone():
+    """3.24: the browser says it is a phone (then the heavy drag editor is left out, the small preview stays)."""
+    import streamlit as st
+    try:
+        agent = str(st.context.headers.get('User-Agent') or '')
+    except Exception:
+        return False
+    return any(word in agent for word in ('iPhone', 'iPod', 'Android', 'Mobile'))
+
+
 def style():
     import streamlit as st
     st.markdown(CSS, unsafe_allow_html=True)

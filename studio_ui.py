@@ -717,12 +717,17 @@ def show_studio(root: Path, template: str, library: dict):
         preview_key = hashlib.sha256(json.dumps({k_: v for k_, v in config.items() if k_ not in VIDEO_ONLY}, sort_keys=True).encode()
                                      + (home or b'')+(away or b'')+(font_bytes or b'')).hexdigest()
         memo = st.session_state.get('preview_'+template)
+        import app_shell
+        phone = app_shell.is_phone()
         if memo and memo['key'] == preview_key:
             prepared, editor_payload = memo['prepared'], memo['payload']
         else:
             prepared = module.scene(config, home, away, font_bytes, 2) if is_crt else r.scene(config, home, font_bytes, 2)
+            editor_payload = None
+        if editor_payload is None and not phone:     # 3.24: the drag editor's images only where it is shown
             editor_scene = (animations.still_base(prepared),)+tuple(prepared[1:]) if is_crt else prepared
             editor_payload = r.editor_data(editor_scene)
+        if not (memo and memo['key'] == preview_key and memo['payload'] is editor_payload):
             st.session_state['preview_'+template] = {'key': preview_key, 'prepared': prepared, 'payload': editor_payload}
         crop = CROPS[config['export_format']] if is_crt else None
         with mobile_slot:
@@ -741,15 +746,20 @@ def show_studio(root: Path, template: str, library: dict):
         # ------------------------------------------------------ PREVIEW
         with preview_column:
             zones = safezone.editor_zones(config['export_format']) if is_crt else None
-            changed = EDITOR(**editor_payload, crop=crop, zones=zones, key=key('canvas'), default=None)
-            if isinstance(changed, dict) and changed.get('event_id') != st.session_state.get('editor_event_'+template):
-                st.session_state['editor_event_'+template] = changed.get('event_id')
-                if isinstance(changed.get('positions'), dict):
-                    updated = {k_: list(v) for k_, v in module.normalized_positions({'positions': changed['positions']}).items()}
-                    if updated != config['positions']:
-                        config['positions'] = updated; st.rerun()
-            st.caption('Trascina testi e stemmi. Le linee gialle mostrano il ritaglio del formato scelto'
-                       + ('; le fasce a righe sono coperte dall\'interfaccia di Instagram nei Reel e nelle Storie.' if zones else '.'))
+            if phone:
+                # 3.24: on a phone the preview at the top is enough; the drag editor (1-2 MB of images at
+                # every tap) stays on the computer. Positions can still be set below.
+                st.caption('Per trascinare testi e stemmi usa il computer; qui sotto puoi spostarli con i numeri.')
+            else:
+                changed = EDITOR(**editor_payload, crop=crop, zones=zones, key=key('canvas'), default=None)
+                if isinstance(changed, dict) and changed.get('event_id') != st.session_state.get('editor_event_'+template):
+                    st.session_state['editor_event_'+template] = changed.get('event_id')
+                    if isinstance(changed.get('positions'), dict):
+                        updated = {k_: list(v) for k_, v in module.normalized_positions({'positions': changed['positions']}).items()}
+                        if updated != config['positions']:
+                            config['positions'] = updated; st.rerun()
+                st.caption('Trascina testi e stemmi. Le linee gialle mostrano il ritaglio del formato scelto'
+                           + ('; le fasce a righe sono coperte dall\'interfaccia di Instagram nei Reel e nelle Storie.' if zones else '.'))
             for warning in layout_warnings(prepared, crop): st.warning(warning)
             hidden = safezone.covered(prepared, config['export_format']) if is_crt else []
             if hidden:

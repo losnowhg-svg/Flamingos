@@ -30,6 +30,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 function send(type,data={}){window.parent.postMessage({isStreamlitMessage:true,type,...data},'*')}
 function height(){send('streamlit:setFrameHeight',{height:Math.ceil(document.body.scrollHeight+4)})}
 function feedback(text){$('message').textContent=text;height()}
+function ack(commandId,error=null){send('streamlit:setComponentValue',{value:{event_id:uid(),ack:true,storage_ok:storageOK,command_id:commandId,error},dataType:'json'})}
 function emit(commandId=null,error=null){send('streamlit:setComponentValue',{value:{event_id:uid(),library:vault,storage_ok:storageOK,command_id:commandId,error},dataType:'json'})}
 function rawSize(library){return Object.values(library.assets).reduce((sum,item)=>sum+(typeof item.data==='string'?Math.floor(item.data.length*3/4):0),0)}
 function checkLibrary(lib){
@@ -146,8 +147,8 @@ window.addEventListener('message',event=>{
      const p=cmd.project;if(!p||!TEMPLATES.includes(p.template))throw Error('Progetto non valido.');
      next.projects[cmd.project_id]={name:String(p.name).slice(0,80),template:p.template,config:p.config};
     }else throw Error('Comando non riconosciuto.');
-    next.last_command=cmd.id;await commit(next);seen.add(cmd.id);feedback(storageOK?'Progetto salvato nel browser.':'Progetto in memoria: scarica il backup.');emit(cmd.id);bootSent=true;
-   }catch(err){seen.add(cmd.id);emit(cmd.id,err.message);feedback(err.message)}
+    next.last_command=cmd.id;await commit(next);seen.add(cmd.id);feedback(storageOK?'Progetto salvato nel browser.':'Progetto in memoria: scarica il backup.');if(bootSent)ack(cmd.id);else emit(cmd.id);bootSent=true;
+   }catch(err){seen.add(cmd.id);if(bootSent)ack(cmd.id,err.message);else emit(cmd.id,err.message);feedback(err.message)}
   }else if(!bootSent){emit(cmd&&cmd.id||null);bootSent=true}
   height();
  });
