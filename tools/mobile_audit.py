@@ -47,7 +47,7 @@ with sync_playwright() as p:
     page = context.new_page()
     page.set_default_timeout(20000)
     page.goto(URL)
-    page.wait_for_selector('h1', timeout=120000)
+    page.wait_for_selector('h1', state='attached', timeout=120000)
     settle(page, 20)
     skip = page.get_by_text('Continua senza archivio')
     if skip.count() and skip.first.is_visible():
@@ -100,7 +100,7 @@ with sync_playwright() as p:
     try:
         desk = browser.new_context(viewport={'width': 1280, 'height': 900}, locale='it-IT').new_page()
         desk.goto(URL)
-        desk.wait_for_selector('h1', timeout=120000)
+        desk.wait_for_selector('h1', state='attached', timeout=120000)
         settle(desk, 20)
         skip = desk.get_by_text('Continua senza archivio')
         if skip.count() and skip.first.is_visible():
