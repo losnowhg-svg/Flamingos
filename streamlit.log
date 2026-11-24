@@ -1,0 +1,111 @@
+
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+
+2026-11-24 23:38:35.550 Uvicorn server started on :::8501
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://10.1.0.24:8501
+  External URL: http://52.156.141.248:8501
+
+[perf] archivio in attesa 683ms | avvio=263 import=371 condiviso+menu=7 archivio=41
+[perf-profile] archivio in attesa
+         413748 function calls (406212 primitive calls) in 0.651 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1969 to 1451 due to restriction <'flamingos|Flamingos|/app\\.py|/[a-z_]+\\.py'>
+   List reduced from 1451 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      278    0.001    0.000    0.536    0.002 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/inotify.py:744(queue_events)
+      278    0.001    0.000    0.235    0.001 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/inotify.py:238(read_event)
+      393    0.002    0.000    0.198    0.001 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/api.py:474(dispatch_events)
+    97/96    0.001    0.000    0.124    0.001 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/asyncio/base_events.py:1922(_run_once)
+      2/1    0.000    0.000    0.123    0.123 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/commands/page_config.py:71(_get_favicon_string)
+      2/1    0.000    0.000    0.123    0.123 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/elements/lib/image_utils.py:253(image_to_url)
+    30/28    0.001    0.000    0.120    0.004 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/runtime/metrics_util.py:686(wrapped_func)
+      278    0.001    0.000    0.117    0.000 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/inotify_move_event_grouper.py:47(read_event)
+       17    0.001    0.000    0.109    0.006 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/delta_generator.py:547(_enqueue)
+        3    0.000    0.000    0.107    0.036 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/elements/markdown.py:110(markdown)
+        3    0.000    0.000    0.107    0.036 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/elements/markdown.py:56(_markdown)
+        1    0.000    0.000    0.105    0.105 /home/runner/work/Flamingos/Flamingos/studio_ui.py:1(<module>)
+       14    0.000    0.000    0.105    0.008 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/inspect.py:1688(getframeinfo)
+       15    0.000    0.000    0.105    0.007 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/inspect.py:1070(findsource)
+      285    0.000    0.000    0.103    0.000 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/asyncio/events.py:86(_run)
+       45    0.003    0.000    0.100    0.002 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/inspect.py:988(getmodule)
+      165    0.002    0.000    0.084    0.001 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/inotify_c.py:476(_check_inotify_fd)
+        2    0.000    0.000    0.079    0.040 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/components/v1/component_registry.py:75(declare_component)
+      165    0.001    0.000    0.077    0.000 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/inotify_c.py:485(_read_event_buffer)
+      394    0.001    0.000    0.070    0.000 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/events.py:291(dispatch)
+        1    0.000    0.000    0.054    0.054 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/numpy/__config__.py:1(<module>)
+        1    0.000    0.000    0.049    0.049 /home/runner/work/Flamingos/Flamingos/studio_state.py:1(<module>)
+        2    0.000    0.000    0.049    0.025 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/components/v1/component_registry.py:33(_get_module_name)
+        1    0.000    0.000    0.046    0.046 /home/runner/work/Flamingos/Flamingos/studio_state.py:146(_choice_fields)
+      234    0.003    0.000    0.044    0.000 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/watcher/event_based_path_watcher.py:400(handle_path_change_event)
+
+
+[perf] Settimana 310ms | avvio=1 import=1 condiviso+menu=7 archivio=2 stemmi+settimana=28 csi+avvisi=4 pagina=249 stagione+salvataggio=18
+[perf-profile] Settimana
+         422876 function calls (396545 primitive calls) in 0.310 seconds
+
+   Ordered by: cumulative time
+   List reduced from 1344 to 903 due to restriction <'flamingos|Flamingos|/app\\.py|/[a-z_]+\\.py'>
+   List reduced from 903 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    71/70    0.000    0.000    0.333    0.005 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/inotify.py:744(queue_events)
+       70    0.000    0.000    0.310    0.004 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/inotify.py:238(read_event)
+        1    0.000    0.000    0.253    0.253 /home/runner/work/Flamingos/Flamingos/week_ui.py:712(show_week)
+    45/43    0.001    0.000    0.177    0.004 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/runtime/metrics_util.py:686(wrapped_func)
+        3    0.000    0.000    0.156    0.052 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/concurrent/futures/thread.py:54(run)
+        1    0.000    0.000    0.148    0.148 /home/runner/work/Flamingos/Flamingos/week_ui.py:695(_phone_week)
+        1    0.000    0.000    0.147    0.147 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/elements/widgets/button_group.py:460(pills)
+        1    0.000    0.000    0.147    0.147 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/elements/widgets/button_group.py:1193(_internal_button_group)
+        1    0.000    0.000    0.147    0.147 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/elements/widgets/button_group.py:1367(_button_group)
+        7    0.000    0.000    0.146    0.021 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/elements/widgets/button_group.py:1235(_transformed_format_func)
+        7    0.000    0.000    0.146    0.021 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/string_util.py:222(extract_leading_icon)
+        7    0.000    0.000    0.146    0.021 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/string_util.py:204(extract_leading_emoji)
+       88    0.002    0.000    0.128    0.001 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/re/__init__.py:280(_compile)
+        1    0.001    0.001    0.128    0.128 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/emojis.py:1(<module>)
+        6    0.000    0.000    0.126    0.021 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/re/__init__.py:226(compile)
+       13    0.000    0.000    0.126    0.010 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/re/_compiler.py:745(compile)
+       13    0.000    0.000    0.123    0.009 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/re/_compiler.py:578(_code)
+        1    0.000    0.000    0.099    0.099 /home/runner/work/Flamingos/Flamingos/app_shell.py:335(home_hero)
+       99    0.002    0.000    0.072    0.001 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/asyncio/base_events.py:1922(_run_once)
+        3    0.002    0.001    0.062    0.021 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/watcher/polling_path_watcher.py:89(task)
+        1    0.001    0.001    0.039    0.039 /home/runner/work/Flamingos/Flamingos/app_shell.py:306(_logos)
+  5333/13    0.017    0.000    0.031    0.002 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/re/_compiler.py:37(_compile)
+       77    0.000    0.000    0.028    0.000 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/api.py:474(dispatch_events)
+      241    0.001    0.000    0.025    0.000 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/asyncio/events.py:86(_run)
+       38    0.000    0.000    0.024    0.001 /opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/watchdog/observers/inotify_c.py:485(_read_event_buffer)
+
+
+2026-11-24 23:38:42.169 Uncaught app execution
+Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 136, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 936, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Flamingos/Flamingos/app.py", line 5, in <module>
+    perf.start()                             # 3.24: timings in the log only with FLAMINGOS_PERF
+    ^^^^^^^^^^^^
+  File "/home/runner/work/Flamingos/Flamingos/perf.py", line 27, in start
+    _local.prof.enable()
+ValueError: Another profiling tool is already active
+2026-11-24 23:46:00.901 Uncaught app execution
+Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 136, in exec_func_with_error_handling
+    result = func()
+             ^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 936, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/Flamingos/Flamingos/app.py", line 5, in <module>
+    perf.start()                             # 3.24: timings in the log only with FLAMINGOS_PERF
+    ^^^^^^^^^^^^
+  File "/home/runner/work/Flamingos/Flamingos/perf.py", line 27, in start
+    _local.prof.enable()
+ValueError: Another profiling tool is already active

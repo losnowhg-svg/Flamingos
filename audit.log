@@ -1,0 +1,98 @@
+TEMPO apertura: 5.03s, 3.33 MB
+shot 00_apertura
+barra in basso visibile: 0
+barra Matchday non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Matchday").first
+
+barra Full Time non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Full Time").first
+
+barra Classifica non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Classifica").first
+
+barra Altro non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Altro").first
+
+barra Home non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Home").first
+
+barra Matchday non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Matchday").first
+
+barra Full Time non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Full Time").first
+
+barra Classifica non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Classifica").first
+
+barra Altro non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Altro").first
+
+barra Home non riuscita: Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator(".st-key-bottom_nav").get_by_role("button").filter(has_text="Home").first
+
+shot 01_menu_aperto
+ERRORE La tua settimana Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("La tua settimana").first
+
+shot 02_La_tua_settimana_errore
+ERRORE Matchday Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("Matchday").first
+
+shot 03_Matchday_errore
+ERRORE Convocati Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("Convocati").first
+
+shot 04_Convocati_errore
+ERRORE Full Time Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("Full Time").first
+
+shot 05_Full_Time_errore
+ERRORE Classifica Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("Classifica").first
+
+shot 06_Classifica_errore
+ERRORE Calendario Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("Calendario").first
+
+shot 07_Calendario_errore
+ERRORE Video con transizioni Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("Video con transizioni").first
+
+shot 08_Video_con_transizioni_errore
+ERRORE Didascalie Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("Didascalie").first
+
+shot 09_Didascalie_errore
+ERRORE Wrapped Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("Wrapped").first
+
+shot 10_Wrapped_errore
+ERRORE Squadra e copertine Locator.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator("[data-testid=\"stSidebar\"]").get_by_text("Squadra e copertine").first
+
+shot 11_Squadra_e_copertine_errore
+computer non riuscito: Page.wait_for_selector: Timeout 120000ms exceeded.
+Call log:
+  - waiting for locator("h1")
+
