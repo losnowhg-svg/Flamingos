@@ -210,7 +210,7 @@ def show_studio(root: Path, template: str, library: dict):
     with controls:
         # 3.24: only the chosen section is built (tabs built all three at every tap, the final PNG included)
         part = st.segmented_control('Sezione', list(SECTIONS), format_func=SECTIONS.get, default='content',
-                                       key='editor_section', label_visibility='collapsed') or 'content'
+                                       key='editor_section_'+SLUGS[template], label_visibility='collapsed') or 'content'
 
     # ============================================================ CONTENUTI
     if part == 'content':
@@ -588,9 +588,10 @@ def show_studio(root: Path, template: str, library: dict):
                         updated = copy.deepcopy(config); updated['font_choice'] = PRESETS[config['preset_id']]['font']
                         restart(updated)
                 catalog = root/'assets'/'preset_catalog.jpg'
-                if catalog.exists():
-                    with st.expander(f'Guarda tutti i {len(PRESET_IDS)} preset'):
-                        st.image(str(catalog), width='stretch')
+                # 3.24: the 2 MB catalogue only when asked (inside an expander it was downloaded at every tap)
+                if catalog.exists() and st.toggle(f'Guarda tutti i {len(PRESET_IDS)} preset', key=key('catalog')):
+                    import app_shell
+                    st.image(app_shell.preview(catalog.read_bytes(), 1000), width='stretch')
                 import layouts
                 if len(layouts.options(template)) > 1:
                     st.divider()
@@ -817,12 +818,14 @@ def show_studio(root: Path, template: str, library: dict):
                 if is_crt and config['mockup']:
                     st.image(app_shell.preview(png), width='stretch')
                 else:
-                    with st.expander('Guarda il PNG finale'):
+                    if st.toggle('Guarda il PNG finale', key=key('see_png')):     # 3.24: only when asked
                         if is_crt and safezone.applies(config['export_format']) and st.toggle(
                                 'Mostra l\'interfaccia di un Reel sopra (solo per controllare)', key=key('ig_mock')):
                             from PIL import Image as _Image
                             import io as _io
-                            st.image(safezone.mock(_Image.open(_io.BytesIO(png))), width='stretch')
+                            mocked = _io.BytesIO()
+                            safezone.mock(_Image.open(_io.BytesIO(png))).save(mocked, 'PNG')
+                            st.image(app_shell.preview(mocked.getvalue()), width='stretch')
                         else:
                             st.image(app_shell.preview(png), width='stretch')
                 st.divider()
