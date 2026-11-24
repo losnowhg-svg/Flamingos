@@ -1,6 +1,8 @@
 """Flamingos Studio 2.0 - CRT graphics, standings, TV mockup, themes, pixel avatars and department slides."""
 from pathlib import Path
 import streamlit as st
+import perf
+perf.start()                             # 3.24: timings in the log only with FLAMINGOS_PERF
 
 st.set_page_config(page_title='Flamingos Studio',page_icon='F',layout='wide')
 st.markdown('''<style>
@@ -40,6 +42,7 @@ h4{margin-bottom:.2rem!important}
  button[data-baseweb="tab"]{padding-left:.4rem!important;padding-right:.4rem!important}
 }
 </style>''',unsafe_allow_html=True)
+perf.mark('avvio')
 import app_shell
 app_shell.style()                        # 3.23: app style (fonts, cards, bottom bar on the phone)
 with st.container(key='app_head'):
@@ -69,6 +72,7 @@ PAGES = {
 
 # 3.14: the last work saved by anyone (private repo in the secrets), before the menu.
 import shared_ui
+perf.mark('import')
 shared_ui.start()
 shared_ui.pull_merged()                  # 3.22: a friend's work joined with ours while saving
 
@@ -87,9 +91,12 @@ with st.sidebar:
 # 3.23: on a phone the menu is a bar at the bottom (Home, Matchday, Full Time, Classifica, Altro).
 app_shell.bottom_nav(template)
 
+perf.mark('condiviso+menu')
 library = show_library()
+perf.mark('archivio')
 if library is None:
     st.info('Caricamento dell\'archivio font e stemmi dal browser. Se il browser lo blocca, usa Continua senza archivio nella barra laterale.')
+    perf.stop('archivio in attesa')
     st.stop()
 import crests
 crests.register(library)        # the girone crests, next to the archive's own logos
@@ -97,12 +104,14 @@ import sponsor
 sponsor.register(library['assets'])
 shared_ui.merge_assets(library)          # fonts and logos uploaded by friends
 restore_week(library)
+perf.mark('stemmi+settimana')
 auto_update()                            # 3.20: the girone from the CSI site, if older than an hour
 root = Path(__file__).resolve().parent
 shared_ui.note_banner(template)          # 3.15: the note a friend left, on top of the page
 import week_ui
 week_ui.moved_banner()                   # 3.21: the CSI moved our match
 import robust
+perf.mark('csi+avvisi')
 try:                                     # 3.18: a page error shows a short message, and the work below is still saved
     if st.session_state.get('phone_more'):
         app_shell.show_more()            # 3.23: the phone's "Altro" screen
@@ -132,6 +141,7 @@ except Exception as exc:
         raise
     robust.page_error(exc, template)
 finally:
+    perf.mark('pagina')
     import integration_ui
     try:
         integration_ui.sync()            # 3.17: a played Full Time result goes into the season by itself
@@ -140,3 +150,5 @@ finally:
             raise
     shared_ui.autosave(library)          # every change, saved for everyone (in the background)
     robust.trim_outputs()                # 3.18: only the newest videos/ZIPs stay in memory
+    perf.mark('stagione+salvataggio')
+    perf.stop('Altro' if st.session_state.get('phone_more') else template)

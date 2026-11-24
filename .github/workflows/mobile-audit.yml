@@ -21,16 +21,16 @@ jobs:
       - run: python -m playwright install --with-deps chromium
       - name: Avvia l'app
         run: |
-          streamlit run app.py --server.headless true --server.port 8501 > streamlit.log 2>&1 &
+          FLAMINGOS_PERF=${{ contains(github.ref_name, 'profile') && '2' || '1' }} streamlit run app.py --server.headless true --server.port 8501 > streamlit.log 2>&1 &
           for i in $(seq 1 60); do curl -sf http://localhost:8501/_stcore/health && break; sleep 2; done
       - run: python tools/mobile_audit.py http://localhost:8501 shots 2>&1 | tee audit.log
         continue-on-error: true
-      - name: Pubblica le schermate sul ramo mobile-shots
+      - name: Pubblica le schermate sul ramo shots-<ramo>
         if: always()
         run: |
           mkdir -p shots; cp streamlit.log audit.log shots/ || true
           cd shots
-          git init -q -b mobile-shots
+          git init -q -b "shots-${GITHUB_REF_NAME}"
           git config user.name "github-actions"; git config user.email "actions@github.com"
           git add -A; git commit -qm "Schermate mobile ${GITHUB_SHA::7}"
-          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" mobile-shots
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" "shots-${GITHUB_REF_NAME}"
