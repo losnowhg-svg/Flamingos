@@ -28,6 +28,9 @@ def is_control(exc):
 
 def page_error(exc, page=''):
     st.session_state['last_error'] = ''.join(traceback.format_exception(type(exc), exc, exc.__traceback__))[-4000:]
+    import perf
+    if perf.ON:                          # 3.24: in the test runs the error also goes to the log
+        print(f'[errore pagina] {page}\n'+st.session_state['last_error'], flush=True)
     with st.container(border=True, key='page_error'):
         st.markdown('#### 😵 Questa pagina si è inceppata')
         st.caption('Il tuo lavoro è salvato: puoi riprovare o andare su un\'altra pagina dal menu. Se succede di nuovo, '

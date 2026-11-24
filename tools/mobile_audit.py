@@ -14,6 +14,7 @@ OUT.mkdir(parents=True, exist_ok=True)
 PAGES = ['La tua settimana', 'Matchday', 'Convocati', 'Full Time', 'Classifica', 'Calendario',
          'Video con transizioni', 'Didascalie', 'Wrapped', 'Squadra e copertine']
 TABS = ['Stile', 'Esporta']
+HEADS_PAGE = {'Matchday': 'MATCHDAY', 'Full Time': 'FULL TIME', 'Classifica': 'CLASSIFICA'}
 
 
 def settle(page, seconds=6):
@@ -25,41 +26,64 @@ def settle(page, seconds=6):
     time.sleep(1.5)
 
 
-TRAFFIC = {'bytes': 0}
+TRAFFIC = {'bytes': 0, 'ws': 0, 'http': 0, 'big': []}
 
 
 def watch_traffic(page):
-    """Bytes the phone downloads: websocket frames (Streamlit's page updates) and media files."""
-    def on_ws(ws):
-        ws.on('framereceived', lambda data: TRAFFIC.__setitem__('bytes', TRAFFIC['bytes']+len(data)))
-    page.on('websocket', on_ws)
+    """Bytes the phone downloads: websocket frames (Streamlit's page updates) and files (images...)."""
+    def on_frame(data):
+        TRAFFIC['ws'] += len(data)
+        TRAFFIC['bytes'] += len(data)
+
+    page.on('websocket', lambda ws: ws.on('framereceived', on_frame))
 
     def on_response(response):
         try:
-            TRAFFIC['bytes'] += int(response.headers.get('content-length') or 0)
+            if response.request.resource_type == 'websocket':
+                return
+            size = int(response.headers.get('content-length') or 0)
+            TRAFFIC['http'] += size
+            TRAFFIC['bytes'] += size
+            if size > 60000:
+                TRAFFIC['big'].append((size, response.url.split('?')[0][-70:], response.status))
         except Exception:
             pass
     page.on('response', on_response)
 
 
+def state(page):
+    """Streamlit's own flag on the app: 'running' while the page is being made."""
+    try:
+        return page.evaluate("(document.querySelector('[data-test-script-state]')||{getAttribute:()=>''})"
+                             ".getAttribute('data-test-script-state')")
+    except Exception:
+        return ''
+
+
 def running(page):
-    return page.locator('[data-testid="stStatusWidget"]').count() > 0
+    return state(page) in ('running', 'rerunRequested') or \
+        page.locator('[data-testid="stStatusWidget"]').count() > 0
 
 
 def timed_tap(page, target, heading):
     """Seconds from the tap until the app has finished its run and shows the new page."""
     start = time.perf_counter()
-    TRAFFIC['bytes'] = 0
+    for key in ('bytes', 'ws', 'http'):
+        TRAFFIC[key] = 0
+    TRAFFIC['big'] = []
     target.click()
     title = page.get_by_role('heading').filter(has_text=heading)
+    seen_run = False
     while time.perf_counter()-start < 90:
-        time.sleep(.05)
+        time.sleep(.03)
         if running(page):
+            seen_run = True
             continue
-        if title.count() and title.first.is_visible() and time.perf_counter()-start > .25:
-            time.sleep(.3)                   # still quiet a moment later: really done
+        if (seen_run or time.perf_counter()-start > 1.0) and title.count() and title.first.is_visible():
+            done = time.perf_counter()-start
+            time.sleep(.4)                   # still quiet a moment later: really done
             if not running(page):
-                return time.perf_counter()-start-.3
+                return done
     return time.perf_counter()-start
 
 
@@ -109,12 +133,25 @@ with sync_playwright() as p:
             try:
                 seconds = timed_tap(page, bar.get_by_role('button').filter(has_text=label).first, HEADS[label])
                 times.setdefault(label, []).append(seconds)
-                print(f'TEMPO giro {round_} {label}: {seconds:.2f}s, {TRAFFIC["bytes"]/1e6:.2f} MB', flush=True)
+                print(f'TEMPO giro {round_} {label}: {seconds:.2f}s, {TRAFFIC["bytes"]/1e6:.2f} MB '
+                      f'(pagina {TRAFFIC["ws"]/1e6:.2f} MB, file {TRAFFIC["http"]/1e6:.2f} MB)', flush=True)
+                for size, url, status in TRAFFIC['big']:
+                    print(f'    file {size/1e6:.2f} MB {status} {url}', flush=True)
                 if round_ == 1:
                     settle(page, 5)
                     shot(page, f'barra_{label.replace(" ", "_")}', tall=label in ('Home', 'Altro'))
             except Exception as exc:
                 print('barra', label, 'non riuscita:', exc, flush=True)
+    # 3.24: a part of the week on the phone
+    try:
+        pill = page.locator('[data-testid="stButtonGroup"] button').filter(has_text='Grafiche')
+        if pill.count():
+            seconds = timed_tap(page, pill.first, 'LA TUA SETTIMANA')
+            print(f'TEMPO Home > Grafiche: {seconds:.2f}s, {TRAFFIC["bytes"]/1e6:.2f} MB', flush=True)
+            settle(page, 5)
+            shot(page, 'barra_Home_grafiche')
+    except Exception as exc:
+        print('Home > Grafiche non riuscita:', exc, flush=True)
     for label, values in times.items():
         print(f'TEMPI {label}: ' + ' / '.join(f'{v:.2f}s' for v in values), flush=True)
     for i, name in enumerate(PAGES):
@@ -135,9 +172,12 @@ with sync_playwright() as p:
             if name in ('Matchday', 'Full Time', 'Classifica'):
                 for tab in TABS:
                     tabs = page.get_by_role('tab').filter(has_text=tab)
+                    if not tabs.count():          # 3.24: sections are a segmented control
+                        tabs = page.locator('[data-testid="stButtonGroup"] button').filter(has_text=tab)
                     if tabs.count():
-                        tabs.first.click()
-                        settle(page, 15)
+                        seconds = timed_tap(page, tabs.first, HEADS_PAGE.get(name, name.upper()))
+                        print(f'TEMPO {name} > {tab}: {seconds:.2f}s, {TRAFFIC["bytes"]/1e6:.2f} MB', flush=True)
+                        settle(page, 5)
                         shot(page, f'{i+2:02d}_{name.replace(" ", "_")}_{tab}')
                         if tab == 'Stile':   # scrolled: the phone preview must still be at the top
                             page.evaluate("""() => { const m = document.querySelector('[data-testid="stMain"]');
