@@ -139,7 +139,7 @@ def tile_status(template, todo, match, today):
     return ('DA FARE', YELLOW) if todo else ('PRONTA', GREEN)
 
 
-CSS = '''<style>
+CSS = '''<style class="fs-css">
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Silkscreen:wght@400;700&display=swap");
 .stApp,.stApp p,.stApp li,.stApp label,.stApp input,.stApp textarea,.stApp button{font-family:Inter,system-ui,sans-serif}
 .stApp h1,.stApp h2,.stApp h3{font-family:Silkscreen,monospace!important;letter-spacing:.03em;font-weight:700!important}
@@ -170,7 +170,7 @@ CSS = '''<style>
 .st-key-home_tiles .stButton button p{font-size:14px}
 .st-key-more_tiles .stButton button{min-height:88px;background:#19131f;border:1px solid #3c2d44}
 .st-key-bottom_nav{display:none}
-[data-testid="stElementContainer"]:has(> [data-testid="stMarkdown"] style):not(:has(.fs-card,.fs-place,.fs-muted)){display:none}
+[data-testid="stElementContainer"]:has(style.fs-css){display:none}
 @media (max-width:640px){
  .st-key-mobile_nav{display:none!important}
  .block-container{padding-bottom:110px!important}
@@ -180,11 +180,12 @@ CSS = '''<style>
  .st-key-bottom_nav .stButton button{min-height:56px!important;width:100%;padding:4px 0!important;border:0!important;background:transparent!important;color:#9c8aa6!important;box-shadow:none!important}
  .st-key-bottom_nav .stButton button,.st-key-bottom_nav .stButton button *:has(> [data-testid="stIconMaterial"]),
  .st-key-more_tiles .stButton button,.st-key-more_tiles .stButton button *:has(> [data-testid="stIconMaterial"]){display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important}
- .st-key-bottom_nav .stButton button p{font-size:11px!important;font-weight:650;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+ .st-key-bottom_nav .stButton button p{font-size:11px!important;font-weight:650;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;line-height:1.25!important;text-align:center;margin:0!important}
+ .st-key-bottom_nav .stButton button p span,.st-key-more_tiles .stButton button p span{font-size:24px!important;line-height:1!important}
  .st-key-bottom_nav .stButton button [data-testid="stMarkdownContainer"],
  .st-key-more_tiles .stButton button [data-testid="stMarkdownContainer"]{overflow:visible!important;width:auto!important;max-width:none!important}
  .st-key-bottom_nav .stButton button span[data-testid="stIconMaterial"]{font-size:24px!important;margin:0!important}
- .st-key-more_tiles .stButton button p{font-size:12px!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+ .st-key-more_tiles .stButton button p{font-size:12px!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;text-align:center;line-height:1.4!important}
  .st-key-more_tiles .stButton button span[data-testid="stIconMaterial"]{font-size:26px!important;color:#F268A8;margin:0!important}
  .st-key-app_head h1{font-size:1rem!important;line-height:1.7!important;padding:.2rem 0!important;margin:0!important}
  .stApp h3{font-size:1.15rem!important;line-height:1.6!important}
@@ -221,12 +222,12 @@ def bottom_nav(template):
     with st.container(key='bottom_nav'):
         columns = st.columns(5, gap='small')
         for column, (target, label, icon) in zip(columns, NAV):
-            column.button(label, icon=icon, key=f'nav_{label}', on_click=_goto, args=(target,), width='stretch')
-        columns[4].button('Altro', icon=':material/more_horiz:', key='nav_Altro', on_click=_more, width='stretch')
+            column.button(f'{icon}  \n{label}', key=f'nav_{label}', on_click=_goto, args=(target,), width='stretch')
+        columns[4].button(':material/more_horiz:  \nAltro', key='nav_Altro', on_click=_more, width='stretch')
     label = 'Altro' if current == 'Altro' else next((l for t, l, _ in NAV if t == current), '')
     if label:
         key = 'nav_'+label.replace(' ', '_')
-        st.markdown(f'<style>@media (max-width:640px){{.st-key-bottom_nav .st-key-{key} .stButton button,'
+        st.markdown(f'<style class="fs-css">@media (max-width:640px){{.st-key-bottom_nav .st-key-{key} .stButton button,'
                     f'.st-key-bottom_nav .st-key-{key} button{{color:{ACCENT}!important}}}}</style>',
                     unsafe_allow_html=True)
 
@@ -240,7 +241,7 @@ def show_more():
         for start in range(0, len(MORE), 3):
             columns = st.columns(3)
             for column, (target, label, icon) in zip(columns, MORE[start:start+3]):
-                column.button(label, icon=icon, key=f'more_{target}', on_click=_goto, args=(target,), width='stretch')
+                column.button(f'{icon}  \n{label}', key=f'more_{target}', on_click=_goto, args=(target,), width='stretch')
     import shared_ui                     # the full box (name, note, versions) stays in the side menu
     meta = shared_ui._meta()
     with st.container(border=True):
