@@ -1,0 +1,56 @@
+TEMPO apertura: 3.67s, 3.26 MB
+shot 00_apertura
+barra in basso visibile: True
+TEMPO giro 1 Matchday: 0.64s, 0.39 MB (pagina 0.02 MB, file 0.37 MB)
+    file 0.07 MB 200 //localhost:8501/static/js/useSyncComboBoxEnterTargetFocus.hm3aTVdR.js
+    file 0.06 MB 200 http://localhost:8501/static/js/moment.4ragD6OA.js
+shot barra_Matchday
+TEMPO giro 1 Full Time: 0.54s, 0.08 MB (pagina 0.02 MB, file 0.05 MB)
+shot barra_Full_Time
+TEMPO giro 1 Classifica: 0.85s, 1.68 MB (pagina 0.03 MB, file 1.65 MB)
+    file 0.08 MB 200 http://localhost:8501/static/js/recordbatch.BW_wpVG-.js
+    file 0.74 MB 200 http://localhost:8501/static/js/arrowFormatUtils.BeTrQZrd.js
+    file 0.49 MB 200 http://localhost:8501/static/js/DataFrame.-f9-1zS0.js
+    file 0.10 MB 200 http://localhost:8501/static/js/serialization.DdOIrmtN.js
+    file 0.11 MB 200 http://localhost:8501/static/js/reactJsonViewCompat.TQCWbwC7.js
+shot barra_Classifica
+TEMPO giro 1 Altro: 1.03s, 0.02 MB (pagina 0.02 MB, file 0.00 MB)
+shot barra_Altro
+TEMPO giro 1 Home: 1.01s, 0.04 MB (pagina 0.04 MB, file 0.00 MB)
+shot barra_Home
+TEMPO giro 2 Matchday: 0.24s, 0.08 MB (pagina 0.02 MB, file 0.06 MB)
+TEMPO giro 2 Full Time: 0.23s, 0.07 MB (pagina 0.02 MB, file 0.05 MB)
+TEMPO giro 2 Classifica: 0.24s, 0.07 MB (pagina 0.03 MB, file 0.04 MB)
+TEMPO giro 2 Altro: 0.14s, 0.02 MB (pagina 0.02 MB, file 0.00 MB)
+TEMPO giro 2 Home: 0.18s, 0.04 MB (pagina 0.04 MB, file 0.00 MB)
+TEMPO Home > Grafiche: 0.61s, 0.48 MB
+shot barra_Home_grafiche
+TEMPI Matchday: 0.64s / 0.24s
+TEMPI Full Time: 0.54s / 0.23s
+TEMPI Classifica: 0.85s / 0.24s
+TEMPI Altro: 1.03s / 0.14s
+TEMPI Home: 1.01s / 0.18s
+shot 01_menu_aperto
+shot 02_La_tua_settimana
+shot 03_Matchday
+TEMPO Matchday > Stile: 0.24s, 0.14 MB
+shot 03_Matchday_Stile
+TEMPO Matchday > Esporta: 2.69s, 2.56 MB
+shot 03_Matchday_Esporta
+shot 04_Convocati
+shot 05_Full_Time
+TEMPO Full Time > Stile: 0.26s, 0.03 MB
+shot 05_Full_Time_Stile
+TEMPO Full Time > Esporta: 1.93s, 0.94 MB
+shot 05_Full_Time_Esporta
+shot 06_Classifica
+TEMPO Classifica > Stile: 0.29s, 0.03 MB
+shot 06_Classifica_Stile
+TEMPO Classifica > Esporta: 1.97s, 0.75 MB
+shot 06_Classifica_Esporta
+shot 07_Calendario
+shot 08_Video_con_transizioni
+shot 09_Didascalie
+shot 10_Wrapped
+shot 11_Squadra_e_copertine
+shot computer_home

@@ -1,0 +1,41 @@
+2026-11-24 23:52:41.689 Uvicorn server started on :::8501
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://10.1.0.143:8501
+  External URL: http://135.233.180.196:8501
+
+[perf] archivio in attesa 470ms | avvio=145 import=290 condiviso+menu=4 archivio=31
+[perf] Settimana 155ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=12 csi+avvisi=2 pagina=128 stagione+salvataggio=10
+[perf] Settimana 419ms | avvio=1 import=0 condiviso+menu=1 archivio=369 stemmi+settimana=0 csi+avvisi=0 pagina=46 stagione+salvataggio=1
+[perf] Settimana 16ms | avvio=1 import=1 condiviso+menu=2 archivio=1 stemmi+settimana=0 csi+avvisi=0 pagina=9 stagione+salvataggio=2
+[perf] Matchday Screen 516ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=510 stagione+salvataggio=2
+[perf] Full Time 397ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=391 stagione+salvataggio=1
+[perf] Classifica 560ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=555 stagione+salvataggio=2
+[perf] Altro 7ms | avvio=0 import=1 condiviso+menu=1 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=2 stagione+salvataggio=1
+[perf] Settimana 10ms | avvio=1 import=1 condiviso+menu=1 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=6 stagione+salvataggio=1
+[perf] Matchday Screen 19ms | avvio=0 import=0 condiviso+menu=1 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=15 stagione+salvataggio=2
+[perf] Full Time 21ms | avvio=0 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=15 stagione+salvataggio=2
+[perf] Classifica 25ms | avvio=0 import=1 condiviso+menu=1 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=19 stagione+salvataggio=3
+[perf] Altro 6ms | avvio=0 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=2 stagione+salvataggio=1
+[perf] Settimana 14ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=8 stagione+salvataggio=1
+[perf] Settimana 491ms | avvio=1 import=1 condiviso+menu=1 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=486 stagione+salvataggio=1
+[perf] Matchday Screen 15ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=11 stagione+salvataggio=1
+[perf] Matchday Screen 24ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=18 stagione+salvataggio=1
+[perf] Matchday Screen 2085ms | avvio=0 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=2079 stagione+salvataggio=2
+[perf] Convocati 54ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=48 stagione+salvataggio=2
+[perf] Full Time 28ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=21 stagione+salvataggio=2
+[perf] Full Time 24ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=18 stagione+salvataggio=2
+[perf] Full Time 1658ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=1652 stagione+salvataggio=2
+[perf] Classifica 34ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=28 stagione+salvataggio=2
+[perf] Classifica 19ms | avvio=0 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=13 stagione+salvataggio=1
+[perf] Classifica 1745ms | avvio=1 import=11 condiviso+menu=3 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=1726 stagione+salvataggio=3
+[perf] Calendario 124ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=118 stagione+salvataggio=2
+[perf] Sequenza video 469ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=463 stagione+salvataggio=1
+[perf] Didascalie 19ms | avvio=0 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=1 pagina=14 stagione+salvataggio=2
+[perf] Wrapped 160ms | avvio=1 import=1 condiviso+menu=2 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=155 stagione+salvataggio=1
+[perf] Instagram 2984ms | avvio=0 import=0 condiviso+menu=1 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=2979 stagione+salvataggio=2
+[perf] archivio in attesa 5ms | avvio=0 import=2 condiviso+menu=2 archivio=0
+[perf] Settimana 1160ms | avvio=1 import=0 condiviso+menu=1 archivio=0 stemmi+settimana=0 csi+avvisi=0 pagina=1155 stagione+salvataggio=2
+[perf] Settimana 550ms | avvio=54 import=1 condiviso+menu=2 archivio=1 stemmi+settimana=0 csi+avvisi=1 pagina=490 stagione+salvataggio=1
