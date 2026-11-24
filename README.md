@@ -1,4 +1,28 @@
-# Flamingos Studio 3.23
+# Flamingos Studio 3.24
+
+## Novita della 3.24: molto più veloce sul telefono
+Misurato con le foto automatiche da iPhone (stesso server di prova, prima e dopo):
+
+| | prima | dopo |
+|---|---|---|
+| apertura dell'app | 6,5 s · 6,2 MB | 3,3 s · 3,3 MB |
+| prima apertura di Matchday / Full Time / Classifica (lavoro del server) | 2,9-3,7 s | 0,25-0,35 s |
+| tornare su una pagina già vista | 0,25-0,3 s | 0,01 s |
+| dati scaricati a ogni tocco su una grafica | 2-3 MB | 0,02-0,08 MB |
+
+- **Si prepara solo quello che guardi.** Negli editor *Contenuti / Stile / Esporta* sono tre pulsanti: prima
+  venivano costruite tutte e tre le parti a ogni tocco, PNG finale compreso. Il PNG si crea quando apri *Esporta*.
+- **Sul telefono**: anteprima a metà risoluzione (basta per lo schermo), niente editor a trascinamento (1-2 MB a
+  ogni tocco: si spostano gli elementi con i numeri, il trascinamento resta al computer), la Home apre una parte
+  alla volta (Dati CSI, Partita, Rosa, Grafiche, Dopo la partita, Sponsor, Kit).
+- **Immagini leggere**: i PNG finiti si vedono come JPEG leggeri (il file da scaricare resta il PNG pieno); il
+  catalogo dei preset e il PNG finale si aprono con un interruttore.
+- **Condividi** prepara il file solo quando lo tocchi (prima il file intero viaggiava dentro la pagina a ogni tocco).
+- **Dati CSI dopo la pagina**: l'app si vede subito e si aggiorna da sola un attimo dopo.
+- **Archivio del browser**: con il lavoro condiviso attivo non copia più settimana e rosa nel browser; i salvataggi
+  sono confermati senza rimandare indietro tutto l'archivio.
+- Barra strumenti di Streamlit ridotta. `FLAMINGOS_PERF=1` (o `2` con il profilo) stampa i tempi di ogni
+  caricamento nel log: le foto da telefono su GitHub li riportano insieme ai MB scaricati per tocco.
 
 ## Novita della 3.23: sul telefono sembra un'app
 - **Barra in basso** sempre visibile sul telefono: Home, Matchday, Full Time, Classifica e Altro (tutte le
