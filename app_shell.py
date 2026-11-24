@@ -170,6 +170,7 @@ CSS = '''<style>
 .st-key-home_tiles .stButton button p{font-size:14px}
 .st-key-more_tiles .stButton button{min-height:88px;background:#19131f;border:1px solid #3c2d44}
 .st-key-bottom_nav{display:none}
+[data-testid="stElementContainer"]:has(> [data-testid="stMarkdown"] style):not(:has(.fs-card,.fs-place,.fs-muted)){display:none}
 @media (max-width:640px){
  .st-key-mobile_nav{display:none!important}
  .block-container{padding-bottom:110px!important}
@@ -177,8 +178,8 @@ CSS = '''<style>
  .st-key-bottom_nav [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important;gap:2px!important}
  .st-key-bottom_nav [data-testid="stColumn"]{min-width:0!important;width:20%!important;flex:1 1 0!important}
  .st-key-bottom_nav .stButton button{min-height:56px!important;width:100%;padding:4px 0!important;border:0!important;background:transparent!important;color:#9c8aa6!important;box-shadow:none!important}
- .st-key-bottom_nav .stButton button,.st-key-bottom_nav .stButton button>div,
- .st-key-more_tiles .stButton button,.st-key-more_tiles .stButton button>div{flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important}
+ .st-key-bottom_nav .stButton button,.st-key-bottom_nav .stButton button *:has(> [data-testid="stIconMaterial"]),
+ .st-key-more_tiles .stButton button,.st-key-more_tiles .stButton button *:has(> [data-testid="stIconMaterial"]){display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important}
  .st-key-bottom_nav .stButton button p{font-size:11px!important;font-weight:650;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
  .st-key-bottom_nav .stButton button [data-testid="stMarkdownContainer"],
  .st-key-more_tiles .stButton button [data-testid="stMarkdownContainer"]{overflow:visible!important;width:auto!important;max-width:none!important}
