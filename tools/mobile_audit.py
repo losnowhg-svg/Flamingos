@@ -96,4 +96,18 @@ with sync_playwright() as p:
         except Exception as exc:     # keep going: a broken page is itself a finding
             print('ERRORE', name, exc, flush=True)
             shot(page, f'{i+2:02d}_{name.replace(" ", "_")}_errore')
+    # 3.23: one look at a computer too (the bottom bar must not show there, the side menu must)
+    try:
+        desk = browser.new_context(viewport={'width': 1280, 'height': 900}, locale='it-IT').new_page()
+        desk.goto(URL)
+        desk.wait_for_selector('h1', timeout=120000)
+        settle(desk, 20)
+        skip = desk.get_by_text('Continua senza archivio')
+        if skip.count() and skip.first.is_visible():
+            skip.first.click()
+            settle(desk, 10)
+        desk.screenshot(path=str(OUT/'computer_home.png'))
+        print('shot computer_home', flush=True)
+    except Exception as exc:
+        print('computer non riuscito:', exc, flush=True)
     browser.close()

@@ -187,7 +187,7 @@ CSS = '''<style class="fs-css">
  .st-key-bottom_nav .stButton button span[data-testid="stIconMaterial"]{font-size:24px!important;margin:0!important}
  .st-key-more_tiles .stButton button p{font-size:12px!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important;text-align:center;line-height:1.4!important}
  .st-key-more_tiles .stButton button span[data-testid="stIconMaterial"]{font-size:26px!important;color:#F268A8;margin:0!important}
- .st-key-app_head h1{font-size:1rem!important;line-height:1.7!important;padding:.2rem 0!important;margin:0!important}
+ .st-key-app_head{display:none!important}
  .stApp h3{font-size:1.15rem!important;line-height:1.6!important}
  .st-key-home_tiles [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important}
  .st-key-home_tiles [data-testid="stColumn"]{min-width:0!important;width:50%!important;flex:1 1 0!important}
