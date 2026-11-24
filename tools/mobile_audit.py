@@ -25,6 +25,23 @@ def settle(page, seconds=6):
     time.sleep(1.5)
 
 
+TRAFFIC = {'bytes': 0}
+
+
+def watch_traffic(page):
+    """Bytes the phone downloads: websocket frames (Streamlit's page updates) and media files."""
+    def on_ws(ws):
+        ws.on('framereceived', lambda data: TRAFFIC.__setitem__('bytes', TRAFFIC['bytes']+len(data)))
+    page.on('websocket', on_ws)
+
+    def on_response(response):
+        try:
+            TRAFFIC['bytes'] += int(response.headers.get('content-length') or 0)
+        except Exception:
+            pass
+    page.on('response', on_response)
+
+
 def running(page):
     return page.locator('[data-testid="stStatusWidget"]').count() > 0
 
@@ -32,6 +49,7 @@ def running(page):
 def timed_tap(page, target, heading):
     """Seconds from the tap until the app has finished its run and shows the new page."""
     start = time.perf_counter()
+    TRAFFIC['bytes'] = 0
     target.click()
     title = page.get_by_role('heading').filter(has_text=heading)
     while time.perf_counter()-start < 90:
@@ -66,13 +84,14 @@ with sync_playwright() as p:
     context = browser.new_context(**phone, locale='it-IT')
     page = context.new_page()
     page.set_default_timeout(20000)
+    watch_traffic(page)
     opened = time.perf_counter()
     page.goto(URL)
     page.wait_for_selector('h1', state='attached', timeout=120000)
     page.get_by_role('heading').filter(has_text='LA TUA SETTIMANA').first.wait_for(timeout=120000)
     while running(page):
         time.sleep(.1)
-    print(f'TEMPO apertura: {time.perf_counter()-opened:.2f}s', flush=True)
+    print(f'TEMPO apertura: {time.perf_counter()-opened:.2f}s, {TRAFFIC["bytes"]/1e6:.2f} MB', flush=True)
     settle(page, 20)
     skip = page.get_by_text('Continua senza archivio')
     if skip.count() and skip.first.is_visible():
@@ -90,7 +109,7 @@ with sync_playwright() as p:
             try:
                 seconds = timed_tap(page, bar.get_by_role('button').filter(has_text=label).first, HEADS[label])
                 times.setdefault(label, []).append(seconds)
-                print(f'TEMPO giro {round_} {label}: {seconds:.2f}s', flush=True)
+                print(f'TEMPO giro {round_} {label}: {seconds:.2f}s, {TRAFFIC["bytes"]/1e6:.2f} MB', flush=True)
                 if round_ == 1:
                     settle(page, 5)
                     shot(page, f'barra_{label.replace(" ", "_")}', tall=label in ('Home', 'Altro'))
