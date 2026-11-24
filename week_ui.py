@@ -685,7 +685,9 @@ def show_after_match(root, library):
 
 def show_week(root: Path, library):
     st.subheader('LA TUA SETTIMANA')
-    st.caption('Tutto in ordine: aggiorna dal CSI, controlla la partita, poi apri le grafiche una alla volta.')
+    import app_shell
+    app_shell.home_hero(root, library)     # 3.23: next match, this week's graphics, our place
+    st.caption('Qui sotto: dati dal CSI, partita, rosa e tutte le grafiche.')
     fulltime = current_config('Full Time')
     line = countdown(sanitize_match(st.session_state.get('shared_match')), _now().date(),
                      (fulltime.get('home_score'), fulltime.get('away_score')))

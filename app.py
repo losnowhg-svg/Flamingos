@@ -40,9 +40,11 @@ h4{margin-bottom:.2rem!important}
  button[data-baseweb="tab"]{padding-left:.4rem!important;padding-right:.4rem!important}
 }
 </style>''',unsafe_allow_html=True)
+import app_shell
+app_shell.style()                        # 3.23: app style (fonts, cards, bottom bar on the phone)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.22 / se lavorate in due insieme, i salvataggi si uniscono: non si perde niente')
+    st.caption('3.23 / sul telefono sembra un\'app: barra in basso, Home con la prossima partita')
 
 from library import show_library
 from studio_ui import show_studio
@@ -74,21 +76,16 @@ shared_ui.pull_merged()                  # 3.22: a friend's work joined with our
 if st.query_params.get(QUERY_KEY):
     del st.query_params[QUERY_KEY]
 
-def _from_phone_menu():
-    st.session_state['studio_template'] = st.session_state['mobile_nav_select']
-
 
 with st.sidebar:
     st.header('Il tuo studio')
     if st.session_state.get('studio_template') not in PAGES:
         st.session_state['studio_template'] = 'Settimana'
-    template = st.radio('Vai a',list(PAGES),format_func=PAGES.get,key='studio_template')
+    template = st.radio('Vai a',list(PAGES),format_func=PAGES.get,key='studio_template',
+                        on_change=lambda: st.session_state.update(phone_more=False))
     shared_ui.sidebar()
-# On a phone the sidebar hides behind a button: the same menu, one tap away at the top (CSS shows it only there).
-if st.session_state.get('mobile_nav_select') != template:
-    st.session_state['mobile_nav_select'] = template
-with st.container(key='mobile_nav'):
-    st.selectbox('Vai a', list(PAGES), format_func=PAGES.get, key='mobile_nav_select', on_change=_from_phone_menu)
+# 3.23: on a phone the menu is a bar at the bottom (Home, Matchday, Full Time, Classifica, Altro).
+app_shell.bottom_nav(template)
 
 library = show_library()
 if library is None:
@@ -107,7 +104,9 @@ import week_ui
 week_ui.moved_banner()                   # 3.21: the CSI moved our match
 import robust
 try:                                     # 3.18: a page error shows a short message, and the work below is still saved
-    if template == 'Settimana':
+    if st.session_state.get('phone_more'):
+        app_shell.show_more()            # 3.23: the phone's "Altro" screen
+    elif template == 'Settimana':
         show_week(root,library)
     elif template == 'Sequenza video':
         show_sequence(root,library)

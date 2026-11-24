@@ -54,9 +54,16 @@ with sync_playwright() as p:
         skip.first.click()
         settle(page, 10)
     shot(page, '00_apertura')
-    # The phone menu at the top (3.6): try it once.
-    menu = page.locator('.st-key-mobile_nav')
-    print('menu in alto visibile:', menu.count() and menu.first.is_visible(), flush=True)
+    # 3.23: the bottom bar, as a phone user taps it
+    bar = page.locator('.st-key-bottom_nav')
+    print('barra in basso visibile:', bar.count() and bar.first.is_visible(), flush=True)
+    for label in ('Matchday', 'Full Time', 'Classifica', 'Altro', 'Home'):
+        try:
+            bar.get_by_role('button').filter(has_text=label).first.click()
+            settle(page, 20)
+            shot(page, f'barra_{label.replace(" ", "_")}', tall=label in ('Home', 'Altro'))
+        except Exception as exc:
+            print('barra', label, 'non riuscita:', exc, flush=True)
     for i, name in enumerate(PAGES):
         try:
             opener = page.locator('[data-testid="stExpandSidebarButton"], [data-testid="stSidebarCollapsedControl"] button')

@@ -50,8 +50,8 @@ class Share(unittest.TestCase):
 class PhoneLayout(unittest.TestCase):
     def test_phone_css_and_containers(self):
         app = (ROOT/'app.py').read_text()
-        for needle in ('.st-key-mobile_nav', '.st-key-mobile_preview', 'div:has(> .st-key-mobile_preview)',
-                       "key='mobile_nav_select'", 'min-height:44px'):
+        for needle in ('.st-key-mobile_preview', 'div:has(> .st-key-mobile_preview)', 'min-height:44px',
+                       'app_shell.bottom_nav(template)'):      # 3.23: the bottom bar replaced the menu at the top
             self.assertIn(needle, app)
         studio = (ROOT/'studio_ui.py').read_text()
         self.assertIn("st.container(key='mobile_preview')", studio)
