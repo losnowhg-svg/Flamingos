@@ -209,11 +209,11 @@ def show_studio(root: Path, template: str, library: dict):
     controls, preview_column = st.columns([1, 1.1], gap='large')
     with controls:
         # 3.24: only the chosen section is built (tabs built all three at every tap, the final PNG included)
-        section = st.segmented_control('Sezione', list(SECTIONS), format_func=SECTIONS.get, default='content',
+        part = st.segmented_control('Sezione', list(SECTIONS), format_func=SECTIONS.get, default='content',
                                        key='editor_section', label_visibility='collapsed') or 'content'
 
     # ============================================================ CONTENUTI
-    if section == 'content':
+    if part == 'content':
         with controls:
             def logos_block():
                 with st.expander('Stemmi'):
@@ -552,7 +552,7 @@ def show_studio(root: Path, template: str, library: dict):
                 logos_block()
 
     # ================================================================ STILE
-    if section == 'style':
+    if part == 'style':
         with controls:
             if is_crt:
                 section('Preset')
@@ -692,7 +692,7 @@ def show_studio(root: Path, template: str, library: dict):
                 st.caption('Se una riga non entra, la dimensione viene ridotta da sola.')
 
     # ======================================================== ESPORTA (setup)
-    if section == 'export':
+    if part == 'export':
         with controls:
             section('Formato')
             a, b = st.columns(2)
@@ -748,7 +748,10 @@ def show_studio(root: Path, template: str, library: dict):
                 from PIL import Image as _Image     # centred on a wide band: the phone shows it full width
                 band = _Image.new('RGB', (round(image.height*1.7), image.height), (16, 13, 22))
                 band.paste(image.convert('RGB'), ((band.width-image.width)//2, 0))
-                small = (preview_key, band)
+                import io as _io                   # 3.24: a light JPEG (the phone downloads it at every change)
+                buffer = _io.BytesIO()
+                band.save(buffer, 'JPEG', quality=80, optimize=True)
+                small = (preview_key, buffer.getvalue())
                 st.session_state['mobile_png_'+template] = small
             st.image(small[1], width='stretch')
             st.caption('Anteprima · le modifiche si vedono qui')
@@ -794,7 +797,7 @@ def show_studio(root: Path, template: str, library: dict):
                     config['positions'] = {k_: list(v) for k_, v in positions.items()}; st.rerun()
 
         # ------------------------------------------------------- EXPORT
-        if section == 'export':
+        if part == 'export':
             with controls:
                 signature_config = {k_: v for k_, v in config.items() if k_ not in ('duration', 'fps', 'video_scale', 'sound', 'volume')}
                 signature = hashlib.sha256(json.dumps(signature_config, sort_keys=True).encode()+(home or b'')+(away or b'')
