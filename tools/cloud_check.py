@@ -217,6 +217,10 @@ assert _mdr.png_bytes(_sc('Matchday Screen', dict(_df('Matchday Screen'), oppone
 done.append('scheda avversario e andamento')
 assert shared_store.merge_state({'shared_note': ''}, {'shared_note': 'a'}, {'shared_note': '', 'squad': []}) == {'shared_note': 'a', 'squad': []}
 done.append('salvataggi uniti')
+import app_shell as _shell
+assert 'PROSSIMA PARTITA' in _shell.match_card(dict(our_name='FLAMINGOS', opponent='FC MUSTANGS', our_side='Ospiti',
+    date='04/12/2099', kickoff='20:30', venue='X', round=11), _dt.date(2099, 12, 1))
+done.append('stile app sul telefono')
 print('OK: '+', '.join(done))
 '''
 

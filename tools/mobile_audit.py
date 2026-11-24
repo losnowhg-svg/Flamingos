@@ -47,16 +47,23 @@ with sync_playwright() as p:
     page = context.new_page()
     page.set_default_timeout(20000)
     page.goto(URL)
-    page.wait_for_selector('h1', timeout=120000)
+    page.wait_for_selector('h1', state='attached', timeout=120000)
     settle(page, 20)
     skip = page.get_by_text('Continua senza archivio')
     if skip.count() and skip.first.is_visible():
         skip.first.click()
         settle(page, 10)
     shot(page, '00_apertura')
-    # The phone menu at the top (3.6): try it once.
-    menu = page.locator('.st-key-mobile_nav')
-    print('menu in alto visibile:', menu.count() and menu.first.is_visible(), flush=True)
+    # 3.23: the bottom bar, as a phone user taps it
+    bar = page.locator('.st-key-bottom_nav')
+    print('barra in basso visibile:', bar.count() and bar.first.is_visible(), flush=True)
+    for label in ('Matchday', 'Full Time', 'Classifica', 'Altro', 'Home'):
+        try:
+            bar.get_by_role('button').filter(has_text=label).first.click()
+            settle(page, 20)
+            shot(page, f'barra_{label.replace(" ", "_")}', tall=label in ('Home', 'Altro'))
+        except Exception as exc:
+            print('barra', label, 'non riuscita:', exc, flush=True)
     for i, name in enumerate(PAGES):
         try:
             opener = page.locator('[data-testid="stExpandSidebarButton"], [data-testid="stSidebarCollapsedControl"] button')
@@ -89,4 +96,18 @@ with sync_playwright() as p:
         except Exception as exc:     # keep going: a broken page is itself a finding
             print('ERRORE', name, exc, flush=True)
             shot(page, f'{i+2:02d}_{name.replace(" ", "_")}_errore')
+    # 3.23: one look at a computer too (the bottom bar must not show there, the side menu must)
+    try:
+        desk = browser.new_context(viewport={'width': 1280, 'height': 900}, locale='it-IT').new_page()
+        desk.goto(URL)
+        desk.wait_for_selector('h1', state='attached', timeout=120000)
+        settle(desk, 20)
+        skip = desk.get_by_text('Continua senza archivio')
+        if skip.count() and skip.first.is_visible():
+            skip.first.click()
+            settle(desk, 10)
+        desk.screenshot(path=str(OUT/'computer_home.png'))
+        print('shot computer_home', flush=True)
+    except Exception as exc:
+        print('computer non riuscito:', exc, flush=True)
     browser.close()

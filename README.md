@@ -1,4 +1,13 @@
-# Flamingos Studio 3.22
+# Flamingos Studio 3.23
+
+## Novita della 3.23: sul telefono sembra un'app
+- **Barra in basso** sempre visibile sul telefono: Home, Matchday, Full Time, Classifica e Altro (tutte le
+  altre sezioni a riquadri). Al posto del menu a tendina in alto. Al computer resta il menu laterale.
+- **Home**: in cima a *La tua settimana* la scheda della prossima partita (stemmi, giorno, ora, ritrovo,
+  campo, quanti giorni mancano, ultime 5 dell'avversario), le quattro grafiche della settimana con
+  pronta / da fare, la nostra posizione con la linea dell'andamento e lo stato dei dati CSI.
+- Stile "sportivo + neon": font Inter per i testi e Silkscreen per i titoli, riquadri arrotondati,
+  pulsanti grandi per il dito.
 
 ## Novita della 3.22: salvataggi uniti
 - **Due amici sull'app nello stesso momento non si cancellano più il lavoro.** Prima l'ultimo che salvava
