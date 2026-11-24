@@ -126,7 +126,7 @@ def match_card(match, today, home_logo=None, away_logo=None, form=None):
 <div class="fs-vs"><span>VS</span><small>{'In casa' if home_side else 'Fuori casa'}</small></div>
 <div class="fs-side">{right}</div></div>
 <div class="fs-info"><div>📅 {html.escape(day)}{meeting}</div><div class="fs-muted">📍 {venue}</div>
-<div class="fs-left">⏳ {html.escape(left_days)}</div></div>
+{f'<div class="fs-left">⏳ {html.escape(left_days)}</div>' if left_days else ''}</div>
 {form_html(form, theirs)}
 </section>'''
 
@@ -176,9 +176,17 @@ CSS = '''<style>
  .st-key-bottom_nav{display:block;position:fixed;left:0;right:0;bottom:0;z-index:1000;background:#160f1c;border-top:1px solid #2e2236;padding:6px 6px calc(10px + env(safe-area-inset-bottom))}
  .st-key-bottom_nav [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important;gap:2px!important}
  .st-key-bottom_nav [data-testid="stColumn"]{min-width:0!important;width:20%!important;flex:1 1 0!important}
- .st-key-bottom_nav .stButton button{min-height:54px!important;width:100%;padding:4px 0!important;border:0!important;background:transparent!important;color:#9c8aa6!important;flex-direction:column;gap:2px;box-shadow:none!important}
- .st-key-bottom_nav .stButton button p{font-size:11px!important;font-weight:650}
- .st-key-bottom_nav .stButton button span[data-testid="stIconMaterial"]{font-size:24px!important}
+ .st-key-bottom_nav .stButton button{min-height:56px!important;width:100%;padding:4px 0!important;border:0!important;background:transparent!important;color:#9c8aa6!important;box-shadow:none!important}
+ .st-key-bottom_nav .stButton button,.st-key-bottom_nav .stButton button>div,
+ .st-key-more_tiles .stButton button,.st-key-more_tiles .stButton button>div{flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important}
+ .st-key-bottom_nav .stButton button p{font-size:11px!important;font-weight:650;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+ .st-key-bottom_nav .stButton button [data-testid="stMarkdownContainer"],
+ .st-key-more_tiles .stButton button [data-testid="stMarkdownContainer"]{overflow:visible!important;width:auto!important;max-width:none!important}
+ .st-key-bottom_nav .stButton button span[data-testid="stIconMaterial"]{font-size:24px!important;margin:0!important}
+ .st-key-more_tiles .stButton button p{font-size:12px!important;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+ .st-key-more_tiles .stButton button span[data-testid="stIconMaterial"]{font-size:26px!important;color:#F268A8;margin:0!important}
+ .st-key-app_head h1{font-size:1rem!important;line-height:1.7!important;padding:.2rem 0!important;margin:0!important}
+ .stApp h3{font-size:1.15rem!important;line-height:1.6!important}
  .st-key-home_tiles [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important}
  .st-key-home_tiles [data-testid="stColumn"]{min-width:0!important;width:50%!important;flex:1 1 0!important}
  .st-key-more_tiles [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important}
@@ -217,7 +225,8 @@ def bottom_nav(template):
     label = 'Altro' if current == 'Altro' else next((l for t, l, _ in NAV if t == current), '')
     if label:
         key = 'nav_'+label.replace(' ', '_')
-        st.markdown(f'<style>@media (max-width:640px){{.st-key-{key} button{{color:{ACCENT}!important}}}}</style>',
+        st.markdown(f'<style>@media (max-width:640px){{.st-key-bottom_nav .st-key-{key} .stButton button,'
+                    f'.st-key-bottom_nav .st-key-{key} button{{color:{ACCENT}!important}}}}</style>',
                     unsafe_allow_html=True)
 
 
@@ -261,6 +270,11 @@ def _logos(root, library):
         try:
             image = Image.open(io.BytesIO(data)).convert('RGBA')
             image.thumbnail((96, 96))
+            if min(image.getpixel((0, 0))[:3]) > 235:        # a JPG crest on white: the white goes
+                import numpy as np
+                pixels = np.array(image)
+                pixels[pixels[..., :3].min(axis=2) > 235, 3] = 0
+                image = Image.fromarray(pixels, 'RGBA')
             buffer = io.BytesIO()
             image.save(buffer, 'PNG')
             out.append(buffer.getvalue())
