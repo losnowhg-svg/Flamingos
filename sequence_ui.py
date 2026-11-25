@@ -95,9 +95,30 @@ def apply_match_everywhere(match):
     return match
 
 
+def refresh_opponent_colors():
+    """3.25: the opponent's colours (CSI team cards, else the girone list) into Matchday and Full Time.
+
+    Written again only when the opponent changes, so colours picked by hand in the editor stay."""
+    import team_colors
+    models = st.session_state.setdefault('studio_models', {})
+    revisions = st.session_state.setdefault('studio_revisions', {})
+    csi = st.session_state.get('csi_team_colors') or {}
+    for template in ('Matchday Screen', 'Full Time'):
+        if template not in models:
+            continue
+        config = models[template]
+        name = team_colors.opponent_name(config)
+        if config.get('opponent_colors_for', '') == name[:42]:
+            continue
+        models[template] = dict(config, opponent_colors=team_colors.lookup(name, csi), opponent_colors_for=name[:42])
+        revisions[template] = revisions.get(template, 0)+1
+        st.session_state.pop('png_'+template, None)
+
+
 def refresh_opponent_form():
     """3.21: the opponent's last five, place and first leg on the Matchday, from the CSI results."""
     import opponent_form
+    refresh_opponent_colors()
     match = sanitize_match(st.session_state.get('shared_match'))
     models = st.session_state.setdefault('studio_models', {})
     if 'Matchday Screen' not in models:

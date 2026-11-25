@@ -188,6 +188,9 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
     white = rgb(config.get('white','#F6F4FC'),DEFAULT_WHITE)
     yellow = rgb(config.get('yellow','#FFC963'),(255,201,99))
     layers = []
+    import team_colors
+    theirs = team_colors.for_config(config)            # 3.25: the opponent's colours, on their half only
+    opp = team_colors.opponent_side(config)
     for id_, value, size, color, width, height in [
         ('title',config.get('title','MATCHDAY SCREEN'),config.get('title_size',27),white,294,29),
         ('date',config.get('date','GG/MM/AAAA'),config.get('title_size',27)-1,pink,260,23),
@@ -203,11 +206,14 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
             image = _unknown_shield(s)
             if size < 100:   # smaller crests in the alternative layouts
                 image.thumbnail((round(size*s),round(size*1.42*s)),Image.Resampling.LANCZOS)
+        if theirs and side == opp:
+            image = team_colors.outline_crest(image, theirs, s)
         layers.append(Layer(f'{side}_logo',LAYER_NAMES[f'{side}_logo'],image))
     layers.append(Layer('vs','VS',_vs_sprite(yellow,style,font_bytes,config.get('vs_size',43),s)))
     # Flamingos always pink, home or away; the opponents take the second colour.
     ours = 'away' if config.get('our_side','Casa') == 'Ospiti' else 'home'
-    for side,color,default in [('home',pink if ours == 'home' else cyan,'FLAMINGOS'),('away',pink if ours == 'away' else cyan,'AVVERSARI')]:
+    them = theirs[2] if theirs else cyan
+    for side,color,default in [('home',pink if ours == 'home' else them,'FLAMINGOS'),('away',pink if ours == 'away' else them,'AVVERSARI')]:
         image = _name_text(config.get(f'{side}_name',default),style,config.get('label_size',18),color,font_bytes,s)
         if image: layers.append(Layer(f'{side}_name',LAYER_NAMES[f'{side}_name'],image))
     for id_,parts in [
@@ -232,7 +238,13 @@ def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     positions = normalized_positions(config)
     if any(l.id == 'form' for l in layers):
         positions = _room_for_form(config, positions)
-    prepared = preset_background(config,layouts.panel_key('matchday','Matchday Screen',config),s),layers,positions
+    key = layouts.panel_key('matchday','Matchday Screen',config)
+    base = preset_background(config,key,s)
+    import team_colors
+    theirs, rect = team_colors.for_config(config), team_colors.panel_for(config,'Matchday Screen',key)
+    if theirs and rect:
+        team_colors.frame_panel(base,rect,theirs,s)
+    prepared = base,layers,positions
     from crt_common import finish
     return finish(prepared,config,'matchday')
 

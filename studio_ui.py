@@ -59,6 +59,46 @@ KINDS = {'Matchday Screen': 'matchday', 'Full Time': 'fulltime', 'Convocati': 'c
          'Calendario': 'calendario'}
 
 
+def opponent_colors_box(config, key):
+    """3.25: the opponent's colours on their half (Matchday, Full Time): on/off and the two colours."""
+    import team_colors
+    from integration import same_team
+    config['opp_colors_on'] = st.toggle('🎽 Colori dell\'avversario sulla sua metà', value=bool(config['opp_colors_on']),
+                                        key=key('opp_colors_on'))
+    if not config['opp_colors_on']:
+        return
+    name = team_colors.opponent_name(config)
+    known = team_colors.colors_for(config)
+    looks = team_colors.pair(known)
+    shown = [team_colors.to_hex([looks[0]]), team_colors.to_hex([looks[1]])] if looks else ['#79DCF7', '#F6F4FC']
+    slot = ''.join(ch for ch in name.upper() if ch.isalnum())[:20]
+    a, b, c = st.columns([1, 1, 3], vertical_alignment='bottom')
+    first = a.color_picker('Colore 1', shown[0], key=key('opp_c1_'+slot))
+    second = b.color_picker('Colore 2', shown[1], key=key('opp_c2_'+slot))
+    if [first.upper(), second.upper()] != [x.upper() for x in shown]:
+        config['opponent_colors'], config['opponent_colors_for'] = f'{first.upper()},{second.upper()}', name[:42]
+    words = next((w for team, w in (st.session_state.get('csi_team_colors') or {}).items() if same_team(team, name)), '') \
+        or team_colors.girone_words(name)
+    c.caption(f'Dal sito CSI: «{words}». Cornice del nome, contorno dello stemma e nome nei loro colori; '
+              'la nostra metà resta rosa e nera.' if words and looks else
+              'Squadra senza colori sul sito CSI: scegli tu i due colori (finché non li tocchi resta tutto come prima).')
+
+
+def weather_box(config, key):
+    """3.25: forecast and kick-off time on the graphic, automatically (Matchday, Convocati)."""
+    import weather
+    config['weather_auto'] = st.toggle('🌦️ Meteo e ora della partita', value=bool(config['weather_auto']),
+                                       key=key('weather_auto'))
+    if not config['weather_auto']:
+        st.caption('Spento: atmosfera e dettagli sono quelli scelti in Stile.')
+        return
+    dark = weather.light(config.get('date'), config.get('kickoff'))
+    when = {'notte': 'si gioca col buio: luce di notte', 'tramonto': 'si gioca al tramonto'}.get(dark, '')
+    note = config.get('weather_note') or 'previsioni in arrivo quando la partita è entro 15 giorni'
+    st.caption(note+(f' · {when}' if when else '')+'. Pioggia, neve, nebbia e buio cambiano da soli la grafica '
+               'intorno allo schermo; i testi restano uguali.')
+
+
 def r_output(image, config):
     from crt_presets import output_image
     return output_image(image, config.get('export_format', 'Story 9:16'), 1)
@@ -252,6 +292,8 @@ def show_studio(root: Path, template: str, library: dict):
                 st.caption(('Dal sito CSI: ' + ''.join(card['last']) + (f" · {card['pos']}° in classifica" if card['pos'] else '')
                             + (f" · andata {card['first_leg']}" if card['first_leg'] else '') + '.') if card else
                            'Si compila da sola quando la partita arriva dal sito CSI.')
+                opponent_colors_box(config, key)
+                weather_box(config, key)
                 with st.expander('Titolo ed etichette'):
                     title_field()
                     a, b = st.columns(2)
@@ -322,6 +364,7 @@ def show_studio(root: Path, template: str, library: dict):
                     text('competition', 'Competizione / giornata', 42)
                     title_field()
                     check('show_result', 'Mostra l\'esito (vittoria, pareggio, sconfitta)')
+                opponent_colors_box(config, key)
                 logos_block()
 
             elif is_squad:
@@ -378,6 +421,7 @@ def show_studio(root: Path, template: str, library: dict):
                     text('venue', 'Campo / indirizzo', 72)
                     text('team_name', 'Nome squadra', 50)
                     title_field()
+                weather_box(config, key)
                 logos_block()
 
             elif is_table:
@@ -619,6 +663,12 @@ def show_studio(root: Path, template: str, library: dict):
                 a, b = st.columns(2)
                 with a: select('atmosphere', 'Atmosfera', atmospheres.ATMOSPHERES, atmospheres.ATMOSPHERES.get)
                 with b: select('decor', 'Dettagli', atmospheres.DETAILS, atmospheres.DETAILS.get)
+                if template in ('Matchday Screen', 'Convocati'):
+                    import weather
+                    forced = weather.atmosphere(config, KINDS[template])
+                    if forced:
+                        st.caption(f'🌦️ Questa settimana la luce la decide la partita ({forced}): '
+                                   'per usare la tua spegni "Meteo e ora della partita" in Contenuti.')
                 section('Design', 'Riquadri, effetto del titolo, cornice e texture. "A rotazione" cambia da solo a ogni giornata.')
                 a, b = st.columns(2)
                 with a:

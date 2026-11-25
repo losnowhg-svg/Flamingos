@@ -74,7 +74,7 @@ def _ramp(lum, stops):
 
 def grade(im, mode, s):
     """The world around the screen in another light (RGBA in, RGBA out)."""
-    if mode not in ('giorno', 'tramonto', 'notte', 'neon'):
+    if mode not in ('giorno', 'tramonto', 'notte', 'neon', 'pioggia', 'neve', 'nebbia'):
         return im
     arr = np.asarray(im).astype(np.float32)
     rgb, alpha = arr[..., :3], arr[..., 3:]
@@ -111,6 +111,18 @@ def grade(im, mode, s):
         stars = np.random.default_rng(3).random((h, w)) > .9993
         stars[int(h*.3):] = False
         rgb[stars] = 245
+    elif mode in ('pioggia', 'neve', 'nebbia'):
+        # 3.25, from the match forecast: washed-out colours under a grey (rain), white (snow) or milky sky.
+        gray = rgb.mean(axis=2, keepdims=True)
+        keep = {'pioggia': .4, 'neve': .5, 'nebbia': .55}[mode]
+        rgb = gray+(rgb-gray)*keep
+        if mode == 'pioggia':
+            rgb = rgb*np.array((.62, .68, .78), np.float32)+np.array((10, 16, 30), np.float32)
+            rgb = rgb*(1-np.clip(1-y/.5, 0, 1)*.25)
+        elif mode == 'neve':
+            rgb = rgb*.82+np.array((40, 46, 58), np.float32)
+        else:
+            rgb = rgb*.9+np.array((22, 24, 28), np.float32)
     elif mode == 'neon':
         rgb = rgb*.6
         g = _glow(size, s, [('rectangle', (-120, 0, 120, 960), (255, 40, 170, 190)),

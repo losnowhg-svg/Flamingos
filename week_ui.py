@@ -142,6 +142,12 @@ def apply_page(page, sync, force=False, today=None):
     revisions = st.session_state.setdefault('studio_revisions', {})
     parts = []
     st.session_state['csi_matches'] = page['matches']
+    colors = {team: card.get('colors', '') for team, card in (page.get('cards') or {}).items() if card.get('colors')}
+    if colors and colors != st.session_state.get('csi_team_colors'):
+        st.session_state['csi_team_colors'] = colors          # 3.25: the opponents' colours from the site
+        for template in ('Matchday Screen', 'Full Time'):
+            if template in models:                           # a new word on the site: read it again
+                models[template] = dict(models[template], opponent_colors_for='')
     rows_sig = cs.signature(page['standings'])
     new_table = bool(force or rows_sig != sync.get('standings'))
     if new_table:
@@ -245,12 +251,79 @@ def update_from_csi(force=False):
     return parts, None
 
 
+WEATHER_EVERY = dt.timedelta(hours=3)
+WEATHER_RETRY = dt.timedelta(minutes=30)
+WEATHER_TEMPLATES = ('Matchday Screen', 'Convocati')
+
+
+def weather_due(sync, sig, now):
+    """A new match, a forecast older than 3 hours, or a failed try more than 30 minutes ago."""
+    seen = (sync or {}).get('weather') or {}
+    if seen.get('for') != sig:
+        return True
+    try:
+        last = dt.datetime.fromisoformat(seen.get('at', ''))
+    except (TypeError, ValueError):
+        return True
+    return now-last >= (WEATHER_RETRY if seen.get('error') else WEATHER_EVERY)
+
+
+def update_weather(force=False):
+    """3.25: the forecast for our match into Matchday and Convocati. Returns a short line when it changed."""
+    import weather
+    match = sanitize_match(st.session_state.get('shared_match'))
+    sig = '|'.join((match['date'], match['kickoff'], match['venue']))
+    sync = dict(st.session_state.get('csi_sync') or {})
+    now = _now()
+    if not force and not weather_due(sync, sig, now):
+        return None
+    error = None
+    try:
+        found = weather.check(match, now.date())
+    except Exception as exc:                             # offline or an odd answer: try again in a while
+        import robust
+        if robust.is_control(exc):
+            raise
+        found, error = None, type(exc).__name__
+    sync['weather'] = {'for': sig, 'at': now.isoformat(timespec='minutes'), 'error': error}
+    st.session_state['csi_sync'] = sync
+    if error:
+        return None
+    found = found or dict(weather='', note='')
+    models = st.session_state.setdefault('studio_models', {})
+    revisions = st.session_state.setdefault('studio_revisions', {})
+    changed = False
+    for template in WEATHER_TEMPLATES:
+        config = sanitize_config(template, models.get(template, defaults(template)))
+        if (config['weather'], config['weather_note']) == (found['weather'], found['note']):
+            continue
+        before = config['weather']
+        config.update(weather=found['weather'], weather_note=found['note'])
+        models[template] = config
+        revisions[template] = revisions.get(template, 0)+1
+        st.session_state.pop('png_'+template, None)
+        changed = changed or before != found['weather']
+    if changed and found['weather']:
+        return 'meteo della partita: '+weather.CONDITIONS.get(found['weather'], found['weather']).lower()
+    return None
+
+
 def auto_update():
     """Once per session, on opening: if the girone is older than an hour, take it again (a few seconds)."""
     import csi_sync as cs
     toast = st.session_state.pop('csi_toast', None)
     if toast:
         st.toast(toast[0], icon=toast[1])
+    import robust
+    try:
+        line = update_weather()                          # 3.25: cheap unless the match or 3 hours changed
+    except Exception as exc:
+        if robust.is_control(exc):
+            raise
+        line = None
+    if line:
+        st.session_state['csi_toast'] = (line[0].upper()+line[1:]+'.', '🌦️')
+        st.rerun()
     if st.session_state.get('csi_auto_done'):
         return
     st.session_state['csi_auto_done'] = True

@@ -113,6 +113,8 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
     pink=rgb(config.get('pink','#F268A8'));cyan=rgb(config.get('cyan','#79DCF7'))
     yellow=rgb(config.get('yellow','#FFC963'));white=rgb(config.get('white','#F6F4FC'))
     layers=[]
+    import team_colors
+    theirs=team_colors.for_config(config); opp=team_colors.opponent_side(config)   # 3.25
     def text(id_,value,size,color,width,height):
         raw=text_image(value,style,size,color,width,font_bytes,s,height)
         im=title_fx.title(raw,config,s) if id_=='title' else _decorate_text(raw,s)
@@ -125,6 +127,8 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
         im=clean_logo(data,size,config.get(side+'_clear_white',True),s) if data else _unknown_shield(s)
         if not data:
             im.thumbnail((size*s,round(size*1.42)*s),Image.Resampling.LANCZOS)
+        if theirs and side==opp:
+            im=team_colors.outline_crest(im,theirs,s)
         layers.append(Layer(side+'_logo',LAYER_NAMES[side+'_logo'],im))
     text('score',f"{config.get('home_score',0)}-{config.get('away_score',0)}",config.get('score_size',54),yellow,142,63)
     if layers and layers[-1].id=='score' and config.get('animation','Retro')=='Retro':
@@ -149,7 +153,8 @@ def get_layers(config,home_logo,away_logo=None,font_bytes=None,render_scale=1):
     if config.get('show_penalties',False) and config.get('home_score',0)==config.get('away_score',0):
         text('penalties',f"{config.get('home_penalties',0)}-{config.get('away_penalties',0)} D.C.R.",10,white,142,12)
     ours='away' if config.get('our_side','Casa')=='Ospiti' else 'home'
-    side_color={'home':pink if ours=='home' else cyan,'away':pink if ours=='away' else cyan}
+    them=theirs[2] if theirs else cyan
+    side_color={'home':pink if ours=='home' else them,'away':pink if ours=='away' else them}
     for side,col in (('home',side_color['home']),('away',side_color['away'])):
         im=_name_text(config.get(side+'_name',''),style,config.get('label_size',15),col,font_bytes,s)
         if im:layers.append(Layer(side+'_name',LAYER_NAMES[side+'_name'],im))
@@ -179,7 +184,13 @@ def scene(config,home_logo,away_logo=None,font_bytes=None,render_scale=2):
     s=checked_scale(render_scale)
     config=themes.effective(config)
     import layouts
-    prepared=(background(config,layouts.panel_key('fulltime' if config.get('show_scorers',True) else 'fulltime_clean','Full Time',config),s),get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config))
+    key=layouts.panel_key('fulltime' if config.get('show_scorers',True) else 'fulltime_clean','Full Time',config)
+    base=background(config,key,s)
+    import team_colors
+    theirs,rect=team_colors.for_config(config),team_colors.panel_for(config,'Full Time',key)
+    if theirs and rect:
+        team_colors.frame_panel(base,rect,theirs,s)
+    prepared=(base,get_layers(config,home_logo,away_logo,font_bytes,s),normalized_positions(config))
     prepared[0].info['outcome'],prepared[0].info['our_goals']=outcome(config)
     return finish(prepared,config,'fulltime')
 
