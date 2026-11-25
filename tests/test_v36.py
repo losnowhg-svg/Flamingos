@@ -28,13 +28,29 @@ class Share(unittest.TestCase):
         comp = types.ModuleType('streamlit.components.v1')
         comp.html = lambda html, height=0: calls.append(html)
         saved = {k: sys.modules.get(k) for k in ('streamlit', 'streamlit.components', 'streamlit.components.v1')}
-        sys.modules['streamlit'] = sys.modules.get('streamlit') or types.ModuleType('streamlit')
+        fake = types.ModuleType('streamlit')
+        fake.session_state, pressed = {}, []
+
+        class Rerun(Exception):
+            pass
+
+        def rerun():
+            raise Rerun()
+        fake.button = lambda label, **kw: (pressed.append(label), bool(getattr(fake, 'press', False)))[1]
+        fake.rerun = rerun
+        sys.modules['streamlit'] = fake
         sys.modules['streamlit.components'] = types.ModuleType('streamlit.components')
         sys.modules['streamlit.components.v1'] = comp
         try:
             share.button(b'', 'a.png', 'image/png')
             share.button(b'x'*(share.LIMIT+1), 'a.mp4', 'video/mp4')
-            self.assertEqual(calls, [])
+            self.assertEqual((calls, pressed), ([], []))
+            share.button(b'png', 'a.png', 'image/png')       # 3.24: first only a button, no file in the page
+            self.assertEqual((len(calls), len(pressed)), (0, 1))
+            fake.press = True
+            with self.assertRaises(Rerun):
+                share.button(b'png', 'a.png', 'image/png')
+            fake.press = False
             share.button(b'png', 'a.png', 'image/png')
             self.assertEqual(len(calls), 1)
             self.assertIn('navigator.canShare', calls[0])

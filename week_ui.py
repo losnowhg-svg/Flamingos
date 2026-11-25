@@ -248,6 +248,9 @@ def update_from_csi(force=False):
 def auto_update():
     """Once per session, on opening: if the girone is older than an hour, take it again (a few seconds)."""
     import csi_sync as cs
+    toast = st.session_state.pop('csi_toast', None)
+    if toast:
+        st.toast(toast[0], icon=toast[1])
     if st.session_state.get('csi_auto_done'):
         return
     st.session_state['csi_auto_done'] = True
@@ -262,9 +265,11 @@ def auto_update():
             raise
         parts, error = [], f'errore inatteso ({type(exc).__name__})'
     if (st.session_state.get('csi_sync') or {}).get('moved') and any(p.startswith('partita aggiornata') for p in parts):
-        st.toast('Il CSI ha spostato la nostra partita: guarda l\'avviso in alto.', icon='📢')
+        st.session_state['csi_toast'] = ('Il CSI ha spostato la nostra partita: guarda l\'avviso in alto.', '📢')
     elif parts:
-        st.toast('Dal sito CSI: '+'; '.join(parts)+'.', icon='📡')
+        st.session_state['csi_toast'] = ('Dal sito CSI: '+'; '.join(parts)+'.', '📡')
+    if parts:
+        st.rerun()                           # 3.24: the page was already shown: once more with the new data
     elif error:
         st.toast(f'Sito CSI non raggiunto: {error}.', icon='⚠️')
 
@@ -683,11 +688,31 @@ def show_after_match(root, library):
                       width='stretch')
 
 
+PHONE_PARTS = {'csi': '📡 Dati CSI', 'match': '⚽ Partita', 'squad': '👥 Rosa', 'graphics': '🖼️ Grafiche',
+               'after': '🏁 Dopo la partita', 'sponsor': '🤝 Sponsor', 'kit': '📦 Kit'}
+
+
+def _phone_week(root, library):
+    """3.24: on a phone the rest of the week opens one part at a time (building all of it at every tap was slow)."""
+    choice = st.pills('Sistema qui', list(PHONE_PARTS), format_func=PHONE_PARTS.get, key='week_part',
+                      label_visibility='visible')
+    if not choice:
+        st.caption('Tocca una voce per aprirla: dati CSI, partita, rosa, anteprime delle grafiche, kit.')
+        return
+    {'csi': show_csi, 'match': show_match_form, 'squad': show_squad, 'sponsor': show_sponsor}.get(choice, lambda _: None)(library)
+    if choice == 'graphics':
+        with st.container(key='week_grid'):
+            show_graphics(root, library)
+    elif choice == 'after':
+        show_after_match(root, library)
+    elif choice == 'kit':
+        show_kit(root, library)
+
+
 def show_week(root: Path, library):
     st.subheader('LA TUA SETTIMANA')
     import app_shell
     app_shell.home_hero(root, library)     # 3.23: next match, this week's graphics, our place
-    st.caption('Qui sotto: dati dal CSI, partita, rosa e tutte le grafiche.')
     fulltime = current_config('Full Time')
     line = countdown(sanitize_match(st.session_state.get('shared_match')), _now().date(),
                      (fulltime.get('home_score'), fulltime.get('away_score')))
@@ -695,6 +720,9 @@ def show_week(root: Path, library):
         st.info(line)
     if st.session_state.get('standings_message'):
         st.success(st.session_state.pop('standings_message'), icon='📡')
+    if app_shell.is_phone():
+        _phone_week(root, library)
+        return
     left, right = st.columns(2, gap='large')
     with left:      # on a phone the columns stack: CSI, match, then the squad (done once) and sponsor
         show_csi(library)

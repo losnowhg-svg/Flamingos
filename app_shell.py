@@ -199,6 +199,53 @@ CSS = '''<style class="fs-css">
 
 # --- Streamlit -----------------------------------------------------------------------------------------
 
+def _jpeg_preview(data, width):
+    from PIL import Image
+    image = Image.open(io.BytesIO(data))
+    if image.mode in ('RGBA', 'LA', 'P'):
+        image = image.convert('RGBA')
+        flat = Image.new('RGB', image.size, (16, 13, 22))
+        flat.paste(image, mask=image.split()[-1])
+        image = flat
+    else:
+        image = image.convert('RGB')
+    if image.width > width:
+        image = image.resize((width, round(image.height*width/image.width)), Image.Resampling.LANCZOS)
+    out = io.BytesIO()
+    image.save(out, 'JPEG', quality=84, optimize=True)
+    return out.getvalue()
+
+
+_PREVIEWS = {}
+
+
+def preview(data, width=720):
+    """3.24: what the page shows of a finished PNG: a light JPEG (the full file stays for download and share).
+    The browser downloads shown images again at every run, so 1-2 MB PNGs made every tap slow."""
+    if not data:
+        return data
+    import hashlib
+    key = (hashlib.sha1(data).hexdigest(), width)
+    if key not in _PREVIEWS:
+        if len(_PREVIEWS) > 48:
+            _PREVIEWS.clear()
+        try:
+            _PREVIEWS[key] = _jpeg_preview(data, width)
+        except Exception:
+            return data
+    return _PREVIEWS[key]
+
+
+def is_phone():
+    """3.24: the browser says it is a phone (then the heavy drag editor is left out, the small preview stays)."""
+    import streamlit as st
+    try:
+        agent = str(st.context.headers.get('User-Agent') or '')
+    except Exception:
+        return False
+    return any(word in agent for word in ('iPhone', 'iPod', 'Android', 'Mobile'))
+
+
 def style():
     import streamlit as st
     st.markdown(CSS, unsafe_allow_html=True)

@@ -118,7 +118,8 @@ def show_results(root, library):
         logo = _logo(root, library, match)
         rows_json = json.dumps(rows, sort_keys=True)
         png = _png(rows_json, title, subtitle, date, logo, ours, fmt, style_key)
-        st.image(png, width='stretch')
+        import app_shell
+        st.image(app_shell.preview(png), width='stretch')
         a, b = st.columns(2)
         a.download_button('⬇ PNG', png, file_name='flamingos_risultati.png', mime='image/png', width='stretch',
                           key='results_png')
