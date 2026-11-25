@@ -47,7 +47,7 @@ import app_shell
 app_shell.style()                        # 3.23: app style (fonts, cards, bottom bar on the phone)
 with st.container(key='app_head'):
     st.title('FLAMINGOS STUDIO')
-    st.caption('3.24 / più veloce: si prepara solo quello che stai guardando')
+    st.caption('3.25 / colori degli avversari e meteo della partita')
 
 from library import show_library
 from studio_ui import show_studio

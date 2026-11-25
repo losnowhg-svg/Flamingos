@@ -108,7 +108,7 @@ def form_html(form, opponent):
             f'{first}{place}</div>')
 
 
-def match_card(match, today, home_logo=None, away_logo=None, form=None):
+def match_card(match, today, home_logo=None, away_logo=None, form=None, sky=''):
     """The 'prossima partita' card as HTML (names escaped). home/away follow our side."""
     ours, theirs = match.get('our_name', 'FLAMINGOS'), match.get('opponent', 'AVVERSARI')
     home_side = match.get('our_side', 'Casa') == 'Casa'
@@ -125,7 +125,7 @@ def match_card(match, today, home_logo=None, away_logo=None, form=None):
 <div class="fs-teams"><div class="fs-side">{left}</div>
 <div class="fs-vs"><span>VS</span><small>{'In casa' if home_side else 'Fuori casa'}</small></div>
 <div class="fs-side">{right}</div></div>
-<div class="fs-info"><div>📅 {html.escape(day)}{meeting}</div><div class="fs-muted">📍 {venue}</div>
+<div class="fs-info"><div>📅 {html.escape(day)}{meeting}</div><div class="fs-muted">📍 {venue}</div>{f'<div class="fs-muted">{html.escape(sky)}</div>' if sky and not played else ''}
 {f'<div class="fs-left">⏳ {html.escape(left_days)}</div>' if left_days else ''}</div>
 {form_html(form, theirs)}
 </section>'''
@@ -346,8 +346,10 @@ def home_hero(root, library):
     if not logos or logos[0] != sig:
         logos = (sig, *_logos(root, library))
         st.session_state['_home_logos'] = logos
-    form = opponent_form.decode(current_config('Matchday Screen').get('opponent_form'))
-    st.markdown(match_card(match, today, logos[1], logos[2], form), unsafe_allow_html=True)
+    matchday = current_config('Matchday Screen')
+    form = opponent_form.decode(matchday.get('opponent_form'))
+    sky = matchday.get('weather_note', '') if matchday.get('weather') else ''      # 3.25: the forecast, when there is one
+    st.markdown(match_card(match, today, logos[1], logos[2], form, sky), unsafe_allow_html=True)
 
     statuses = [(t, l, i, tile_status(t, data_status(t, current_config(t)), match, today)) for t, l, i in TILES]
     done = sum(1 for *_, (s, _) in statuses if s == 'PRONTA')

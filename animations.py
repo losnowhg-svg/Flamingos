@@ -428,13 +428,17 @@ def particles(canvas, prepared, t, animated):
     theme = prepared[0].info.get('theme')
     if theme:
         themes.draw_particles(canvas, theme, t if animated else themes.STILL_TIME)
+    sky = prepared[0].info.get('weather')
+    if sky:                                       # 3.25: rain, snow or a storm from the match forecast
+        import weather
+        weather.draw(canvas, sky, t if animated else themes.STILL_TIME)
 
 
 def still_base(prepared):
     """Background with the theme particles frozen (and the frame and texture), for the drag editor."""
     import frames
     base = prepared[0]
-    if not base.info.get('theme') and not frames.active(base.info):
+    if not base.info.get('theme') and not base.info.get('weather') and not frames.active(base.info):
         return base
     image = base.copy()
     particles(image, prepared, 0, False)

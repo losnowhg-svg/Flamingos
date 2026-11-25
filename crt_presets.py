@@ -621,7 +621,8 @@ def background(config, layout='matchday', render_scale=2):
     except (TypeError, ValueError):
         brightness = DEFAULT_BRIGHTNESS
     intensity = max(0, min(60, int(config.get('scanlines', 16))))
-    atmosphere = atmospheres.resolve_atmosphere(config)
+    import weather
+    atmosphere = weather.atmosphere(config, layout) or atmospheres.resolve_atmosphere(config)   # 3.25: the real match light
     image = _background(preset, *colors, layout, intensity, s, brightness, atmosphere, panel_style(config)).copy()
     try:
         white = _rgb(config.get('white', palette['white']))
@@ -629,6 +630,10 @@ def background(config, layout='matchday', render_scale=2):
         white = _rgb(palette['white'])
     decor = atmospheres.resolve_details(config)
     atmospheres.draw_details(image, decor, (*[_rgb(c) for c in colors], white), s, atmospheres.seed(config))
+    sky = weather.particles(config, layout)
+    if sky == 'fog':
+        image = weather.haze(image, s)
+    image.info['weather'] = sky
     import themes
     theme = themes.resolve(config)
     if theme:
